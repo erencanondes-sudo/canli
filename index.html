@@ -90,7 +90,8 @@ button {
  * İnşaat uygulamasındaki resmin yerinde; resim yerine kodla
  * çizilmiş bir saha (hiçbir şey indirilmez).
  */
-#homeBanner {
+#homeBanner,
+.banner {
     position: relative;
     aspect-ratio: 3.4 / 1;
     margin-bottom: 12px;
@@ -104,7 +105,8 @@ button {
 }
 
 /* Koyu perde: yazı okunsun */
-#homeBanner::after {
+#homeBanner::after,
+.banner::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -445,6 +447,33 @@ button {
 }
 
 /* Arama ve canlı listesinde satırın üstündeki tarih */
+/* Satırın sağındaki zil */
+.score-bell {
+    width: 1.9em;
+    height: 1.5em;
+    padding: 0;
+    border-radius: 50%;
+    background: none;
+    color: #9aa0ab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.score-bell svg {
+    width: 1.25em;
+    height: 1.25em;
+}
+
+/* Kayıtlı: sarı, içi dolu */
+.score-bell.on {
+    color: #f5b301;
+}
+
+.score-bell.on svg path:nth-child(2) {
+    fill: currentColor;
+}
+
 .score-date {
     grid-column: 1 / -1;
     margin-bottom: -.3em;
@@ -505,9 +534,11 @@ button {
 /* Tek satır: durum | ev sahibi | skor | deplasman */
 .score-row {
     display: grid;
-    grid-template-columns: 2.4em 1fr auto 1fr;
+    /* durum | ev sahibi | skor | deplasman | zil */
+    grid-template-columns: 2.4em 1fr auto 1fr 1.9em;
     align-items: center;
-    gap: .5em;
+    gap: .45em;
+    cursor: pointer;
     width: 100%;
     padding: .45em .7em;
     border-radius: 0;
@@ -906,14 +937,48 @@ button {
     z-index: 18;
     background: #f4f5f7;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9aa0ab;
-    font-size: 15px;
+    flex-direction: column;
 
     transform: translateY(100%);
     visibility: hidden;
     transition: transform .32s ease, visibility 0s linear .32s;
+}
+
+#myMain {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 12px var(--side-gap) 180px;
+}
+
+/* Kayıtlı Maçlarım / Kuponlarım düğmeleri (ana sayfadaki sekmeler gibi) */
+#myTabs {
+    display: flex;
+    gap: .35em;
+    margin-bottom: 10px;
+    font-size: min(16px, 3.4vw);
+}
+
+#myTabs button {
+    flex: 1;
+    padding: .55em .3em;
+    border: 1px solid #d5d8de;
+    border-radius: 10px;
+    background: white;
+    font-size: inherit;
+    font-weight: 800;
+    color: #444;
+}
+
+#myTabs button.active {
+    border-color: #1a73e8;
+    background: #eef4ff;
+    color: #1a73e8;
+}
+
+#mySaved .league-block {
+    margin-left: max(-2.5vw, -.75em);
+    margin-right: max(-2.5vw, -.75em);
 }
 
 body[data-tab="empty"] #emptyLayer {
@@ -1366,7 +1431,27 @@ body[data-tab="empty"] .ac-kapa svg {
 </div>
 
 <!-- BOŞ SAYFA (mavi top ile açılır) -->
-<div id="emptyLayer">Bu sayfa şimdilik boş.</div>
+<div id="emptyLayer">
+    <main id="myMain">
+        <div class="banner">
+            <div class="banner-text">
+                <div class="banner-title">Canlı Skor</div>
+                <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
+            </div>
+        </div>
+
+        <div id="myTabs">
+            <button data-my="saved" class="active">Kayıtlı Maçlarım</button>
+            <button data-my="coupons">Kuponlarım</button>
+        </div>
+
+        <div id="mySaved"></div>
+
+        <div id="myCoupons" hidden>
+            <p class="home-empty">Kuponların yakında burada olacak.</p>
+        </div>
+    </main>
+</div>
 
 <!-- ALT DÜĞME -->
 <nav class="alt-menu" aria-label="Alt menü">
@@ -1749,6 +1834,47 @@ const MATCH_BY_ID = new Map(MATCHES.map(match => [match.id, match]));
 
 
 /* =================================================
+   KAYITLI MAÇLAR
+   -------------------------------------------------
+   Veritabanı olmadığı için şimdilik telefonun kendi
+   hafızasında (localStorage) tutulur; uygulama kapanıp
+   açılınca da kalır. Üye girişi gelince hesaba taşınacak.
+================================================= */
+
+const SAVED_KEY = 'canliSkorKayitli';
+
+function loadSaved() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'));
+    } catch (error) {
+        return new Set();
+    }
+}
+
+const savedIds = loadSaved();
+
+function isSaved(id) {
+    return savedIds.has(id);
+}
+
+function toggleSaved(id) {
+
+    if (savedIds.has(id))
+        savedIds.delete(id);
+    else
+        savedIds.add(id);
+
+    try {
+        localStorage.setItem(SAVED_KEY, JSON.stringify(Array.from(savedIds)));
+    } catch (error) {}
+
+    /* Zillerin hepsi güncellensin */
+    renderLive();
+    renderSaved();
+}
+
+
+/* =================================================
    YARDIMCILAR
 ================================================= */
 
@@ -1781,6 +1907,13 @@ function statusText(match) {
 }
 
 const ICONS = {
+    /* Zil: yuvarlak gövde, düz alt kenar, altta tokmak */
+    bell:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M12 3v1.2"/>' +
+        '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/>' +
+        '<path d="M9.8 18a2.2 2.2 0 0 0 4.4 0"/></svg>',
     comment:
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
         'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -2011,8 +2144,11 @@ function selectDay(key) {
 /* Tek satırlık maç: durum | ev sahibi | skor | deplasman */
 function scoreRow(match, showDate) {
 
-    const row = document.createElement('button');
+    /* Satırın içinde zil düğmesi olduğu için satır <button> değil */
+    const row = document.createElement('div');
     row.className = 'score-row';
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
 
     /* Arama sonuçlarında maçın tarihi de yazar */
     if (showDate) {
@@ -2056,6 +2192,20 @@ function scoreRow(match, showDate) {
     row.appendChild(team('home', 0));
     row.appendChild(mid);
     row.appendChild(team('away', 1));
+
+    /* Zil: maçı kaydeder / kayıttan çıkarır (sarı = kayıtlı) */
+    const bell = document.createElement('button');
+    bell.className = 'score-bell';
+    bell.setAttribute('aria-label', 'Maçı kaydet');
+    bell.innerHTML = ICONS.bell;
+    bell.classList.toggle('on', isSaved(match.id));
+
+    bell.addEventListener('click', event => {
+        event.stopPropagation();
+        toggleSaved(match.id);
+    });
+
+    row.appendChild(bell);
 
     row.addEventListener('click', () => openDetail(match.id));
 
@@ -2270,6 +2420,64 @@ calendarInput.addEventListener('change', () => {
 });
 
 /*
+ * KAYITLI MAÇLARIM (mavi top sayfası)
+ * Zili sarı olan maçlar, lig lig; en yakın tarihli üstte.
+ */
+function renderSaved() {
+
+    const box = document.getElementById('mySaved');
+    box.textContent = '';
+
+    let any = false;
+
+    LEAGUES.forEach(league => {
+
+        const list = MATCHES
+            .filter(m => m.league === league && savedIds.has(m.id))
+            .sort((a, b) => a.date - b.date);
+
+        if (!list.length)
+            return;
+
+        any = true;
+
+        const block = document.createElement('div');
+        block.className = 'league-block';
+
+        const head = document.createElement('div');
+        head.className = 'league-head';
+        head.innerHTML = league.flag + '<span></span>';
+        head.querySelector('span').textContent = league.country + ' · ';
+        head.appendChild(document.createTextNode(league.name));
+
+        block.appendChild(head);
+        list.forEach(m => block.appendChild(scoreRow(m, true)));
+        box.appendChild(block);
+    });
+
+    if (!any) {
+        const empty = document.createElement('p');
+        empty.className = 'home-empty';
+        empty.textContent =
+            'Kayıtlı maçın yok. Canlı Skor\'da bir maçın yanındaki zile basınca burada görünür.';
+        box.appendChild(empty);
+    }
+}
+
+document.querySelectorAll('#myTabs button').forEach(button => {
+
+    button.addEventListener('click', () => {
+
+        document.querySelectorAll('#myTabs button').forEach(other => {
+            other.classList.toggle('active', other === button);
+        });
+
+        document.getElementById('mySaved').hidden = button.dataset.my !== 'saved';
+        document.getElementById('myCoupons').hidden = button.dataset.my !== 'coupons';
+    });
+});
+
+/*
  * FORUM
  * Maçlar ayrıntılı kartlarla (yorum, beğeni...). Üstteki satırdan sıralanır:
  *   popular : en çok yorum alan maçlar (oynanmış ya da canlı)
@@ -2389,6 +2597,7 @@ function renderOdds() {
 renderDays();
 renderLive();
 renderForum();
+renderSaved();
 renderOdds();
 
 
