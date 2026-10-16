@@ -401,10 +401,17 @@ button {
 }
 
 /* Arama kutusu: satırın kalanını doldurur */
+#forumSearchBox {
+    margin: 0 0 10px;
+}
+
 #searchBox {
     flex: 0 1 11.5em;
-    min-width: 0;
     margin-left: auto;
+}
+
+.search-box {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: .35em;
@@ -416,17 +423,17 @@ button {
     color: #8a8f9c;
 }
 
-#searchBox:focus-within {
+.search-box:focus-within {
     border-color: #1a73e8;
 }
 
-#searchBox svg {
+.search-box svg {
     flex: none;
     width: 1.2em;
     height: 1.2em;
 }
 
-#searchInput {
+.search-box input {
     flex: 1;
     min-width: 0;
     border: 0;
@@ -462,7 +469,8 @@ button {
  * CANLI SKOR LİSTESİ (tek satırlık maçlar, lig lig)
  */
 .league-block {
-    margin-bottom: .9em;
+    /* Gün ve araç satırlarından biraz daha geniş: iki yana taşar */
+    margin: 0 max(-2.5vw, -.75em) .9em;
     background: white;
     border-radius: 16px;
     box-shadow: 0 1px 6px rgba(0,0,0,.10);
@@ -501,13 +509,13 @@ button {
     align-items: center;
     gap: .5em;
     width: 100%;
-    padding: .7em .7em;
+    padding: .45em .7em;
     border-radius: 0;
     background: white;
     border-bottom: 1px solid #f1f2f5;
     text-align: left;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     color: #1d2340;
 }
 
@@ -548,8 +556,8 @@ button {
     text-overflow: ellipsis;
 }
 
-.score-team.lost span:not(.crest) {
-    color: #8a8f9c;
+.score-team.won {
+    font-weight: 700;
 }
 
 .score-mid {
@@ -624,6 +632,13 @@ button {
  */
 #homePager {
     overflow-x: clip;
+
+    /*
+     * Kırpma alanı iki yana biraz taşar (içerik aynı yerde kalır);
+     * böylece Canlı Skor'daki geniş lig kutuları kesilmez.
+     */
+    margin: 0 max(-2.5vw, -.75em);
+    padding: 0 min(2.5vw, .75em);
 }
 
 #homeTrack {
@@ -1313,7 +1328,7 @@ body[data-tab="empty"] .ac-kapa svg {
                     <div id="leagueMenu"></div>
                 </div>
 
-                <label id="searchBox">
+                <label id="searchBox" class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
@@ -1332,6 +1347,13 @@ body[data-tab="empty"] .ac-kapa svg {
                     <button data-sort="league">Lige göre</button>
                     <button data-sort="time">Saate göre</button>
                 </div>
+                <label id="forumSearchBox" class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
+                    </svg>
+                    <input id="forumSearchInput" type="search" placeholder="Takım ara" autocomplete="off">
+                </label>
                 <div id="forumList"></div>
             </div>
             <div class="home-page" data-page="analysis">
@@ -1413,7 +1435,8 @@ body[data-tab="empty"] .ac-kapa svg {
    çıksın diye sabit bir tohumla).
 ================================================= */
 
-/* Takımlar: ad, kısa ad, renkler, güç (sadece sahte skor üretmek için) */
+/* Takımlar: ad, kısa ad, renkler, güç (sadece sahte skor üretmek için),
+   mid: canlı skor satırına sığmayan adların kısaltılmışı */
 const PL_TEAMS = [
     { name: 'Arsenal',           short: 'ARS', bg: '#db0007', fg: '#fff', power: 88 },
     { name: 'Aston Villa',       short: 'AVL', bg: '#670e36', fg: '#95bfe5', power: 78 },
@@ -1421,20 +1444,20 @@ const PL_TEAMS = [
     { name: 'Brentford',         short: 'BRE', bg: '#e30613', fg: '#fff', power: 72 },
     { name: 'Brighton',          short: 'BHA', bg: '#0057b8', fg: '#fff', power: 74 },
     { name: 'Chelsea',           short: 'CHE', bg: '#034694', fg: '#fff', power: 82 },
-    { name: 'Coventry City',     short: 'COV', bg: '#59cbe8', fg: '#000', power: 64 },
-    { name: 'Crystal Palace',    short: 'CRY', bg: '#1b458f', fg: '#c4122e', power: 72 },
+    { name: 'Coventry City',     short: 'COV', bg: '#59cbe8', fg: '#000', power: 64, mid: 'Coventry' },
+    { name: 'Crystal Palace',    short: 'CRY', bg: '#1b458f', fg: '#c4122e', power: 72, mid: 'C. Palace' },
     { name: 'Everton',           short: 'EVE', bg: '#003399', fg: '#fff', power: 70 },
     { name: 'Fulham',            short: 'FUL', bg: '#ffffff', fg: '#000', power: 70 },
     { name: 'Hull City',         short: 'HUL', bg: '#f5a12d', fg: '#000', power: 62 },
-    { name: 'Ipswich Town',      short: 'IPS', bg: '#3a64a3', fg: '#fff', power: 64 },
-    { name: 'Leeds United',      short: 'LEE', bg: '#ffffff', fg: '#1d428a', power: 67 },
+    { name: 'Ipswich Town',      short: 'IPS', bg: '#3a64a3', fg: '#fff', power: 64, mid: 'Ipswich' },
+    { name: 'Leeds United',      short: 'LEE', bg: '#ffffff', fg: '#1d428a', power: 67, mid: 'Leeds' },
     { name: 'Liverpool',         short: 'LIV', bg: '#c8102e', fg: '#fff', power: 87 },
-    { name: 'Manchester City',   short: 'MCI', bg: '#6cabdd', fg: '#1c2c5b', power: 86 },
-    { name: 'Manchester United', short: 'MUN', bg: '#da291c', fg: '#fbe122', power: 78 },
+    { name: 'Manchester City',   short: 'MCI', bg: '#6cabdd', fg: '#1c2c5b', power: 86, mid: 'Man. City' },
+    { name: 'Manchester United', short: 'MUN', bg: '#da291c', fg: '#fbe122', power: 78, mid: 'Man. United' },
     { name: 'Newcastle',         short: 'NEW', bg: '#241f20', fg: '#fff', power: 80 },
-    { name: 'Nottingham Forest', short: 'NFO', bg: '#dd0000', fg: '#fff', power: 72 },
+    { name: 'Nottingham Forest', short: 'NFO', bg: '#dd0000', fg: '#fff', power: 72, mid: 'Nott. Forest' },
     { name: 'Sunderland',        short: 'SUN', bg: '#eb172b', fg: '#fff', power: 66 },
-    { name: 'Tottenham Hotspur', short: 'TOT', bg: '#132257', fg: '#fff', power: 77 }
+    { name: 'Tottenham Hotspur', short: 'TOT', bg: '#132257', fg: '#fff', power: 77, mid: 'Tottenham' }
 ];
 
 const SL_TEAMS = [
@@ -1447,13 +1470,13 @@ const SL_TEAMS = [
     { name: 'Samsunspor',      short: 'SAM', bg: '#e30613', fg: '#ffffff', power: 71 },
     { name: 'Kasımpaşa',       short: 'KAS', bg: '#003da5', fg: '#ffffff', power: 66 },
     { name: 'Eyüpspor',        short: 'EYP', bg: '#5c2d91', fg: '#ffd200', power: 66 },
-    { name: 'Çaykur Rizespor', short: 'RİZ', bg: '#00843d', fg: '#ffffff', power: 67 },
+    { name: 'Çaykur Rizespor', short: 'RİZ', bg: '#00843d', fg: '#ffffff', power: 67, mid: 'Rizespor' },
     { name: 'Konyaspor',       short: 'KON', bg: '#007a3d', fg: '#ffffff', power: 66 },
     { name: 'Kocaelispor',     short: 'KOC', bg: '#111111', fg: '#3bb54a', power: 65 },
     { name: 'Alanyaspor',      short: 'ALA', bg: '#f28c00', fg: '#00843d', power: 67 },
-    { name: 'Gaziantep FK',    short: 'GFK', bg: '#d71920', fg: '#111111', power: 66 },
+    { name: 'Gaziantep FK',    short: 'GFK', bg: '#d71920', fg: '#111111', power: 66, mid: 'Gaziantep' },
     { name: 'Gençlerbirliği',  short: 'GB',  bg: '#e30613', fg: '#111111', power: 63 },
-    { name: 'Erzurumspor FK',  short: 'ERZ', bg: '#004b93', fg: '#ffffff', power: 62 },
+    { name: 'Erzurumspor FK',  short: 'ERZ', bg: '#004b93', fg: '#ffffff', power: 62, mid: 'Erzurumspor' },
     { name: 'Amedspor',        short: 'AMD', bg: '#007a3d', fg: '#e30613', power: 62 },
     { name: 'Çorum FK',        short: 'ÇOR', bg: '#c8102e', fg: '#111111', power: 60 }
 ];
@@ -1830,7 +1853,13 @@ function matchCard(match, options = {}) {
     if (options.odds)
         card.appendChild(oddsRow(match, ['1', 'X', '2'], ['home', 'draw', 'away']));
 
-    /* Alt satır: yorum | beğeni, beğenmeme (şimdilik sahte, çalışmaz) */
+    /* Alt satır: yorum | beğeni, beğenmeme (şimdilik sahte, çalışmaz).
+       Oranlar sayfasında yoktur. */
+    if (options.odds) {
+        card.addEventListener('click', () => openDetail(match.id));
+        return card;
+    }
+
     const stats = document.createElement('div');
     stats.className = 'match-stats';
 
@@ -2004,12 +2033,16 @@ function scoreRow(match, showDate) {
         const el = document.createElement('span');
         el.className = 'score-team ' + side;
 
-        if (match.status === 'done' && match.score[index] < match.score[1 - index])
-            el.classList.add('lost');
+        /* Önde / kazanan takım kalın; diğerleri ve oynanmamış maç normal */
+        if (match.score && match.score[index] > match.score[1 - index])
+            el.classList.add('won');
 
-        /* Tek satıra sığsın diye arma yok, sadece ad */
+        /*
+         * Tek satıra sığsın diye arma yok, sadece ad. Uzun adlar
+         * şimdilik kısaltılır (mid); gerçek veride düzenlenecek.
+         */
         const name = document.createElement('span');
-        name.textContent = match[side].name;
+        name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
 
         return el;
@@ -2254,11 +2287,25 @@ function renderForum() {
         button.classList.toggle('active', button.dataset.sort === forumSort);
     });
 
+    /* Arama: takım adına göre */
+    const query = lower(forumSearchInput.value.trim());
+    const all = query
+        ? MATCHES.filter(m => lower(m.home.name).includes(query) || lower(m.away.name).includes(query))
+        : MATCHES;
+
+    if (!all.length) {
+        const empty = document.createElement('p');
+        empty.className = 'home-empty';
+        empty.textContent = '"' + forumSearchInput.value.trim() + '" için maç bulunamadı.';
+        box.appendChild(empty);
+        return;
+    }
+
     if (forumSort === 'popular') {
 
         box.appendChild(weekTitle('EN ÇOK KONUŞULANLAR'));
 
-        MATCHES
+        all
             .filter(m => m.status !== 'upcoming')
             .sort((a, b) => b.comments - a.comments)
             .slice(0, 20)
@@ -2271,7 +2318,7 @@ function renderForum() {
 
         const order = { live: 0, upcoming: 1, done: 2 };
 
-        MATCHES
+        all
             .slice()
             .sort((a, b) =>
                 order[a.status] - order[b.status] ||
@@ -2282,7 +2329,7 @@ function renderForum() {
         return;
     }
 
-    const live = MATCHES.filter(m => m.status === 'live');
+    const live = all.filter(m => m.status === 'live');
 
     if (live.length) {
         box.appendChild(weekTitle('ŞU AN OYNANIYOR'));
@@ -2293,7 +2340,7 @@ function renderForum() {
 
         for (let week = CURRENT_WEEK; week >= 1; week--) {
 
-            const list = MATCHES.filter(m =>
+            const list = all.filter(m =>
                 m.league === league && m.week === week && m.status !== 'live'
             );
 
@@ -2309,6 +2356,10 @@ function renderForum() {
         }
     });
 }
+
+const forumSearchInput = document.getElementById('forumSearchInput');
+
+forumSearchInput.addEventListener('input', renderForum);
 
 document.querySelectorAll('#forumSort button').forEach(button => {
     button.addEventListener('click', () => {
@@ -2528,7 +2579,7 @@ function setHomeSwipeX(px) {
 homeMain.addEventListener('touchstart', event => {
 
     /* Gün düğmeleri kendi içinde yana kayar; sayfa değişmez. */
-    if (event.touches.length !== 1 || event.target.closest('#liveTools')) {
+    if (event.touches.length !== 1 || event.target.closest('#liveTools, #forumSort, #forumSearchBox')) {
         homeSwipe = null;
         return;
     }
