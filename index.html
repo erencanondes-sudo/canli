@@ -1,0 +1,3100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>Canlı Skor</title>
+
+<style>
+
+* { box-sizing: border-box; }
+
+/*
+ * İÇERİK GENİŞLİĞİ
+ * Ana sayfadaki kartlar ve maç sayfası aynı genişliği kullanır.
+ */
+:root {
+    --content-width: 640px;
+    --side-gap: max(16px, calc((100% - var(--content-width)) / 2));
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+}
+
+button {
+    border: 0;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* -----------------------------
+   ANA SAYFA
+----------------------------- */
+
+#homePage {
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    background: #f4f5f7;
+    display: flex;
+    flex-direction: column;
+}
+
+#homeMain {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /*
+     * Kaydırma çubuğunun yeri hep ayrılır: içerik kısa ya da uzun
+     * olsun genişlik değişmez, üstteki alan büyüyüp küçülmez.
+     */
+    scrollbar-gutter: stable;
+
+    /* Yukarı aşağı kaydırma tarayıcıda, sağa sola kaydırma bizde. */
+    touch-action: pan-y;
+
+    /* Alttaki boşluk: son kart alttaki düğmenin arkasında kalmasın. */
+    padding: 12px var(--side-gap) 180px;
+}
+
+/*
+ * ÜSTTEKİ BAŞLIK ALANI
+ * İnşaat uygulamasındaki resmin yerinde; resim yerine kodla
+ * çizilmiş bir saha (hiçbir şey indirilmez).
+ */
+#homeBanner {
+    position: relative;
+    aspect-ratio: 3.4 / 1;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    color: white;
+    background:
+        radial-gradient(circle at 50% 50%, transparent 17%, rgba(255,255,255,.35) 17.4%, transparent 18%),
+        linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.35) 49.8%, rgba(255,255,255,.35) 50.2%, transparent 50.2%),
+        repeating-linear-gradient(90deg, #2f7d43 0 10%, #2a7340 10% 20%);
+}
+
+/* Koyu perde: yazı okunsun */
+#homeBanner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10, 30, 20, .05), rgba(10, 30, 20, .55));
+}
+
+.banner-text {
+    position: absolute;
+    left: 1em;
+    bottom: .9em;
+    z-index: 1;
+}
+
+.banner-title {
+    font-size: 1.7em;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+.banner-sub {
+    margin-top: .15em;
+    font-size: .9em;
+    font-weight: 600;
+    opacity: .9;
+}
+
+#homeTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+/*
+ * ÜST DÜĞMELER: Canlı Skor / Forum / Analiz / Oranlar
+ * Satırın genişliğine yayılırlar; yazı boyutu ekranla orantılı.
+ */
+#homeModeBox {
+    display: flex;
+    flex: 1;
+    gap: .35em;
+    min-width: 0;
+    margin-right: .35em;
+    font-size: min(16px, 3.4vw);
+}
+
+#homeModeBox button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: .55em .3em;
+    border: 1px solid #d5d8de;
+    border-radius: 10px;
+    background: white;
+    font-size: inherit;
+    font-weight: 800;
+    color: #444;
+    white-space: nowrap;
+}
+
+#homeModeBox button.active {
+    border-color: #1a73e8;
+    background: #eef4ff;
+    color: #1a73e8;
+}
+
+/*
+ * GÜN SEÇİMİ (sadece Canlı Skor sayfasında)
+ * Sekmelerin altında yana kaydırılan gün düğmeleri.
+ */
+/* Forum sıralama satırı */
+#forumSort {
+    display: flex;
+    gap: .4em;
+    margin: 0 0 10px;
+    font-size: 13px;
+}
+
+#forumSort button {
+    padding: .45em 1em;
+    border: 1px solid #d5d8de;
+    border-radius: 999px;
+    background: white;
+    font-size: inherit;
+    font-weight: 700;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+#forumSort button.active {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
+}
+
+#dayRow {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    margin: 0 0 8px;
+}
+
+#dayBox {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: .4em;
+    overflow-x: auto;
+    scrollbar-width: none;
+    font-size: 13px;
+}
+
+#dayBox::-webkit-scrollbar {
+    display: none;
+}
+
+#dayBox button {
+    flex: none;
+    padding: .4em .9em;
+    border: 1px solid #d5d8de;
+    border-radius: 999px;
+    background: white;
+    font-size: inherit;
+    font-weight: 700;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+#dayBox button.active {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
+}
+
+/* "Canlı" ya da arama açıkken gün seçimi kullanılmaz: soluk görünür */
+#liveTools.no-day #dayBox {
+    opacity: .45;
+}
+
+/* Gün düğmelerinin iki yanındaki oklar: önceki / sonraki gün */
+.day-arrow {
+    flex: none;
+    width: 1em;
+    height: 1.4em;
+    padding: 0;
+    background: none;
+    color: #1d2340;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.day-arrow:disabled {
+    opacity: .25;
+}
+
+/* Sağdaki takvim düğmesi */
+#calendarBtn {
+    position: relative;
+    flex: none;
+    width: 2.4em;
+    height: 2.4em;
+    padding: 0;
+    border: 1px solid #d5d8de;
+    border-radius: 50%;
+    background: white;
+    color: #1d2340;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+#calendarBtn svg {
+    width: 1.35em;
+    height: 1.35em;
+}
+
+/* Tarayıcının tarih seçicisi düğmenin altında, görünmez durur */
+#calendarInput {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* İkinci satır: Canlı | Ligler | Arama */
+#toolRow {
+    display: flex;
+    align-items: center;
+    gap: .45em;
+    margin: 0 0 10px;
+    font-size: 13px;
+}
+
+#liveOnlyBtn,
+#leagueFilterBtn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    height: 2.5em;
+    padding: 0 1.5em;
+    border: 1px solid #d5d8de;
+    border-radius: 999px;
+    background: white;
+    font-size: inherit;
+    font-weight: 700;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+/* Canlı düğmesindeki kırmızı nokta */
+#liveOnlyBtn::before {
+    content: '';
+    width: .5em;
+    height: .5em;
+    border-radius: 50%;
+    background: #d93025;
+}
+
+#liveOnlyBtn.active {
+    border-color: #d93025;
+    background: #d93025;
+    color: white;
+}
+
+#liveOnlyBtn.active::before {
+    background: white;
+    animation: blink 1.2s ease-in-out infinite;
+}
+
+#leagueFilterBtn.active {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
+}
+
+#leagueFilterBtn .caret {
+    font-size: .85em;
+}
+
+/* Ligler menüsü: işaret kutulu liste */
+#leagueFilterBox {
+    position: relative;
+    flex: none;
+}
+
+#leagueMenu {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + .35em);
+    z-index: 6;
+    min-width: 13em;
+    padding: .3em 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.22);
+}
+
+#leagueMenu.open {
+    display: block;
+}
+
+#leagueMenu label {
+    display: flex;
+    align-items: center;
+    gap: .6em;
+    padding: .65em .9em;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2340;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#leagueMenu label + label {
+    border-top: 1px solid #f0f1f4;
+}
+
+#leagueMenu input {
+    width: 1.1em;
+    height: 1.1em;
+    margin: 0;
+    accent-color: #1d2340;
+}
+
+#leagueMenu small {
+    margin-left: auto;
+    font-weight: 600;
+    color: #8a8f9c;
+}
+
+/* Arama kutusu: satırın kalanını doldurur */
+#searchBox {
+    flex: 0 1 11.5em;
+    min-width: 0;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: .35em;
+    height: 2.5em;
+    padding: 0 .7em;
+    border: 1px solid #d5d8de;
+    border-radius: 999px;
+    background: white;
+    color: #8a8f9c;
+}
+
+#searchBox:focus-within {
+    border-color: #1a73e8;
+}
+
+#searchBox svg {
+    flex: none;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+#searchInput {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1d2340;
+}
+
+/* Arama ve canlı listesinde satırın üstündeki tarih */
+.score-date {
+    grid-column: 1 / -1;
+    margin-bottom: -.3em;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8a8f9c;
+}
+
+/* Canlı maç olan günün düğmesinde küçük kırmızı nokta */
+#dayBox button.has-live::after {
+    content: '';
+    display: inline-block;
+    width: .45em;
+    height: .45em;
+    margin-left: .4em;
+    vertical-align: middle;
+    border-radius: 50%;
+    background: #d93025;
+}
+
+/*
+ * CANLI SKOR LİSTESİ (tek satırlık maçlar, lig lig)
+ */
+.league-block {
+    margin-bottom: .9em;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.10);
+    overflow: hidden;
+}
+
+.league-head {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    padding: .6em .9em;
+    background: #1d2340;
+    font-size: 13px;
+    font-weight: 800;
+    color: white;
+}
+
+.league-head span {
+    font-weight: 600;
+    color: #c3c8d6;
+}
+
+/* Ülke bayrağı (kodla çizilmiş) */
+.flag {
+    flex: none;
+    width: 1.5em;
+    height: 1em;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.25);
+}
+
+/* Tek satır: durum | ev sahibi | skor | deplasman */
+.score-row {
+    display: grid;
+    grid-template-columns: 2.4em 1fr auto 1fr;
+    align-items: center;
+    gap: .5em;
+    width: 100%;
+    padding: .7em .7em;
+    border-radius: 0;
+    background: white;
+    border-bottom: 1px solid #f1f2f5;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2340;
+}
+
+.score-row:last-child {
+    border-bottom: 0;
+}
+
+.score-row:active {
+    background: #f4f6fa;
+}
+
+.score-status {
+    font-size: 12px;
+    font-weight: 800;
+    color: #6b7080;
+}
+
+.score-status.live {
+    color: #d93025;
+}
+
+.score-team {
+    display: flex;
+    align-items: center;
+    gap: .4em;
+    min-width: 0;
+}
+
+.score-team.home {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.score-team span:not(.crest) {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.score-team.lost span:not(.crest) {
+    color: #8a8f9c;
+}
+
+.score-mid {
+    min-width: 3.4em;
+    padding: .2em .45em;
+    text-align: center;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.score-mid.live {
+    color: #d93025;
+}
+
+/* Menü düğmesi: simge üstteki alanın sağ kenarıyla aynı hizada */
+#menuBtn {
+    flex: none;
+    width: 32px;
+    height: 40px;
+    padding: 0;
+    background: none;
+    color: #333;
+    font-size: 24px;
+    text-align: right;
+}
+
+/* SAĞ ÜST MENÜ */
+#homeMenu {
+    position: absolute;
+    right: var(--side-gap);
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    min-width: 210px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.25);
+    overflow: hidden;
+}
+
+#homeMenu.open {
+    display: flex;
+}
+
+#homeMenu button {
+    flex: none;
+    background: none;
+    border-radius: 0;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 15px;
+    font-weight: normal;
+    color: #222;
+    border-bottom: 1px solid #eee;
+}
+
+#homeMenu button:last-child {
+    border-bottom: 0;
+}
+
+#homeMenu #menuClose {
+    background: #d93025;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+}
+
+/*
+ * ANA SAYFANIN DÖRT SAYFASI
+ * Yan yana dururlar; şerit sağa sola kayarak seçili olanı gösterir.
+ * Parmakla çekilirken yandaki sayfa da görünür.
+ */
+#homePager {
+    overflow-x: clip;
+}
+
+#homeTrack {
+    --page-gap: 3em;
+
+    display: flex;
+    align-items: flex-start;
+    gap: var(--page-gap);
+    width: calc(400% + 3 * var(--page-gap));
+    transform: translateX(calc(
+        var(--page, 0) * (-100% / 4 - var(--page-gap) / 4) + var(--swipe-x, 0px)
+    ));
+    transition: transform .28s ease;
+}
+
+#homeMain.swiping #homeTrack {
+    transition: none;
+}
+
+.home-page {
+    flex: none;
+    width: calc((100% - 3 * var(--page-gap)) / 4);
+    min-width: 0;
+}
+
+/* Geçiş yokken görünmeyen sayfalar yer kaplamaz. */
+#homeTrack:not(.both) .home-page:not(.current) {
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+/* Hafta başlığı ("7. Hafta") */
+.week-title {
+    margin: 14px 4px 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #6b7080;
+    letter-spacing: .02em;
+}
+
+.week-title:first-child {
+    margin-top: 4px;
+}
+
+.home-empty {
+    margin: 30px 10px;
+    text-align: center;
+    font-size: 15px;
+    color: #777;
+}
+
+/* -----------------------------
+   MAÇ KARTI
+   Üstte hafta ve saat, ortada iki takım ve skor,
+   altta ayraçla ayrılmış yorum / beğeni / beğenmeme.
+----------------------------- */
+
+.match-card {
+    display: block;
+    width: 100%;
+    padding: .75em .9em .7em;
+    margin-bottom: .75em;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.10);
+    text-align: left;
+    font-size: 14px;
+    font-weight: normal;
+    color: #222;
+}
+
+.match-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .45em;
+    font-size: .857em;
+    font-weight: 600;
+    color: #6b7080;
+}
+
+/* Maçın durumu: CANLI 63' / MS / saat */
+.match-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .35em;
+    font-weight: 800;
+}
+
+.match-status.live {
+    color: #d93025;
+}
+
+.match-status.live::before {
+    content: '';
+    width: .55em;
+    height: .55em;
+    border-radius: 50%;
+    background: #d93025;
+    animation: blink 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+    50% { opacity: .25; }
+}
+
+.match-status.done {
+    color: #444;
+}
+
+.match-status.upcoming {
+    color: #1a73e8;
+}
+
+.team-row {
+    display: flex;
+    align-items: center;
+    gap: .6em;
+    padding: .2em 0;
+}
+
+.team-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 1.07em;
+    font-weight: 700;
+    color: #1d2340;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Kaybeden takım biraz soluk */
+.team-row.lost .team-name,
+.team-row.lost .team-score {
+    color: #8a8f9c;
+    font-weight: 600;
+}
+
+.team-score {
+    flex: none;
+    min-width: 1.4em;
+    text-align: right;
+    font-size: 1.2em;
+    font-weight: 800;
+    color: #1d2340;
+}
+
+/*
+ * Takım arması yerine: takım renklerinde yuvarlak ve kısa adı.
+ * (Gerçek armalar kullanılmaz.)
+ */
+.crest {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.7em;
+    height: 2.7em;
+    border-radius: 50%;
+    font-size: .56em;
+    font-weight: 800;
+    letter-spacing: -.02em;
+
+    /* İnce çerçeve: beyaz formalı takımlar da beyaz kartta görünsün */
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+
+/* Alttaki satır: yorum, beğeni, beğenmeme (üstünde ince ayraç) */
+.match-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.1em;
+    margin-top: .5em;
+    padding-top: calc(.5em + 1px);
+    border-top: 1px solid #e6e8ee;
+    font-size: .857em;
+    font-weight: 600;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+.stat {
+    display: inline-flex;
+    align-items: center;
+    gap: .35em;
+}
+
+.stat svg {
+    width: 1.15em;
+    height: 1.15em;
+}
+
+.stat.comment {
+    position: relative;
+    padding-right: calc(1.5em + 1px);
+    margin-right: calc(.4em + 1px);
+}
+
+.stat.comment svg {
+    width: 1.25em;
+    height: 1.25em;
+}
+
+/* Yorum ile beğeni arasındaki dik ayraç */
+.stat.comment::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 15%;
+    height: 70%;
+    border-right: 1px solid #d9dce4;
+}
+
+.stat.like {
+    margin-right: calc(.25em + 3px);
+}
+
+.stat.like svg,
+.stat.dislike svg {
+    width: 1.4em;
+    height: 1.4em;
+}
+
+.stat.like svg    { color: #16a34a; }
+.stat.dislike svg { color: #dc2626; }
+
+/* Oranlar sayfasındaki 1 / X / 2 kutuları */
+.odds-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .5em;
+    margin-top: .55em;
+}
+
+.odd {
+    padding: .45em 0;
+    border-radius: 10px;
+    background: #f1f3f7;
+    text-align: center;
+}
+
+.odd span {
+    display: block;
+    font-size: .78em;
+    font-weight: 600;
+    color: #6b7080;
+}
+
+.odd b {
+    font-size: 1.05em;
+    color: #1d2340;
+}
+
+/* -----------------------------
+   BOŞ SAYFA
+   Mavi top ile alttan açılır (inşaat uygulamasındaki
+   haritanın yeri; şimdilik boş).
+----------------------------- */
+
+#emptyLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    background: #f4f5f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa0ab;
+    font-size: 15px;
+
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform .32s ease, visibility 0s linear .32s;
+}
+
+body[data-tab="empty"] #emptyLayer {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform .32s ease, visibility 0s;
+}
+
+/* -----------------------------
+   ALT DÜĞME (mavi top)
+----------------------------- */
+
+.alt-menu {
+    position: fixed;
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 19;
+}
+
+.ac-kapa {
+    flex: none;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 5px solid #fff;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #3d8dff 0%, #1f6ff2 100%);
+    box-shadow: 0 10px 24px rgba(37, 117, 252, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s ease, box-shadow .2s ease;
+}
+
+.ac-kapa:active { transform: scale(.94); }
+
+.ac-kapa svg {
+    width: 26px;
+    height: 26px;
+    transition: transform .3s ease;
+}
+
+body[data-tab="empty"] .ac-kapa svg {
+    transform: rotate(180deg);
+}
+
+/* -----------------------------
+   MAÇ SAYFASI
+   Tüm ekranı kaplar. Üstte skor alanı, altta yukarı
+   çekilebilen bölüm ve parmakla kayan dört sekme.
+----------------------------- */
+
+#detailSheet {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: #f4f5f7;
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility 0s linear .28s;
+}
+
+#detailSheet.open {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform .28s ease, visibility 0s;
+}
+
+#detailInner {
+    position: relative;
+    width: 100%;
+    max-width: var(--content-width);
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    box-shadow: 0 0 20px rgba(0,0,0,.12);
+}
+
+/* Skor alanı */
+#scoreBoard {
+    position: relative;
+    flex: none;
+    height: 38%;
+    min-height: 15em;
+    padding: 4.2em 1em 1em;
+    color: white;
+    background:
+        linear-gradient(180deg, rgba(8, 20, 40, .2), rgba(8, 20, 40, .65)),
+        repeating-linear-gradient(90deg, #2f7d43 0 10%, #2a7340 10% 20%);
+}
+
+#detailCloseBtn {
+    position: absolute;
+    top: 12px;
+    z-index: 2;
+    height: 40px;
+    background: rgba(0,0,0,.4);
+    color: white;
+}
+
+#detailCloseBtn {
+    right: 12px;
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 18px;
+}
+
+.sb-league {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: .85;
+}
+
+.sb-teams {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: .5em;
+    margin-top: 1em;
+}
+
+.sb-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .45em;
+    min-width: 0;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.sb-team .crest {
+    font-size: .9em;
+    width: 3.6em;
+    height: 3.6em;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.85);
+}
+
+.sb-team span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+#sbScore {
+    text-align: center;
+}
+
+#sbScoreText {
+    font-size: 2.6em;
+    font-weight: 800;
+    letter-spacing: .04em;
+    line-height: 1;
+}
+
+#sbStatus {
+    margin-top: .35em;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+#sbStatus.live {
+    color: #ffb4ad;
+}
+
+/*
+ * ALT BÖLÜM (başlık + sekmeler + içerik)
+ * Başlığından tutulup yukarı çekilince skor alanının
+ * üzerine biner; skorun hemen altına kadar çıkar.
+ */
+#detailPanel {
+    position: relative;
+    z-index: 3;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-top: calc(-1 * var(--lift, 0px));
+    background: white;
+}
+
+#detailHead {
+    flex: none;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#detailGrip {
+    width: 2.6em;
+    height: .3em;
+    margin: .55em auto .2em;
+    border-radius: 1em;
+    background: #cfd3da;
+}
+
+#detailTabs {
+    display: flex;
+    padding: 0 10px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#detailTabs button {
+    flex: 1;
+    background: none;
+    border-radius: 0;
+    color: #666;
+    font-size: 14px;
+    padding: 12px 4px;
+    border-bottom: 3px solid transparent;
+}
+
+#detailTabs button.active {
+    color: #1a73e8;
+    border-bottom-color: #1a73e8;
+}
+
+#detailBody {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#detailTrack {
+    display: flex;
+    width: 400%;
+    height: 100%;
+    transition: transform .28s ease;
+}
+
+#detailTrack.dragging {
+    transition: none;
+}
+
+.tab-page {
+    flex: none;
+    width: 25%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px 18px 40px;
+    touch-action: pan-y;
+}
+
+.tab-empty {
+    margin: 0;
+    font-size: 14px;
+    color: #777;
+}
+
+/* Özet: maçın olayları, ev sahibi solda, deplasman sağda */
+.event {
+    display: grid;
+    grid-template-columns: 1fr 3em 1fr;
+    align-items: center;
+    padding: .55em 0;
+    border-bottom: 1px solid #f0f1f4;
+    font-size: 14px;
+}
+
+.event .minute {
+    text-align: center;
+    font-weight: 800;
+    color: #6b7080;
+}
+
+.event .home {
+    text-align: right;
+}
+
+.event-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    font-weight: 600;
+    color: #1d2340;
+}
+
+.card-icon {
+    display: inline-block;
+    width: .7em;
+    height: .95em;
+    border-radius: 2px;
+    background: #f5c518;
+}
+
+.card-icon.red {
+    background: #d93025;
+}
+
+.half-line {
+    margin: .7em 0 .2em;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #9aa0ab;
+}
+
+/* İstatistik çubukları */
+.stat-line {
+    margin-bottom: 1em;
+}
+
+.stat-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: .35em;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1d2340;
+}
+
+.stat-top span:nth-child(2) {
+    font-weight: 600;
+    color: #6b7080;
+}
+
+.stat-bars {
+    display: flex;
+    gap: 4px;
+    height: 7px;
+}
+
+.stat-bars div {
+    border-radius: 4px;
+    background: #e3e6ec;
+}
+
+.stat-bars .h { background: #1f6ff2; }
+.stat-bars .a { background: #f59e0b; }
+
+/* Oranlar sekmesi */
+.odds-title {
+    margin: 0 0 .5em;
+    font-size: 13px;
+    font-weight: 800;
+    color: #6b7080;
+}
+
+.odds-block {
+    margin-bottom: 1.2em;
+}
+
+.odds-block .odds-row {
+    font-size: 15px;
+}
+
+.odds-note {
+    margin-top: 1.5em;
+    font-size: 12px;
+    color: #9aa0ab;
+}
+
+</style>
+</head>
+<body data-tab="home">
+
+<!-- ANA SAYFA -->
+<div id="homePage">
+    <nav id="homeMenu">
+        <button data-go="live">Canlı Skor</button>
+        <button data-go="forum">Forum</button>
+        <button data-go="analysis">Analiz</button>
+        <button data-go="odds">Oranlar</button>
+        <button id="menuClose">Kapat</button>
+    </nav>
+
+    <main id="homeMain">
+        <div id="homeBanner">
+            <div class="banner-text">
+                <div class="banner-title">Canlı Skor</div>
+                <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
+            </div>
+        </div>
+
+        <div id="homeTitleRow">
+            <div id="homeModeBox">
+                <button data-mode="live" class="active">Canlı Skor</button>
+                <button data-mode="forum">Forum</button>
+                <button data-mode="analysis">Analiz</button>
+                <button data-mode="odds">Oranlar</button>
+            </div>
+            <button id="menuBtn" aria-label="Menü">☰</button>
+        </div>
+
+        <!-- CANLI SKOR ARAÇLARI: gün seçimi, canlı / ligler / arama -->
+        <div id="liveTools">
+            <div id="dayRow">
+                <button class="day-arrow" id="dayPrev" aria-label="Önceki gün">‹</button>
+                <div id="dayBox"></div>
+                <button class="day-arrow" id="dayNext" aria-label="Sonraki gün">›</button>
+                <button id="calendarBtn" aria-label="Tarih seç">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/>
+                        <path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/>
+                    </svg>
+                    <input id="calendarInput" type="date" tabindex="-1" aria-hidden="true">
+                </button>
+            </div>
+
+            <div id="toolRow">
+                <button id="liveOnlyBtn">Canlı</button>
+
+                <div id="leagueFilterBox">
+                    <button id="leagueFilterBtn">Ligler <span class="caret">▾</span></button>
+                    <div id="leagueMenu"></div>
+                </div>
+
+                <label id="searchBox">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
+                    </svg>
+                    <input id="searchInput" type="search" placeholder="Takım ara" autocomplete="off">
+                </label>
+            </div>
+        </div>
+
+        <div id="homePager">
+        <div id="homeTrack" style="--page: 0">
+            <div class="home-page current" data-page="live"><div id="liveList"></div></div>
+            <div class="home-page" data-page="forum">
+                <div id="forumSort">
+                    <button data-sort="popular" class="active">Popüler</button>
+                    <button data-sort="league">Lige göre</button>
+                    <button data-sort="time">Saate göre</button>
+                </div>
+                <div id="forumList"></div>
+            </div>
+            <div class="home-page" data-page="analysis">
+                <p class="home-empty">Analizler yakında burada olacak.</p>
+            </div>
+            <div class="home-page" data-page="odds"><div id="oddsList"></div></div>
+        </div>
+        </div>
+    </main>
+</div>
+
+<!-- BOŞ SAYFA (mavi top ile açılır) -->
+<div id="emptyLayer">Bu sayfa şimdilik boş.</div>
+
+<!-- ALT DÜĞME -->
+<nav class="alt-menu" aria-label="Alt menü">
+    <button class="ac-kapa" id="acKapa" type="button" aria-label="Sayfayı aç">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 15 12 9 18 15"></polyline>
+        </svg>
+    </button>
+</nav>
+
+<!-- MAÇ SAYFASI -->
+<div id="detailSheet">
+<div id="detailInner">
+
+    <div id="scoreBoard">
+        <button id="detailCloseBtn" aria-label="Kapat">✕</button>
+
+        <div class="sb-league" id="sbLeague"></div>
+
+        <div class="sb-teams">
+            <div class="sb-team" id="sbHome"></div>
+            <div id="sbScore">
+                <div id="sbScoreText"></div>
+                <div id="sbStatus"></div>
+            </div>
+            <div class="sb-team" id="sbAway"></div>
+        </div>
+    </div>
+
+    <div id="detailPanel">
+        <div id="detailHead">
+            <div id="detailGrip"></div>
+            <div id="detailTabs">
+                <button data-tab="summary">Özet</button>
+                <button data-tab="stats">İstatistik</button>
+                <button data-tab="odds">Oranlar</button>
+                <button data-tab="comments">Yorumlar</button>
+            </div>
+        </div>
+
+        <div id="detailBody">
+        <div id="detailTrack">
+            <div class="tab-page" data-page="summary"><div id="summaryBox"></div></div>
+            <div class="tab-page" data-page="stats"><div id="statsBox"></div></div>
+            <div class="tab-page" data-page="odds"><div id="oddsBox"></div></div>
+            <div class="tab-page" data-page="comments">
+                <p class="tab-empty">Yorumlar yakında eklenecek.</p>
+            </div>
+        </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+
+/* =================================================
+   !!! SAHTE VERİ - GERÇEK API BAĞLANINCA KALDIRILACAK !!!
+   -------------------------------------------------
+   Premier Lig ve Süper Lig 2026-27 için uydurma maçlar:
+   1-6. haftalar oynanmış, 7. haftada birkaç maç canlı,
+   diğerleri oynanacak.
+   Skorlar, olaylar, istatistikler, oranlar ve yorum /
+   beğeni sayıları rastgele üretilir (her açılışta aynı
+   çıksın diye sabit bir tohumla).
+================================================= */
+
+/* Takımlar: ad, kısa ad, renkler, güç (sadece sahte skor üretmek için) */
+const PL_TEAMS = [
+    { name: 'Arsenal',           short: 'ARS', bg: '#db0007', fg: '#fff', power: 88 },
+    { name: 'Aston Villa',       short: 'AVL', bg: '#670e36', fg: '#95bfe5', power: 78 },
+    { name: 'Bournemouth',       short: 'BOU', bg: '#da291c', fg: '#000', power: 72 },
+    { name: 'Brentford',         short: 'BRE', bg: '#e30613', fg: '#fff', power: 72 },
+    { name: 'Brighton',          short: 'BHA', bg: '#0057b8', fg: '#fff', power: 74 },
+    { name: 'Chelsea',           short: 'CHE', bg: '#034694', fg: '#fff', power: 82 },
+    { name: 'Coventry City',     short: 'COV', bg: '#59cbe8', fg: '#000', power: 64 },
+    { name: 'Crystal Palace',    short: 'CRY', bg: '#1b458f', fg: '#c4122e', power: 72 },
+    { name: 'Everton',           short: 'EVE', bg: '#003399', fg: '#fff', power: 70 },
+    { name: 'Fulham',            short: 'FUL', bg: '#ffffff', fg: '#000', power: 70 },
+    { name: 'Hull City',         short: 'HUL', bg: '#f5a12d', fg: '#000', power: 62 },
+    { name: 'Ipswich Town',      short: 'IPS', bg: '#3a64a3', fg: '#fff', power: 64 },
+    { name: 'Leeds United',      short: 'LEE', bg: '#ffffff', fg: '#1d428a', power: 67 },
+    { name: 'Liverpool',         short: 'LIV', bg: '#c8102e', fg: '#fff', power: 87 },
+    { name: 'Manchester City',   short: 'MCI', bg: '#6cabdd', fg: '#1c2c5b', power: 86 },
+    { name: 'Manchester United', short: 'MUN', bg: '#da291c', fg: '#fbe122', power: 78 },
+    { name: 'Newcastle',         short: 'NEW', bg: '#241f20', fg: '#fff', power: 80 },
+    { name: 'Nottingham Forest', short: 'NFO', bg: '#dd0000', fg: '#fff', power: 72 },
+    { name: 'Sunderland',        short: 'SUN', bg: '#eb172b', fg: '#fff', power: 66 },
+    { name: 'Tottenham Hotspur', short: 'TOT', bg: '#132257', fg: '#fff', power: 77 }
+];
+
+const SL_TEAMS = [
+    { name: 'Galatasaray',     short: 'GS',  bg: '#a90432', fg: '#fdb912', power: 86 },
+    { name: 'Fenerbahçe',      short: 'FB',  bg: '#002d72', fg: '#ffed00', power: 84 },
+    { name: 'Beşiktaş',        short: 'BJK', bg: '#111111', fg: '#ffffff', power: 79 },
+    { name: 'Trabzonspor',     short: 'TS',  bg: '#7a1f3d', fg: '#5cb8e6', power: 77 },
+    { name: 'Başakşehir',      short: 'İBF', bg: '#1d3a6e', fg: '#f26522', power: 72 },
+    { name: 'Göztepe',         short: 'GÖZ', bg: '#ffd200', fg: '#e30613', power: 72 },
+    { name: 'Samsunspor',      short: 'SAM', bg: '#e30613', fg: '#ffffff', power: 71 },
+    { name: 'Kasımpaşa',       short: 'KAS', bg: '#003da5', fg: '#ffffff', power: 66 },
+    { name: 'Eyüpspor',        short: 'EYP', bg: '#5c2d91', fg: '#ffd200', power: 66 },
+    { name: 'Çaykur Rizespor', short: 'RİZ', bg: '#00843d', fg: '#ffffff', power: 67 },
+    { name: 'Konyaspor',       short: 'KON', bg: '#007a3d', fg: '#ffffff', power: 66 },
+    { name: 'Kocaelispor',     short: 'KOC', bg: '#111111', fg: '#3bb54a', power: 65 },
+    { name: 'Alanyaspor',      short: 'ALA', bg: '#f28c00', fg: '#00843d', power: 67 },
+    { name: 'Gaziantep FK',    short: 'GFK', bg: '#d71920', fg: '#111111', power: 66 },
+    { name: 'Gençlerbirliği',  short: 'GB',  bg: '#e30613', fg: '#111111', power: 63 },
+    { name: 'Erzurumspor FK',  short: 'ERZ', bg: '#004b93', fg: '#ffffff', power: 62 },
+    { name: 'Amedspor',        short: 'AMD', bg: '#007a3d', fg: '#e30613', power: 62 },
+    { name: 'Çorum FK',        short: 'ÇOR', bg: '#c8102e', fg: '#111111', power: 60 }
+];
+
+/* Sabit tohumlu rastgele sayı üreticisi (her açılışta aynı veri) */
+function seededRandom(seed) {
+    return function () {
+        seed |= 0;
+        seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+}
+
+const rand = seededRandom(20262027);
+
+function randInt(min, max) {
+    return min + Math.floor(rand() * (max - min + 1));
+}
+
+/* Ortalaması lambda olan rastgele gol sayısı */
+function poisson(lambda) {
+    const limit = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+
+    do {
+        k++;
+        p *= rand();
+    } while (p > limit);
+
+    return k - 1;
+}
+
+const PLAYED_WEEKS = 6;
+const CURRENT_WEEK = 7;
+
+/*
+ * LİGLER
+ * weekDates : haftaların ilk günü (Eylül ve Ekim'de milli ara var)
+ * kickoffs  : [ilk günden kaç gün sonra, saat], haftanın her maçı için
+ * live      : 7. haftada canlı gösterilen maçlar ve dakikaları (sahte)
+ * todayDone : 7. haftada bugün erken oynanıp bitmiş sayılan maçlar
+ * todayLater: 7. haftada bugün biraz sonra başlayacak sayılan maçlar
+ * (Böylece "Bugün"de canlı, bitmiş ve başlamamış maçlar birlikte görünür.)
+ */
+const LEAGUES = [
+    {
+        id: 'pl',
+        name: 'Premier Lig',
+        country: 'İngiltere',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="30" height="20" fill="#fff"/>' +
+            '<rect x="12.5" width="5" height="20" fill="#ce1124"/>' +
+            '<rect y="7.5" width="30" height="5" fill="#ce1124"/></svg>',
+        teams: PL_TEAMS,
+        weekDates: [
+            '2026-08-22', '2026-08-29', '2026-09-12', '2026-09-19',
+            '2026-09-26', '2026-10-03', '2026-10-17'
+        ],
+        kickoffs: [
+            [0, '14:30'], [0, '17:00'], [0, '17:00'], [0, '17:00'], [0, '17:00'],
+            [0, '19:30'], [1, '16:00'], [1, '16:00'], [1, '18:30'], [2, '22:00']
+        ],
+        live: { 0: 63, 1: 27 },
+        todayDone: [2],
+        todayLater: [3]
+    },
+    {
+        id: 'sl',
+        name: 'Süper Lig',
+        country: 'Türkiye',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="30" height="20" fill="#e30a17"/>' +
+            '<circle cx="11.25" cy="10" r="5" fill="#fff"/>' +
+            '<circle cx="12.5" cy="10" r="4" fill="#e30a17"/>' +
+            '<polygon fill="#fff" points="16.6,10 21.9,8.27 18.62,12.78 18.62,7.22 21.9,11.73"/></svg>',
+        teams: SL_TEAMS,
+        weekDates: [
+            '2026-08-14', '2026-08-21', '2026-08-28', '2026-09-11',
+            '2026-09-18', '2026-10-02', '2026-10-16'
+        ],
+        kickoffs: [
+            [0, '20:00'], [1, '14:30'], [1, '17:00'], [1, '20:00'], [2, '14:30'],
+            [2, '17:00'], [2, '20:00'], [3, '19:00'], [3, '20:00']
+        ],
+        live: { 0: 71 },
+        todayDone: [1],
+        todayLater: [2]
+    }
+];
+
+/* Kazanma / beraberlik / kaybetme olasılığından basit oranlar */
+function makeOdds(home, away) {
+
+    const diff = (home.power + 4 - away.power) / 25;
+
+    let pHome = 0.45 + diff * 0.5;
+    let pAway = 0.30 - diff * 0.45;
+
+    pHome = Math.min(0.85, Math.max(0.08, pHome));
+    pAway = Math.min(0.80, Math.max(0.06, pAway));
+
+    let pDraw = Math.max(0.12, 1 - pHome - pAway);
+
+    const sum = pHome + pDraw + pAway;
+    const margin = 1.07;
+
+    const odd = p => Math.max(1.05, (1 / (p / sum * margin))).toFixed(2);
+
+    const over = 0.5 + (home.power + away.power - 150) / 120;
+
+    return {
+        home: odd(pHome),
+        draw: odd(pDraw),
+        away: odd(pAway),
+        over: odd(Math.min(0.8, Math.max(0.3, over))),
+        under: odd(Math.min(0.7, Math.max(0.2, 1 - over)))
+    };
+}
+
+/* Bir maçın olayları: goller (dakikalarıyla) ve sarı / kırmızı kartlar */
+function makeEvents(homeGoals, awayGoals, maxMinute) {
+
+    const events = [];
+
+    const add = (side, type, count) => {
+        for (let i = 0; i < count; i++)
+            events.push({ side: side, type: type, minute: randInt(2, maxMinute) });
+    };
+
+    add('home', 'goal', homeGoals);
+    add('away', 'goal', awayGoals);
+    add('home', 'yellow', randInt(0, 3));
+    add('away', 'yellow', randInt(0, 3));
+
+    if (rand() < 0.08)
+        add(rand() < 0.5 ? 'home' : 'away', 'red', 1);
+
+    return events.sort((a, b) => a.minute - b.minute);
+}
+
+/* Maç istatistikleri (gollerle uyumlu) */
+function makeStats(home, away, homeGoals, awayGoals, ratio) {
+
+    const possession = Math.round(
+        Math.min(72, Math.max(28, 50 + (home.power - away.power) * 0.8 + randInt(-6, 6)))
+    );
+
+    const side = (goals, strength) => {
+        const shots = Math.round((randInt(6, 12) + strength / 12) * ratio);
+        const onTarget = Math.max(goals, Math.round(shots * (0.3 + rand() * 0.2)));
+        return {
+            shots: Math.max(shots, onTarget),
+            onTarget: onTarget,
+            corners: Math.round(randInt(2, 8) * ratio),
+            fouls: Math.round(randInt(7, 14) * ratio)
+        };
+    };
+
+    return {
+        possession: [possession, 100 - possession],
+        home: side(homeGoals, home.power),
+        away: side(awayGoals, away.power)
+    };
+}
+
+/* Fikstür: "daire yöntemi" ile her hafta herkes bir maç yapar. */
+function makeMatches(league) {
+
+    const TEAMS = league.teams;
+    const ids = TEAMS.map((team, index) => index);
+    const matches = [];
+
+    for (let week = 1; week <= CURRENT_WEEK; week++) {
+
+        for (let i = 0; i < ids.length / 2; i++) {
+
+            let a = ids[i];
+            let b = ids[ids.length - 1 - i];
+
+            /* Ev sahipliği haftadan haftaya değişsin */
+            if ((week + i) % 2 === 0)
+                [a, b] = [b, a];
+
+            const home = TEAMS[a];
+            const away = TEAMS[b];
+
+            const [dayOffset, time] = league.kickoffs[i];
+            const date = new Date(league.weekDates[week - 1] + 'T' + time + ':00+03:00');
+            date.setDate(date.getDate() + dayOffset);
+
+            const match = {
+                id: league.id + '-' + week + '-' + (i + 1),
+                league: league,
+                week: week,
+                date: date,
+                home: home,
+                away: away,
+                odds: makeOdds(home, away),
+                comments: randInt(1, 40),
+                likes: randInt(1, 60),
+                dislikes: randInt(0, 25)
+            };
+
+            const liveMinute = week === CURRENT_WEEK ? league.live[i] : undefined;
+            const doneToday = week === CURRENT_WEEK && league.todayDone.includes(i);
+            const laterToday = week === CURRENT_WEEK && league.todayLater.includes(i);
+
+            /* Bugün biraz sonra başlayacak (gün bitmeden) */
+            if (laterToday) {
+                const start = new Date(Date.now() + 45 * 60000);
+                start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5, 0, 0);
+                const endOfDay = new Date();
+                endOfDay.setHours(23, 55, 0, 0);
+                match.date = start > endOfDay ? endOfDay : start;
+            }
+
+            if (week <= PLAYED_WEEKS || liveMinute || doneToday) {
+
+                const minute = liveMinute || 90;
+                const ratio = minute / 90;
+
+                const homeGoals = poisson((1.35 + (home.power - away.power) / 30) * ratio);
+                const awayGoals = poisson((1.05 + (away.power - home.power) / 30) * ratio);
+
+                match.status = liveMinute ? 'live' : 'done';
+
+                /* Canlı maç "şu an" oynanıyor: başlama saati dakikası kadar önce */
+                if (liveMinute) {
+                    match.date = new Date(Date.now() - (liveMinute + 15) * 60000);
+                    match.date.setSeconds(0, 0);
+                }
+
+                /* Bugün erken oynanmış: yaklaşık 3 saat önce başlamış */
+                if (doneToday) {
+                    match.date = new Date(Date.now() - 3 * 3600000);
+                    match.date.setMinutes(Math.floor(match.date.getMinutes() / 15) * 15, 0, 0);
+
+                    if (dayKey(match.date) !== dayKey(new Date())) {
+                        match.date = new Date();
+                        match.date.setHours(0, 30, 0, 0);
+                    }
+                }
+                match.minute = minute;
+                match.score = [homeGoals, awayGoals];
+                match.events = makeEvents(homeGoals, awayGoals, minute);
+                match.stats = makeStats(home, away, homeGoals, awayGoals, ratio);
+
+            } else {
+
+                match.status = 'upcoming';
+            }
+
+            matches.push(match);
+        }
+
+        /* İlk takım sabit kalır, diğerleri bir sıra döner. */
+        ids.splice(1, 0, ids.pop());
+    }
+
+    return matches;
+}
+
+const MATCHES = LEAGUES.flatMap(makeMatches);
+const MATCH_BY_ID = new Map(MATCHES.map(match => [match.id, match]));
+
+
+/* =================================================
+   YARDIMCILAR
+================================================= */
+
+const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+function formatDate(date) {
+    return DAYS[date.getDay()] + ' ' + date.getDate() + ' ' + MONTHS[date.getMonth()];
+}
+
+function formatTime(date) {
+    return String(date.getHours()).padStart(2, '0') + ':' +
+        String(date.getMinutes()).padStart(2, '0');
+}
+
+function crest(team) {
+    const el = document.createElement('span');
+    el.className = 'crest';
+    el.style.background = team.bg;
+    el.style.color = team.fg;
+    el.textContent = team.short;
+    return el;
+}
+
+/* "CANLI 63'" / "MS" / "17:00" */
+function statusText(match) {
+    if (match.status === 'live') return "CANLI " + match.minute + "'";
+    if (match.status === 'done') return 'MS';
+    return formatTime(match.date);
+}
+
+const ICONS = {
+    comment:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/>' +
+        '<path d="M7.5 9h9"/><path d="M7.5 13h6"/></svg>',
+    like:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M7 11v9H4.5a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 4.5 11z"/>' +
+        '<path d="M7 11l3.5-7a2 2 0 0 1 2.5 2.4L12.3 10H18a2 2 0 0 1 2 2.3l-1.1 6A2 2 0 0 1 16.9 20H7"/></svg>',
+    dislike:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<g transform="rotate(180 12 12)">' +
+        '<path d="M7 11v9H4.5a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 4.5 11z"/>' +
+        '<path d="M7 11l3.5-7a2 2 0 0 1 2.5 2.4L12.3 10H18a2 2 0 0 1 2 2.3l-1.1 6A2 2 0 0 1 16.9 20H7"/></g></svg>'
+};
+
+
+/* =================================================
+   MAÇ KARTI
+================================================= */
+
+function matchCard(match, options = {}) {
+
+    const card = document.createElement('button');
+    card.className = 'match-card';
+
+    /* Üst satır: hafta ve tarih solda, durum sağda */
+    const head = document.createElement('div');
+    head.className = 'match-head';
+
+    const when = document.createElement('span');
+    when.textContent = match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
+
+    const status = document.createElement('span');
+    status.className = 'match-status ' + match.status;
+    status.textContent = statusText(match);
+
+    head.appendChild(when);
+    head.appendChild(status);
+    card.appendChild(head);
+
+    /* İki takım ve skorları */
+    [['home', 0], ['away', 1]].forEach(([side, index]) => {
+
+        const row = document.createElement('div');
+        row.className = 'team-row';
+
+        if (match.score && match.status === 'done' &&
+            match.score[index] < match.score[1 - index]) {
+            row.classList.add('lost');
+        }
+
+        const name = document.createElement('span');
+        name.className = 'team-name';
+        name.textContent = match[side].name;
+
+        const score = document.createElement('span');
+        score.className = 'team-score';
+        score.textContent = match.score ? match.score[index] : '';
+
+        row.appendChild(crest(match[side]));
+        row.appendChild(name);
+        row.appendChild(score);
+        card.appendChild(row);
+    });
+
+    /* Oranlar sayfasında 1 / X / 2 */
+    if (options.odds)
+        card.appendChild(oddsRow(match, ['1', 'X', '2'], ['home', 'draw', 'away']));
+
+    /* Alt satır: yorum | beğeni, beğenmeme (şimdilik sahte, çalışmaz) */
+    const stats = document.createElement('div');
+    stats.className = 'match-stats';
+
+    [
+        ['comment', match.comments + ' yorum'],
+        ['like', match.likes],
+        ['dislike', match.dislikes]
+    ].forEach(([kind, value]) => {
+        const stat = document.createElement('span');
+        stat.className = 'stat ' + kind;
+        stat.innerHTML = ICONS[kind];
+        stat.appendChild(document.createTextNode(String(value)));
+        stats.appendChild(stat);
+    });
+
+    card.appendChild(stats);
+
+    card.addEventListener('click', () => openDetail(match.id));
+
+    return card;
+}
+
+function oddsRow(match, labels, keys) {
+
+    const row = document.createElement('div');
+    row.className = 'odds-row';
+
+    labels.forEach((label, i) => {
+        const box = document.createElement('div');
+        box.className = 'odd';
+        box.innerHTML = '<span></span><b></b>';
+        box.querySelector('span').textContent = label;
+        box.querySelector('b').textContent = match.odds[keys[i]];
+        row.appendChild(box);
+    });
+
+    if (labels.length === 2)
+        row.style.gridTemplateColumns = 'repeat(2, 1fr)';
+
+    return row;
+}
+
+function weekTitle(text) {
+    const el = document.createElement('div');
+    el.className = 'week-title';
+    el.textContent = text;
+    return el;
+}
+
+
+/* =================================================
+   ANA SAYFA LİSTELERİ
+================================================= */
+
+/* Günün anahtarı: "2026-10-17" (telefonun saatine göre) */
+function dayKey(date) {
+    return date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0');
+}
+
+const TODAY = dayKey(new Date());
+
+/* Düğmedeki yazı: Dün / Bugün / Yarın ya da "Cmt 17 Eki" */
+function dayLabel(key) {
+
+    const date = new Date(key + 'T12:00:00');
+    const diff = Math.round((date - new Date(TODAY + 'T12:00:00')) / 86400000);
+
+    if (diff === 0) return 'Bugün';
+    if (diff === -1) return 'Dün';
+    if (diff === 1) return 'Yarın';
+
+    return formatDate(date);
+}
+
+let selectedDay = TODAY;
+
+/* Düğmelerdeki günler, sırayla (oklar için) */
+let dayKeys = [];
+
+/* Gün düğmeleri: maç olan günler + bugün */
+function renderDays() {
+
+    const box = document.getElementById('dayBox');
+    box.textContent = '';
+
+    const keys = new Set(MATCHES.map(m => dayKey(m.date)));
+    keys.add(TODAY);
+
+    /* Takvimden maçsız bir gün seçildiyse o da listede olsun */
+    keys.add(selectedDay);
+
+    Array.from(keys).sort().forEach(key => {
+
+        const button = document.createElement('button');
+        button.textContent = dayLabel(key);
+        button.dataset.day = key;
+        button.classList.toggle('active', key === selectedDay);
+        button.classList.toggle('has-live',
+            MATCHES.some(m => m.status === 'live' && dayKey(m.date) === key));
+
+        button.addEventListener('click', () => selectDay(key));
+
+        box.appendChild(button);
+    });
+
+    /* Oklar: ilk ve son günde pasif */
+    const list = Array.from(keys).sort();
+    const index = list.indexOf(selectedDay);
+
+    document.getElementById('dayPrev').disabled = index <= 0;
+    document.getElementById('dayNext').disabled = index >= list.length - 1;
+
+    dayKeys = list;
+
+    /* Seçili gün görünür olsun (ortada). */
+    const active = box.querySelector('button.active');
+
+    if (active)
+        box.scrollLeft = active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2;
+}
+
+/*
+ * Bir gün seçilir: "Canlı" ve arama kapanır, liste o güne döner.
+ * (Gün düğmeleri ve takvim kullanır.)
+ */
+function selectDay(key) {
+
+    selectedDay = key;
+    liveOnly = false;
+    searchInput.value = '';
+
+    renderDays();
+    renderLive();
+}
+
+/* Oklar: listede bir önceki / sonraki güne geçer */
+['dayPrev', 'dayNext'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('click', () => {
+
+        const next = dayKeys[dayKeys.indexOf(selectedDay) + (i === 0 ? -1 : 1)];
+
+        if (next)
+            selectDay(next);
+    });
+});
+
+/* Tek satırlık maç: durum | ev sahibi | skor | deplasman */
+function scoreRow(match, showDate) {
+
+    const row = document.createElement('button');
+    row.className = 'score-row';
+
+    /* Arama sonuçlarında maçın tarihi de yazar */
+    if (showDate) {
+        const date = document.createElement('span');
+        date.className = 'score-date';
+        date.textContent = dayLabel(dayKey(match.date)) + ' · ' + match.week + '. Hafta';
+        row.appendChild(date);
+    }
+
+    const status = document.createElement('span');
+    status.className = 'score-status' + (match.status === 'live' ? ' live' : '');
+    status.textContent =
+        match.status === 'live' ? match.minute + "'" :
+        match.status === 'done' ? 'MS' : formatTime(match.date);
+
+    const team = (side, index) => {
+
+        const el = document.createElement('span');
+        el.className = 'score-team ' + side;
+
+        if (match.status === 'done' && match.score[index] < match.score[1 - index])
+            el.classList.add('lost');
+
+        /* Tek satıra sığsın diye arma yok, sadece ad */
+        const name = document.createElement('span');
+        name.textContent = match[side].name;
+        el.appendChild(name);
+
+        return el;
+    };
+
+    const mid = document.createElement('span');
+    mid.className = 'score-mid' + (match.status === 'live' ? ' live' : '');
+    mid.textContent = match.score ? match.score[0] + ' - ' + match.score[1] : '-';
+
+    row.appendChild(status);
+    row.appendChild(team('home', 0));
+    row.appendChild(mid);
+    row.appendChild(team('away', 1));
+
+    row.addEventListener('click', () => openDetail(match.id));
+
+    return row;
+}
+
+/*
+ * CANLI SKOR SÜZGEÇLERİ
+ * liveOnly       : "Canlı" açık; günden bağımsız, o an oynanan maçlar
+ * leagueSelected : Ligler menüsünde işaretli ligler (boşsa hepsi)
+ * arama          : takım adına göre; günden bağımsız, bütün maçlar
+ */
+let liveOnly = false;
+const leagueSelected = new Set();
+
+const searchInput = document.getElementById('searchInput');
+const liveTools = document.getElementById('liveTools');
+
+/* Türkçe harflere duyarlı küçük harf */
+function lower(text) {
+    return text.toLocaleLowerCase('tr');
+}
+
+/* Canlı Skor: lig lig, tek satır */
+function renderLive() {
+
+    const box = document.getElementById('liveList');
+    box.textContent = '';
+
+    const query = lower(searchInput.value.trim());
+    const searching = query.length > 0;
+
+    liveTools.classList.toggle('no-day', liveOnly || searching);
+    document.getElementById('liveOnlyBtn').classList.toggle('active', liveOnly);
+
+    let any = false;
+
+    LEAGUES.forEach(league => {
+
+        if (leagueSelected.size && !leagueSelected.has(league.id))
+            return;
+
+        let list = MATCHES.filter(m => m.league === league);
+
+        if (liveOnly)
+            list = list.filter(m => m.status === 'live');
+
+        if (searching) {
+            list = list.filter(m =>
+                lower(m.home.name).includes(query) || lower(m.away.name).includes(query)
+            );
+        }
+
+        if (!liveOnly && !searching)
+            list = list.filter(m => dayKey(m.date) === selectedDay);
+
+        /* Aramada en yeni maç üstte, diğerlerinde saat sırasıyla */
+        list.sort((a, b) => searching ? b.date - a.date : a.date - b.date);
+
+        if (!list.length)
+            return;
+
+        any = true;
+
+        const block = document.createElement('div');
+        block.className = 'league-block';
+
+        const head = document.createElement('div');
+        head.className = 'league-head';
+        head.innerHTML = league.flag + '<span></span>';
+        head.querySelector('span').textContent = league.country + ' · ';
+        head.appendChild(document.createTextNode(
+            league.name + (searching ? '' : ' · ' + list[0].week + '. Hafta')
+        ));
+
+        block.appendChild(head);
+        list.forEach(m => block.appendChild(scoreRow(m, searching)));
+        box.appendChild(block);
+    });
+
+    if (!any) {
+        const empty = document.createElement('p');
+        empty.className = 'home-empty';
+        empty.textContent =
+            searching ? '"' + searchInput.value.trim() + '" için maç bulunamadı.' :
+            liveOnly ? 'Şu an oynanan maç yok.' : 'Bu gün maç yok.';
+        box.appendChild(empty);
+    }
+}
+
+/* "Canlı": aç / kapat */
+document.getElementById('liveOnlyBtn').addEventListener('click', () => {
+
+    liveOnly = !liveOnly;
+
+    if (liveOnly)
+        searchInput.value = '';
+
+    renderLive();
+});
+
+/* Arama: yazdıkça süzülür */
+searchInput.addEventListener('input', () => {
+
+    if (searchInput.value.trim())
+        liveOnly = false;
+
+    renderLive();
+});
+
+/* Ligler menüsü */
+const leagueMenu = document.getElementById('leagueMenu');
+const leagueFilterBtn = document.getElementById('leagueFilterBtn');
+
+LEAGUES.forEach(league => {
+
+    const row = document.createElement('label');
+    const input = document.createElement('input');
+    const name = document.createElement('span');
+    const country = document.createElement('small');
+
+    input.type = 'checkbox';
+    name.textContent = league.name;
+    country.textContent = league.country;
+
+    input.addEventListener('change', () => {
+
+        if (input.checked)
+            leagueSelected.add(league.id);
+        else
+            leagueSelected.delete(league.id);
+
+        leagueFilterBtn.firstChild.textContent =
+            leagueSelected.size ? 'Ligler (' + leagueSelected.size + ') ' : 'Ligler ';
+        leagueFilterBtn.classList.toggle('active', leagueSelected.size > 0);
+
+        renderLive();
+    });
+
+    row.appendChild(input);
+    row.appendChild(name);
+    row.appendChild(country);
+    leagueMenu.appendChild(row);
+});
+
+function hideLeagueMenu() {
+    leagueMenu.classList.remove('open');
+}
+
+function closeLeagueMenu() {
+    hideLeagueMenu();
+    layerClosed('leagueMenu');
+}
+
+leagueFilterBtn.addEventListener('click', () => {
+
+    if (leagueMenu.classList.contains('open')) {
+        closeLeagueMenu();
+        return;
+    }
+
+    leagueMenu.classList.add('open');
+    layerOpened('leagueMenu');
+});
+
+/* Menünün dışına dokununca menü kapanır (dokunulan yer çalışmaz). */
+let leagueSwallow = false;
+
+document.addEventListener('pointerdown', event => {
+
+    leagueSwallow =
+        leagueMenu.classList.contains('open') &&
+        !event.target.closest('#leagueFilterBox');
+
+    if (leagueSwallow) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeLeagueMenu();
+    }
+
+}, true);
+
+document.addEventListener('click', event => {
+
+    if (!leagueSwallow)
+        return;
+
+    leagueSwallow = false;
+    event.preventDefault();
+    event.stopPropagation();
+
+}, true);
+
+/* Takvim: tarayıcının kendi tarih seçicisi açılır */
+const calendarInput = document.getElementById('calendarInput');
+
+document.getElementById('calendarBtn').addEventListener('click', () => {
+
+    calendarInput.value = selectedDay;
+
+    try {
+        calendarInput.showPicker();
+    } catch (error) {
+        calendarInput.focus();
+        calendarInput.click();
+    }
+});
+
+calendarInput.addEventListener('change', () => {
+    if (calendarInput.value)
+        selectDay(calendarInput.value);
+});
+
+/*
+ * FORUM
+ * Maçlar ayrıntılı kartlarla (yorum, beğeni...). Üstteki satırdan sıralanır:
+ *   popular : en çok yorum alan maçlar (oynanmış ya da canlı)
+ *   league  : lig lig, hafta hafta (önce canlı maçlar)
+ *   time    : en yeni maç üstte (önce canlı, sonra oynanacak, sonra oynanmış)
+ */
+let forumSort = 'popular';
+
+function renderForum() {
+
+    const box = document.getElementById('forumList');
+    box.textContent = '';
+
+    document.querySelectorAll('#forumSort button').forEach(button => {
+        button.classList.toggle('active', button.dataset.sort === forumSort);
+    });
+
+    if (forumSort === 'popular') {
+
+        box.appendChild(weekTitle('EN ÇOK KONUŞULANLAR'));
+
+        MATCHES
+            .filter(m => m.status !== 'upcoming')
+            .sort((a, b) => b.comments - a.comments)
+            .slice(0, 20)
+            .forEach(m => box.appendChild(matchCard(m)));
+
+        return;
+    }
+
+    if (forumSort === 'time') {
+
+        const order = { live: 0, upcoming: 1, done: 2 };
+
+        MATCHES
+            .slice()
+            .sort((a, b) =>
+                order[a.status] - order[b.status] ||
+                (a.status === 'upcoming' ? a.date - b.date : b.date - a.date)
+            )
+            .forEach(m => box.appendChild(matchCard(m)));
+
+        return;
+    }
+
+    const live = MATCHES.filter(m => m.status === 'live');
+
+    if (live.length) {
+        box.appendChild(weekTitle('ŞU AN OYNANIYOR'));
+        live.forEach(m => box.appendChild(matchCard(m)));
+    }
+
+    LEAGUES.forEach(league => {
+
+        for (let week = CURRENT_WEEK; week >= 1; week--) {
+
+            const list = MATCHES.filter(m =>
+                m.league === league && m.week === week && m.status !== 'live'
+            );
+
+            if (!list.length)
+                continue;
+
+            box.appendChild(weekTitle(
+                league.name.toLocaleUpperCase('tr') + ' · ' + week + '. HAFTA' +
+                (week === CURRENT_WEEK ? ' · OYNANACAK' : '')
+            ));
+
+            list.forEach(m => box.appendChild(matchCard(m)));
+        }
+    });
+}
+
+document.querySelectorAll('#forumSort button').forEach(button => {
+    button.addEventListener('click', () => {
+        forumSort = button.dataset.sort;
+        renderForum();
+    });
+});
+
+/* Oranlar: her ligin bu haftaki maçları, 1 / X / 2 ile */
+function renderOdds() {
+
+    const box = document.getElementById('oddsList');
+    box.textContent = '';
+
+    LEAGUES.forEach(league => {
+
+        box.appendChild(weekTitle(
+            league.name.toLocaleUpperCase('tr') + ' · ' + CURRENT_WEEK + '. HAFTA ORANLARI'
+        ));
+
+        MATCHES
+            .filter(m => m.league === league && m.week === CURRENT_WEEK)
+            .forEach(m => box.appendChild(matchCard(m, { odds: true })));
+    });
+}
+
+renderDays();
+renderLive();
+renderForum();
+renderOdds();
+
+
+/* =================================================
+   GERİ TUŞU
+   -------------------------------------------------
+   Açılan her katman (sayfa, menü...) geçmişe bir kayıt
+   ekler; geri tuşu en son açılanı kapatır.
+================================================= */
+
+const openLayers = [];
+let ignoredPops = 0;
+let waitingLayers = [];
+
+const LAYER_HIDERS = {
+    empty: () => setTab('home'),
+    leagueMenu: hideLeagueMenu,
+    homeMode: () => setHomeModeView('live'),
+    homeMenu: () => homeMenu.classList.remove('open'),
+    detail: hideDetail
+};
+
+function layerOpened(name, url) {
+
+    if (ignoredPops > 0) {
+        waitingLayers = waitingLayers.filter(item => item.name !== name);
+        waitingLayers.push({ name: name, url: url });
+        return;
+    }
+
+    try {
+
+        if (openLayers.includes(name)) {
+            if (url)
+                history.replaceState({ depth: openLayers.length }, '', url);
+            return;
+        }
+
+        openLayers.push(name);
+        history.pushState({ depth: openLayers.length }, '', url || location.href);
+
+    } catch (error) {}
+}
+
+function layerClosed(name) {
+
+    if (waitingLayers.some(item => item.name === name)) {
+        waitingLayers = waitingLayers.filter(item => item.name !== name);
+        return;
+    }
+
+    const index = openLayers.indexOf(name);
+
+    if (index < 0)
+        return;
+
+    openLayers.splice(index, 1);
+
+    ignoredPops++;
+    history.back();
+}
+
+window.addEventListener('popstate', event => {
+
+    if (ignoredPops > 0) {
+
+        ignoredPops--;
+
+        if (ignoredPops === 0) {
+            const waiting = waitingLayers;
+            waitingLayers = [];
+            waiting.forEach(item => layerOpened(item.name, item.url));
+        }
+
+        return;
+    }
+
+    const depth = (event.state && event.state.depth) || 0;
+
+    if (depth > openLayers.length) {
+        ignoredPops++;
+        history.go(openLayers.length - depth);
+        return;
+    }
+
+    while (openLayers.length > depth)
+        LAYER_HIDERS[openLayers.pop()]();
+});
+
+
+/* =================================================
+   SEKMELER (ana sayfa / boş sayfa) VE MAVİ TOP
+================================================= */
+
+const acKapa = document.getElementById('acKapa');
+
+function setTab(name) {
+    document.body.dataset.tab = name;
+    acKapa.setAttribute('aria-label', name === 'empty' ? 'Ana sayfaya dön' : 'Sayfayı aç');
+}
+
+function showTab(name) {
+
+    setTab(name);
+
+    if (name === 'empty')
+        layerOpened('empty');
+    else
+        layerClosed('empty');
+}
+
+acKapa.addEventListener('click', () => {
+    showTab(document.body.dataset.tab === 'empty' ? 'home' : 'empty');
+});
+
+
+/* =================================================
+   ANA SAYFANIN DÖRT SAYFASI
+================================================= */
+
+const HOME_ORDER = ['live', 'forum', 'analysis', 'odds'];
+
+const homeMain = document.getElementById('homeMain');
+const homeTrack = document.getElementById('homeTrack');
+const homeModeBox = document.getElementById('homeModeBox');
+
+let homeMode = 'live';
+let homeTrackTimer = null;
+
+/* Görünümü değiştirir (geri tuşuyla dönerken de kullanılır). */
+function setHomeModeView(mode) {
+
+    const index = HOME_ORDER.indexOf(mode);
+
+    homeMode = mode;
+
+    /* Gün seçimi, canlı, ligler ve arama sadece Canlı Skor'da */
+    liveTools.style.display = mode === 'live' ? '' : 'none';
+
+    homeModeBox.querySelectorAll('button').forEach(button => {
+        button.classList.toggle('active', button.dataset.mode === mode);
+    });
+
+    homeTrack.querySelectorAll('.home-page').forEach(page => {
+        page.classList.toggle('current', page.dataset.page === mode);
+    });
+
+    /* Kayarken iki sayfa da görünsün; bitince diğerleri gizlenir. */
+    homeTrack.classList.add('both');
+    homeTrack.style.setProperty('--page', index);
+
+    clearTimeout(homeTrackTimer);
+    homeTrackTimer = setTimeout(() => {
+        if (!homeSwipe)
+            homeTrack.classList.remove('both');
+    }, 320);
+}
+
+/*
+ * "Canlı Skor" ana sayfadır. Başka bir sayfa açıkken geri
+ * tuşu önce "Canlı Skor"a döner.
+ */
+function setHomeMode(mode) {
+
+    setHomeModeView(mode);
+    homeMain.scrollTop = Math.min(homeMain.scrollTop, homeTrack.offsetTop - 12);
+
+    if (mode === 'live')
+        layerClosed('homeMode');
+    else
+        layerOpened('homeMode');
+}
+
+homeModeBox.querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', () => setHomeMode(button.dataset.mode));
+});
+
+/* Yana kaydırma (inşaat uygulamasındakiyle aynı his) */
+const TAB_SWIPE_RATIO = 0.12;
+const TAB_FLICK_RATIO = 0.04;
+
+let homeSwipe = null;
+
+function setHomeSwipeX(px) {
+    homeTrack.style.setProperty('--swipe-x', px + 'px');
+}
+
+homeMain.addEventListener('touchstart', event => {
+
+    /* Gün düğmeleri kendi içinde yana kayar; sayfa değişmez. */
+    if (event.touches.length !== 1 || event.target.closest('#liveTools')) {
+        homeSwipe = null;
+        return;
+    }
+
+    homeSwipe = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+        time: Date.now(),
+        dx: 0,
+        horizontal: null
+    };
+
+}, { passive: true });
+
+homeMain.addEventListener('touchmove', event => {
+
+    if (!homeSwipe)
+        return;
+
+    const dx = event.touches[0].clientX - homeSwipe.x;
+    const dy = event.touches[0].clientY - homeSwipe.y;
+
+    if (homeSwipe.horizontal === null) {
+
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
+            return;
+
+        homeSwipe.horizontal = Math.abs(dx) > Math.abs(dy);
+
+        if (homeSwipe.horizontal) {
+            homeMain.classList.add('swiping');
+            homeTrack.classList.add('both');
+        }
+    }
+
+    if (!homeSwipe.horizontal)
+        return;
+
+    homeSwipe.dx = dx;
+
+    const index = HOME_ORDER.indexOf(homeMode);
+    const atEdge = (index === 0 && dx > 0) || (index === HOME_ORDER.length - 1 && dx < 0);
+
+    setHomeSwipeX(atEdge ? dx * 0.25 : dx);
+
+}, { passive: true });
+
+function endHomeSwipe() {
+
+    if (!homeSwipe)
+        return;
+
+    const swipe = homeSwipe;
+
+    homeSwipe = null;
+    homeMain.classList.remove('swiping');
+
+    if (!swipe.horizontal)
+        return;
+
+    const width = homeMain.clientWidth || 1;
+    const distance = Math.abs(swipe.dx);
+    const speed = distance / Math.max(1, Date.now() - swipe.time);
+
+    const enough =
+        distance > width * TAB_SWIPE_RATIO ||
+        (distance > width * TAB_FLICK_RATIO && speed > 0.3);
+
+    const next = HOME_ORDER[HOME_ORDER.indexOf(homeMode) + (swipe.dx < 0 ? 1 : -1)];
+
+    setHomeSwipeX(0);
+
+    if (enough && next)
+        setHomeMode(next);
+    else
+        setHomeModeView(homeMode);
+}
+
+homeMain.addEventListener('touchend', endHomeSwipe, { passive: true });
+homeMain.addEventListener('touchcancel', endHomeSwipe, { passive: true });
+
+
+/* =================================================
+   SAĞ ÜST MENÜ
+================================================= */
+
+const homeMenu = document.getElementById('homeMenu');
+const menuBtn = document.getElementById('menuBtn');
+
+function closeHomeMenu() {
+    homeMenu.classList.remove('open');
+    layerClosed('homeMenu');
+}
+
+menuBtn.addEventListener('click', event => {
+
+    event.stopPropagation();
+
+    if (homeMenu.classList.contains('open')) {
+        closeHomeMenu();
+        return;
+    }
+
+    /* Menü, düğmenin hemen altında açılır. */
+    const box = menuBtn.getBoundingClientRect();
+    homeMenu.style.top = (box.bottom + 2) + 'px';
+
+    homeMenu.classList.add('open');
+    layerOpened('homeMenu');
+});
+
+homeMenu.querySelectorAll('button[data-go]').forEach(button => {
+    button.addEventListener('click', () => {
+        closeHomeMenu();
+        setHomeMode(button.dataset.go);
+    });
+});
+
+document.getElementById('menuClose').addEventListener('click', closeHomeMenu);
+
+/* Menü açıkken başka bir yere dokunulursa sadece menü kapanır. */
+let menuSwallow = false;
+
+document.addEventListener('pointerdown', event => {
+
+    menuSwallow =
+        homeMenu.classList.contains('open') &&
+        !event.target.closest('#homeMenu, #menuBtn');
+
+    if (menuSwallow) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHomeMenu();
+    }
+
+}, true);
+
+document.addEventListener('click', event => {
+
+    if (!menuSwallow)
+        return;
+
+    menuSwallow = false;
+    event.preventDefault();
+    event.stopPropagation();
+
+}, true);
+
+homeMain.addEventListener('scroll', () => {
+    if (homeMenu.classList.contains('open'))
+        closeHomeMenu();
+});
+
+
+/* =================================================
+   MAÇ SAYFASI
+================================================= */
+
+const detailSheet = document.getElementById('detailSheet');
+const detailTrack = document.getElementById('detailTrack');
+const detailBody = document.getElementById('detailBody');
+const detailPanel = document.getElementById('detailPanel');
+const detailHead = document.getElementById('detailHead');
+const scoreBoard = document.getElementById('scoreBoard');
+
+const DETAIL_TABS = ['summary', 'stats', 'odds', 'comments'];
+const LINK_PREFIX = '#mac=';
+
+let detailId = null;
+let detailTab = 'summary';
+
+function sbTeam(el, team) {
+    el.textContent = '';
+    el.appendChild(crest(team));
+    const name = document.createElement('span');
+    name.textContent = team.name;
+    el.appendChild(name);
+}
+
+function renderSummary(match) {
+
+    const box = document.getElementById('summaryBox');
+    box.textContent = '';
+
+    if (!match.events) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'Maç ' + formatDate(match.date) + ' ' + formatTime(match.date) +
+            ' saatinde başlayacak.';
+        box.appendChild(p);
+        return;
+    }
+
+    let halfShown = false;
+
+    const events = match.events.slice();
+
+    if (events.some(e => e.minute <= 45)) {
+        const first = document.createElement('div');
+        first.className = 'half-line';
+        first.textContent = 'İLK YARI';
+        box.appendChild(first);
+    }
+
+    if (!events.length) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'Henüz önemli bir olay yok.';
+        box.appendChild(p);
+    }
+
+    events.forEach(event => {
+
+        if (!halfShown && event.minute > 45) {
+            halfShown = true;
+            const line = document.createElement('div');
+            line.className = 'half-line';
+            line.textContent = 'İKİNCİ YARI';
+            box.appendChild(line);
+        }
+
+        const row = document.createElement('div');
+        row.className = 'event';
+
+        const home = document.createElement('div');
+        home.className = 'home';
+        const minute = document.createElement('div');
+        minute.className = 'minute';
+        minute.textContent = event.minute + "'";
+        const away = document.createElement('div');
+
+        const label = document.createElement('span');
+        label.className = 'event-label';
+
+        if (event.type === 'goal') {
+            label.textContent = '⚽ Gol';
+        } else {
+            const icon = document.createElement('span');
+            icon.className = 'card-icon' + (event.type === 'red' ? ' red' : '');
+            label.appendChild(icon);
+            label.appendChild(document.createTextNode(
+                event.type === 'red' ? 'Kırmızı kart' : 'Sarı kart'
+            ));
+        }
+
+        (event.side === 'home' ? home : away).appendChild(label);
+
+        row.appendChild(home);
+        row.appendChild(minute);
+        row.appendChild(away);
+        box.appendChild(row);
+    });
+
+    if (match.status === 'done') {
+        const end = document.createElement('div');
+        end.className = 'half-line';
+        end.textContent = 'MAÇ SONU · ' + match.score[0] + ' - ' + match.score[1];
+        box.appendChild(end);
+    }
+}
+
+function renderStats(match) {
+
+    const box = document.getElementById('statsBox');
+    box.textContent = '';
+
+    if (!match.stats) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'İstatistikler maç başlayınca görünecek.';
+        box.appendChild(p);
+        return;
+    }
+
+    const s = match.stats;
+
+    const cards = side => match.events.filter(e => e.side === side && e.type !== 'goal').length;
+
+    [
+        ['Topla oynama', s.possession[0] + '%', s.possession[1] + '%', s.possession[0], s.possession[1]],
+        ['Şut', s.home.shots, s.away.shots],
+        ['İsabetli şut', s.home.onTarget, s.away.onTarget],
+        ['Korner', s.home.corners, s.away.corners],
+        ['Faul', s.home.fouls, s.away.fouls],
+        ['Kart', cards('home'), cards('away')]
+    ].forEach(([label, h, a, hv, av]) => {
+
+        hv = hv === undefined ? h : hv;
+        av = av === undefined ? a : av;
+
+        const total = (hv + av) || 1;
+
+        const line = document.createElement('div');
+        line.className = 'stat-line';
+
+        line.innerHTML =
+            '<div class="stat-top"><span></span><span></span><span></span></div>' +
+            '<div class="stat-bars"><div class="h"></div><div class="a"></div></div>';
+
+        const spans = line.querySelectorAll('.stat-top span');
+        spans[0].textContent = h;
+        spans[1].textContent = label;
+        spans[2].textContent = a;
+
+        const bars = line.querySelectorAll('.stat-bars div');
+        bars[0].style.flex = String(Math.max(hv, 0.001) / total);
+        bars[1].style.flex = String(Math.max(av, 0.001) / total);
+
+        box.appendChild(line);
+    });
+}
+
+function renderDetailOdds(match) {
+
+    const box = document.getElementById('oddsBox');
+    box.textContent = '';
+
+    const block = (title, labels, keys) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'odds-block';
+        const t = document.createElement('p');
+        t.className = 'odds-title';
+        t.textContent = title;
+        wrap.appendChild(t);
+        wrap.appendChild(oddsRow(match, labels, keys));
+        box.appendChild(wrap);
+    };
+
+    block('MAÇ SONUCU', ['1', 'X', '2'], ['home', 'draw', 'away']);
+    block('2,5 GOL ALT / ÜST', ['Alt', 'Üst'], ['under', 'over']);
+
+    const note = document.createElement('p');
+    note.className = 'odds-note';
+    note.textContent = 'Oranlar örnektir; gerçek değildir.';
+    box.appendChild(note);
+}
+
+function openDetail(id) {
+
+    const match = MATCH_BY_ID.get(id);
+
+    if (!match)
+        return;
+
+    detailId = id;
+
+    document.getElementById('sbLeague').textContent =
+        match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
+
+    sbTeam(document.getElementById('sbHome'), match.home);
+    sbTeam(document.getElementById('sbAway'), match.away);
+
+    document.getElementById('sbScoreText').textContent =
+        match.score ? match.score[0] + ' - ' + match.score[1] : formatTime(match.date);
+
+    const status = document.getElementById('sbStatus');
+    status.textContent =
+        match.status === 'live' ? "CANLI · " + match.minute + "'" :
+        match.status === 'done' ? 'MAÇ SONU' : 'OYNANACAK';
+    status.className = match.status === 'live' ? 'live' : '';
+
+    renderSummary(match);
+    renderStats(match);
+    renderDetailOdds(match);
+
+    /* Bölüm her açılışta aşağıda, ilk sekmede başlar. */
+    detailLift = 0;
+    detailPanel.style.setProperty('--lift', '0px');
+
+    detailTrack.classList.add('dragging');
+    setDetailTab('summary');
+    detailTrack.getBoundingClientRect();
+    detailTrack.classList.remove('dragging');
+
+    detailSheet.classList.add('open');
+
+    layerOpened('detail', LINK_PREFIX + encodeURIComponent(id));
+}
+
+function hideDetail() {
+    detailSheet.classList.remove('open');
+    detailId = null;
+}
+
+function closeDetail() {
+    hideDetail();
+    layerClosed('detail');
+}
+
+document.getElementById('detailCloseBtn').addEventListener('click', closeDetail);
+
+/* Sekmeler */
+function setDetailTab(name, keepScroll) {
+
+    detailTab = name;
+
+    detailSheet.querySelectorAll('#detailTabs button').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === name);
+    });
+
+    placeDetailTrack(0);
+
+    const page = detailSheet.querySelector('.tab-page[data-page="' + name + '"]');
+
+    if (page && !keepScroll)
+        page.scrollTop = 0;
+}
+
+function placeDetailTrack(dragPx) {
+    const index = DETAIL_TABS.indexOf(detailTab);
+    detailTrack.style.transform =
+        'translateX(calc(' + (-index * 25) + '% + ' + dragPx + 'px))';
+}
+
+detailSheet.querySelectorAll('#detailTabs button').forEach(button => {
+    button.addEventListener('click', () => setDetailTab(button.dataset.tab));
+});
+
+/* Sekmeler arası parmakla kaydırma */
+let tabSwipe = null;
+
+detailBody.addEventListener('touchstart', event => {
+
+    tabSwipe = event.touches.length === 1 ? {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+        time: Date.now(),
+        dx: 0,
+        horizontal: null
+    } : null;
+
+}, { passive: true });
+
+detailBody.addEventListener('touchmove', event => {
+
+    if (!tabSwipe)
+        return;
+
+    const dx = event.touches[0].clientX - tabSwipe.x;
+    const dy = event.touches[0].clientY - tabSwipe.y;
+
+    if (tabSwipe.horizontal === null) {
+
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
+            return;
+
+        tabSwipe.horizontal = Math.abs(dx) > Math.abs(dy);
+
+        if (tabSwipe.horizontal)
+            detailTrack.classList.add('dragging');
+    }
+
+    if (!tabSwipe.horizontal)
+        return;
+
+    const index = DETAIL_TABS.indexOf(detailTab);
+    const atEdge = (index === 0 && dx > 0) || (index === DETAIL_TABS.length - 1 && dx < 0);
+
+    tabSwipe.dx = dx;
+    placeDetailTrack(atEdge ? dx * 0.25 : dx);
+
+}, { passive: true });
+
+function endTabSwipe() {
+
+    if (!tabSwipe)
+        return;
+
+    const swipe = tabSwipe;
+
+    tabSwipe = null;
+    detailTrack.classList.remove('dragging');
+
+    if (!swipe.horizontal)
+        return;
+
+    const width = detailBody.clientWidth || 1;
+    const distance = Math.abs(swipe.dx);
+    const speed = distance / Math.max(1, Date.now() - swipe.time);
+
+    const enough =
+        distance > width * TAB_SWIPE_RATIO ||
+        (distance > width * TAB_FLICK_RATIO && speed > 0.3);
+
+    const next = DETAIL_TABS.indexOf(detailTab) + (swipe.dx < 0 ? 1 : -1);
+
+    if (enough && next >= 0 && next < DETAIL_TABS.length)
+        setDetailTab(DETAIL_TABS[next], true);
+    else
+        placeDetailTrack(0);
+}
+
+detailBody.addEventListener('touchend', endTabSwipe, { passive: true });
+detailBody.addEventListener('touchcancel', endTabSwipe, { passive: true });
+
+/* Bölümü yukarı çekme: skorun hemen altına kadar */
+let detailLift = 0;
+let liftDrag = null;
+let liftDragged = false;
+
+function maxDetailLift() {
+    const board = scoreBoard.getBoundingClientRect();
+    const score = document.getElementById('sbScore').getBoundingClientRect();
+    return Math.max(0, board.bottom - (score.bottom + 10));
+}
+
+function setDetailLift(value) {
+    detailLift = Math.max(0, Math.min(maxDetailLift(), value));
+    detailPanel.style.setProperty('--lift', detailLift + 'px');
+}
+
+detailHead.addEventListener('pointerdown', event => {
+    liftDrag = { y: event.clientY, lift: detailLift, moved: false };
+    liftDragged = false;
+});
+
+detailHead.addEventListener('pointermove', event => {
+
+    if (!liftDrag)
+        return;
+
+    const dy = liftDrag.y - event.clientY;
+
+    if (!liftDrag.moved) {
+
+        if (Math.abs(dy) < 8)
+            return;
+
+        liftDrag.moved = true;
+        liftDragged = true;
+
+        try {
+            detailHead.setPointerCapture(event.pointerId);
+        } catch (e) {}
+    }
+
+    setDetailLift(liftDrag.lift + dy);
+});
+
+['pointerup', 'pointercancel'].forEach(name => {
+    detailHead.addEventListener(name, () => { liftDrag = null; });
+});
+
+detailSheet.addEventListener('dragstart', event => event.preventDefault());
+
+/* Sürükleme bittiğinde altındaki sekme tıklanmış sayılmasın. */
+detailHead.addEventListener('click', event => {
+    if (liftDragged) {
+        liftDragged = false;
+        event.stopPropagation();
+        event.preventDefault();
+    }
+}, true);
+
+window.addEventListener('resize', () => {
+    if (detailId)
+        setDetailLift(detailLift);
+});
+
+document.addEventListener('keydown', event => {
+    if (detailId && event.key === 'Escape')
+        closeDetail();
+});
+
+/* Paylaşılan bağlantıyla açılış: #mac=... */
+(function openLinkedMatch() {
+
+    if (!location.hash.startsWith(LINK_PREFIX))
+        return;
+
+    const id = decodeURIComponent(location.hash.slice(LINK_PREFIX.length));
+
+    try {
+        history.replaceState(null, '', location.href.split('#')[0]);
+    } catch (error) {}
+
+    if (MATCH_BY_ID.has(id))
+        openDetail(id);
+})();
+
+</script>
+</body>
+</html>
