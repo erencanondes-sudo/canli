@@ -22,7 +22,12 @@
 
 <style>
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+
+    /* Dokunulan yerde telefonun mavi vurgusu çıkmasın */
+    -webkit-tap-highlight-color: transparent;
+}
 
 /*
  * İÇERİK GENİŞLİĞİ
@@ -216,18 +221,25 @@ button {
     gap: .4em;
     overflow-x: auto;
     scrollbar-width: none;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 #dayBox::-webkit-scrollbar {
     display: none;
 }
 
+/* İki satır: üstte gün (Cmt), altta tarih (17.10) */
 #dayBox button {
     flex: none;
-    padding: .4em .9em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+    min-width: 3.6em;
+    padding: .3em .6em;
     border: 1px solid #d5d8de;
-    border-radius: 999px;
+    border-radius: .9em;
     background: white;
     font-size: inherit;
     font-weight: 700;
@@ -266,8 +278,8 @@ button {
 #calendarBtn {
     position: relative;
     flex: none;
-    width: 2.4em;
-    height: 2.4em;
+    width: 2.6em;
+    height: 2.6em;
     padding: 0;
     border: 1px solid #d5d8de;
     border-radius: 50%;
@@ -298,19 +310,22 @@ button {
 #toolRow {
     display: flex;
     align-items: center;
-    gap: .45em;
+    gap: .3em;
     margin: 0 0 10px;
-    font-size: 13px;
+
+    /* Dar ekranda yazılar biraz küçülür, dört öğe tek satıra sığar */
+    font-size: min(12.5px, 3.3vw);
 }
 
 #liveOnlyBtn,
-#leagueFilterBtn {
+#leagueFilterBtn,
+#timeOrderBtn {
     flex: none;
     display: inline-flex;
     align-items: center;
     gap: .4em;
     height: 2.5em;
-    padding: 0 1.5em;
+    padding: 0 .75em;
     border: 1px solid #d5d8de;
     border-radius: 999px;
     background: white;
@@ -327,6 +342,12 @@ button {
     height: .5em;
     border-radius: 50%;
     background: #d93025;
+}
+
+#timeOrderBtn.active {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
 }
 
 #liveOnlyBtn.active {
@@ -346,8 +367,21 @@ button {
     color: white;
 }
 
+/* Canlı ve Ligler, Zaman düğmesinden kalan yeri alıp biraz geniştir */
+#liveOnlyBtn,
+#leagueFilterBtn {
+    padding: 0 1.25em;
+}
+
 #leagueFilterBtn .caret {
     font-size: .85em;
+}
+
+/* Zaman: uzun aşağı ok */
+#timeOrderBtn .time-arrow {
+    width: .5em;
+    height: 1.05em;
+    margin-left: .2em;
 }
 
 /* Ligler menüsü: işaret kutulu liste */
@@ -408,8 +442,44 @@ button {
 }
 
 #searchBox {
-    flex: 0 1 11.5em;
-    margin-left: auto;
+    flex: 1 1 6em;
+    gap: .25em;
+    padding: 0 .55em;
+}
+
+/* Dar ekranda büyüteç gizlenir; "Arama yap" yazısı sığsın */
+@media (max-width: 380px) {
+    #searchBox svg {
+        display: none;
+    }
+
+    #searchBox {
+        padding: 0 .4em;
+    }
+
+    #toolRow {
+        gap: .25em;
+    }
+}
+
+/*
+ * Canlı Skor satırındaki arama: büyüteç ve yazı kutunun ortasında.
+ * Kutu yazı kadar geniştir; yazdıkça büyür (en fazla kutu kadar).
+ */
+#searchBox {
+    justify-content: center;
+}
+
+/* Büyüteç yer kaplamış sayılmaz: "Arama yap" yazısı kutunun ortasına yakın durur */
+#searchBox svg {
+    margin-left: -.6em;
+}
+
+#searchBox input {
+    flex: 0 1 auto;
+    width: auto;
+    font-size: 1em;
+    field-sizing: content;
 }
 
 .search-box {
@@ -449,15 +519,22 @@ button {
 /* Arama ve canlı listesinde satırın üstündeki tarih */
 /* Satırın sağındaki zil */
 .score-bell {
-    width: 1.9em;
-    height: 1.5em;
-    padding: 0;
-    border-radius: 50%;
+    /*
+     * Dokunma alanı sola doğru geniştir (takım adının ucuna biner);
+     * zil simgesi yine sağdaki yerinde ve aynı boyda durur.
+     */
+    position: relative;
+    z-index: 1;
+    width: 2.9em;
+    height: 2.2em;
+    margin: -.35em 0 -.35em -1em;
+    padding: 0 .32em 0 0;
+    border-radius: 0;
     background: none;
     color: #9aa0ab;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
 }
 
 .score-bell svg {
@@ -483,23 +560,17 @@ button {
 }
 
 /* Canlı maç olan günün düğmesinde küçük kırmızı nokta */
-#dayBox button.has-live::after {
-    content: '';
-    display: inline-block;
-    width: .45em;
-    height: .45em;
-    margin-left: .4em;
-    vertical-align: middle;
-    border-radius: 50%;
-    background: #d93025;
+#dayBox button .day-date {
+    font-weight: 600;
 }
+
 
 /*
  * CANLI SKOR LİSTESİ (tek satırlık maçlar, lig lig)
  */
 .league-block {
     /* Gün ve araç satırlarından biraz daha geniş: iki yana taşar */
-    margin: 0 max(-2.5vw, -.75em) .9em;
+    margin: 0 max(-1.25vw, -.375em) .9em;
     background: white;
     border-radius: 16px;
     box-shadow: 0 1px 6px rgba(0,0,0,.10);
@@ -556,6 +627,20 @@ button {
 
 .score-row:active {
     background: #f4f6fa;
+}
+
+.score-row:focus {
+    outline: none;
+}
+
+/* Zile basılıp maç kaydedilince satır kısa bir an kırmızılaşır */
+.score-row.flash {
+    animation: savedFlash .5s ease-out;
+}
+
+@keyframes savedFlash {
+    0%   { background: #fbd5d1; }
+    100% { background: white; }
 }
 
 .score-status {
@@ -935,7 +1020,18 @@ button {
     position: fixed;
     inset: 0;
     z-index: 18;
-    background: #f4f5f7;
+
+    /*
+     * Açılırken ve kapanırken resmin üstü şeffaftır; kayan pencere
+     * resmin kendisiyle başlıyormuş gibi görünür. Resmin iki yanı ve
+     * altı gridir. Pencere yerine oturunca (.settled) her yer gri olur.
+     * --clear-top : resmin alt kenarına kadar olan yükseklik
+     * --side      : resmin iki yanındaki boşluk
+     */
+    background:
+        linear-gradient(#f4f5f7, #f4f5f7) 0 var(--clear-top, 0px) / 100% 100% no-repeat,
+        linear-gradient(#f4f5f7, #f4f5f7) 0 0 / var(--side, 0px) var(--clear-top, 0px) no-repeat,
+        linear-gradient(#f4f5f7, #f4f5f7) 100% 0 / var(--side, 0px) var(--clear-top, 0px) no-repeat;
     display: flex;
     flex-direction: column;
 
@@ -976,9 +1072,49 @@ button {
     color: #1a73e8;
 }
 
+/* Kayıtlı Maçlarım | Kuponlarım: yan yana iki sayfa, kayarak geçilir */
+#myPager {
+    overflow-x: clip;
+    margin: 0 max(-2.5vw, -.75em);
+    padding: 0 min(2.5vw, .75em);
+}
+
+#myTrack {
+    --page-gap: 3em;
+
+    display: flex;
+    align-items: flex-start;
+    gap: var(--page-gap);
+    width: calc(200% + var(--page-gap));
+    transform: translateX(calc(
+        var(--page, 0) * (-50% - var(--page-gap) / 2) + var(--swipe-x, 0px)
+    ));
+    transition: transform .28s ease;
+}
+
+#myMain.swiping #myTrack {
+    transition: none;
+}
+
+.my-page {
+    flex: none;
+    width: calc((100% - var(--page-gap)) / 2);
+    min-width: 0;
+}
+
+#myTrack:not(.both) .my-page:not(.current) {
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+}
+
 #mySaved .league-block {
     margin-left: max(-2.5vw, -.75em);
     margin-right: max(-2.5vw, -.75em);
+}
+
+#emptyLayer.settled {
+    background: #f4f5f7;
 }
 
 body[data-tab="empty"] #emptyLayer {
@@ -1393,12 +1529,14 @@ body[data-tab="empty"] .ac-kapa svg {
                     <div id="leagueMenu"></div>
                 </div>
 
+                <button id="timeOrderBtn">Zaman <svg class="time-arrow" viewBox="0 0 10 16" aria-hidden="true"><path d="M5 1.5v12M1.5 10l3.5 4 3.5-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
                 <label id="searchBox" class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
                     </svg>
-                    <input id="searchInput" type="search" placeholder="Takım ara" autocomplete="off">
+                    <input id="searchInput" type="search" placeholder="Arama yap" size="9" autocomplete="off">
                 </label>
             </div>
         </div>
@@ -1410,14 +1548,14 @@ body[data-tab="empty"] .ac-kapa svg {
                 <div id="forumSort">
                     <button data-sort="popular" class="active">Popüler</button>
                     <button data-sort="league">Lige göre</button>
-                    <button data-sort="time">Saate göre</button>
+                    <button data-sort="time">Zamana göre</button>
                 </div>
                 <label id="forumSearchBox" class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
                     </svg>
-                    <input id="forumSearchInput" type="search" placeholder="Takım ara" autocomplete="off">
+                    <input id="forumSearchInput" type="search" placeholder="Arama yap" autocomplete="off">
                 </label>
                 <div id="forumList"></div>
             </div>
@@ -1445,10 +1583,13 @@ body[data-tab="empty"] .ac-kapa svg {
             <button data-my="coupons">Kuponlarım</button>
         </div>
 
-        <div id="mySaved"></div>
-
-        <div id="myCoupons" hidden>
-            <p class="home-empty">Kuponların yakında burada olacak.</p>
+        <div id="myPager">
+        <div id="myTrack" style="--page: 0">
+            <div class="my-page current" data-my="saved"><div id="mySaved"></div></div>
+            <div class="my-page" data-my="coupons">
+                <p class="home-empty">Kuponların yakında burada olacak.</p>
+            </div>
+        </div>
         </div>
     </main>
 </div>
@@ -1868,9 +2009,26 @@ function toggleSaved(id) {
         localStorage.setItem(SAVED_KEY, JSON.stringify(Array.from(savedIds)));
     } catch (error) {}
 
-    /* Zillerin hepsi güncellensin */
-    renderLive();
-    renderSaved();
+    /* Aynı maçın bütün zilleri yerinde güncellenir (liste baştan çizilmez) */
+    document.querySelectorAll('.score-bell[data-id="' + id + '"]').forEach(bell => {
+        bell.classList.toggle('on', savedIds.has(id));
+    });
+
+    /* Kayıtlı Maçlarım sayfası açıksa satır hemen kalksın; değilse yenilensin */
+    if (document.body.dataset.tab !== 'empty' || savedIds.has(id))
+        renderSaved();
+    else
+        renderSavedLater();
+
+    return savedIds.has(id);
+}
+
+/* Kayıtlı sayfasında zil kapatılınca satır animasyondan sonra kalkar */
+let savedTimer = null;
+
+function renderSavedLater() {
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(renderSaved, 250);
 }
 
 
@@ -2089,11 +2247,23 @@ function renderDays() {
     Array.from(keys).sort().forEach(key => {
 
         const button = document.createElement('button');
-        button.textContent = dayLabel(key);
+        /* Üstte gün adı, altta gün.ay */
+        const date = new Date(key + 'T12:00:00');
+
+        const name = document.createElement('span');
+        name.className = 'day-name';
+        name.textContent = key === TODAY ? 'Bugün' : DAYS[date.getDay()];
+
+        const dm = document.createElement('span');
+        dm.className = 'day-date';
+        dm.textContent = String(date.getDate()).padStart(2, '0') + '.' +
+            String(date.getMonth() + 1).padStart(2, '0');
+
+        button.appendChild(name);
+        /* Bugünün düğmesinde yalnızca "Bugün" yazar, tarih yok */
+        if (key !== TODAY) button.appendChild(dm);
         button.dataset.day = key;
         button.classList.toggle('active', key === selectedDay);
-        button.classList.toggle('has-live',
-            MATCHES.some(m => m.status === 'live' && dayKey(m.date) === key));
 
         button.addEventListener('click', () => selectDay(key));
 
@@ -2142,7 +2312,7 @@ function selectDay(key) {
 });
 
 /* Tek satırlık maç: durum | ev sahibi | skor | deplasman */
-function scoreRow(match, showDate) {
+function scoreRow(match, showDate, showLeague) {
 
     /* Satırın içinde zil düğmesi olduğu için satır <button> değil */
     const row = document.createElement('div');
@@ -2151,10 +2321,13 @@ function scoreRow(match, showDate) {
     row.tabIndex = 0;
 
     /* Arama sonuçlarında maçın tarihi de yazar */
-    if (showDate) {
+    if (showDate || showLeague) {
         const date = document.createElement('span');
         date.className = 'score-date';
-        date.textContent = dayLabel(dayKey(match.date)) + ' · ' + match.week + '. Hafta';
+        date.textContent = [
+            showLeague ? match.league.name : '',
+            showDate ? dayLabel(dayKey(match.date)) + ' · ' + match.week + '. Hafta' : ''
+        ].filter(Boolean).join(' · ');
         row.appendChild(date);
     }
 
@@ -2196,13 +2369,23 @@ function scoreRow(match, showDate) {
     /* Zil: maçı kaydeder / kayıttan çıkarır (sarı = kayıtlı) */
     const bell = document.createElement('button');
     bell.className = 'score-bell';
+    bell.dataset.id = match.id;
     bell.setAttribute('aria-label', 'Maçı kaydet');
     bell.innerHTML = ICONS.bell;
     bell.classList.toggle('on', isSaved(match.id));
 
     bell.addEventListener('click', event => {
+
         event.stopPropagation();
-        toggleSaved(match.id);
+
+        const added = toggleSaved(match.id);
+
+        /* Eklenme animasyonu */
+        if (added) {
+            row.classList.remove('flash');
+            row.getBoundingClientRect();
+            row.classList.add('flash');
+        }
     });
 
     row.appendChild(bell);
@@ -2219,6 +2402,9 @@ function scoreRow(match, showDate) {
  * arama          : takım adına göre; günden bağımsız, bütün maçlar
  */
 let liveOnly = false;
+
+/* "Zaman" açık: ligler ayrılmadan saat sırasıyla */
+let timeOrder = false;
 const leagueSelected = new Set();
 
 const searchInput = document.getElementById('searchInput');
@@ -2241,14 +2427,19 @@ function renderLive() {
     liveTools.classList.toggle('no-day', liveOnly || searching);
     document.getElementById('liveOnlyBtn').classList.toggle('active', liveOnly);
 
+    document.getElementById('timeOrderBtn').classList.toggle('active', timeOrder);
+
     let any = false;
 
-    LEAGUES.forEach(league => {
+    /* Zamana göre: ligler ayrılmaz, tek kutuda saat sırasıyla */
+    const groups = timeOrder ? [null] : LEAGUES;
 
-        if (leagueSelected.size && !leagueSelected.has(league.id))
+    groups.forEach(league => {
+
+        if (league && leagueSelected.size && !leagueSelected.has(league.id))
             return;
 
-        let list = MATCHES.filter(m => m.league === league);
+        let list = MATCHES.filter(m => timeOrder || m.league === league);
 
         if (liveOnly)
             list = list.filter(m => m.status === 'live');
@@ -2258,6 +2449,9 @@ function renderLive() {
                 lower(m.home.name).includes(query) || lower(m.away.name).includes(query)
             );
         }
+
+        if (timeOrder && leagueSelected.size)
+            list = list.filter(m => leagueSelected.has(m.league.id));
 
         if (!liveOnly && !searching)
             list = list.filter(m => dayKey(m.date) === selectedDay);
@@ -2272,6 +2466,13 @@ function renderLive() {
 
         const block = document.createElement('div');
         block.className = 'league-block';
+
+        /* Zamana göre: başlık yok, her satırın üstünde ligi yazar */
+        if (!league) {
+            list.forEach(m => block.appendChild(scoreRow(m, searching, true)));
+            box.appendChild(block);
+            return;
+        }
 
         const head = document.createElement('div');
         head.className = 'league-head';
@@ -2304,6 +2505,12 @@ document.getElementById('liveOnlyBtn').addEventListener('click', () => {
     if (liveOnly)
         searchInput.value = '';
 
+    renderLive();
+});
+
+/* "Zamana göre": aç / kapat */
+document.getElementById('timeOrderBtn').addEventListener('click', () => {
+    timeOrder = !timeOrder;
     renderLive();
 });
 
@@ -2464,18 +2671,115 @@ function renderSaved() {
     }
 }
 
-document.querySelectorAll('#myTabs button').forEach(button => {
+const MY_ORDER = ['saved', 'coupons'];
+const myMain = document.getElementById('myMain');
+const myTrack = document.getElementById('myTrack');
 
-    button.addEventListener('click', () => {
+let myPage = 'saved';
+let myTrackTimer = null;
+let mySwipe = null;
 
-        document.querySelectorAll('#myTabs button').forEach(other => {
-            other.classList.toggle('active', other === button);
-        });
+function setMyPage(name) {
 
-        document.getElementById('mySaved').hidden = button.dataset.my !== 'saved';
-        document.getElementById('myCoupons').hidden = button.dataset.my !== 'coupons';
+    myPage = name;
+
+    document.querySelectorAll('#myTabs button').forEach(button => {
+        button.classList.toggle('active', button.dataset.my === name);
     });
+
+    myTrack.querySelectorAll('.my-page').forEach(page => {
+        page.classList.toggle('current', page.dataset.my === name);
+    });
+
+    myTrack.classList.add('both');
+    myTrack.style.setProperty('--page', MY_ORDER.indexOf(name));
+
+    clearTimeout(myTrackTimer);
+    myTrackTimer = setTimeout(() => {
+        if (!mySwipe)
+            myTrack.classList.remove('both');
+    }, 320);
+}
+
+document.querySelectorAll('#myTabs button').forEach(button => {
+    button.addEventListener('click', () => setMyPage(button.dataset.my));
 });
+
+/* Parmakla yana kaydırma (ana sayfadakiyle aynı his) */
+myMain.addEventListener('touchstart', event => {
+
+    mySwipe = event.touches.length === 1 ? {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+        time: Date.now(),
+        dx: 0,
+        horizontal: null
+    } : null;
+
+}, { passive: true });
+
+myMain.addEventListener('touchmove', event => {
+
+    if (!mySwipe)
+        return;
+
+    const dx = event.touches[0].clientX - mySwipe.x;
+    const dy = event.touches[0].clientY - mySwipe.y;
+
+    if (mySwipe.horizontal === null) {
+
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
+            return;
+
+        mySwipe.horizontal = Math.abs(dx) > Math.abs(dy);
+
+        if (mySwipe.horizontal) {
+            myMain.classList.add('swiping');
+            myTrack.classList.add('both');
+        }
+    }
+
+    if (!mySwipe.horizontal)
+        return;
+
+    mySwipe.dx = dx;
+
+    const index = MY_ORDER.indexOf(myPage);
+    const atEdge = (index === 0 && dx > 0) || (index === MY_ORDER.length - 1 && dx < 0);
+
+    myTrack.style.setProperty('--swipe-x', (atEdge ? dx * 0.25 : dx) + 'px');
+
+}, { passive: true });
+
+function endMySwipe() {
+
+    if (!mySwipe)
+        return;
+
+    const swipe = mySwipe;
+
+    mySwipe = null;
+    myMain.classList.remove('swiping');
+
+    if (!swipe.horizontal)
+        return;
+
+    const width = myMain.clientWidth || 1;
+    const distance = Math.abs(swipe.dx);
+    const speed = distance / Math.max(1, Date.now() - swipe.time);
+
+    const enough =
+        distance > width * TAB_SWIPE_RATIO ||
+        (distance > width * TAB_FLICK_RATIO && speed > 0.3);
+
+    const next = MY_ORDER[MY_ORDER.indexOf(myPage) + (swipe.dx < 0 ? 1 : -1)];
+
+    myTrack.style.setProperty('--swipe-x', '0px');
+    setMyPage(enough && next ? next : myPage);
+}
+
+myMain.addEventListener('touchend', endMySwipe, { passive: true });
+myMain.addEventListener('touchcancel', endMySwipe, { passive: true });
 
 /*
  * FORUM
@@ -2511,10 +2815,8 @@ function renderForum() {
 
     if (forumSort === 'popular') {
 
-        box.appendChild(weekTitle('EN ÇOK KONUŞULANLAR'));
-
         all
-            .filter(m => m.status !== 'upcoming')
+            .slice()
             .sort((a, b) => b.comments - a.comments)
             .slice(0, 20)
             .forEach(m => box.appendChild(matchCard(m)));
@@ -2539,10 +2841,7 @@ function renderForum() {
 
     const live = all.filter(m => m.status === 'live');
 
-    if (live.length) {
-        box.appendChild(weekTitle('ŞU AN OYNANIYOR'));
-        live.forEach(m => box.appendChild(matchCard(m)));
-    }
+    live.forEach(m => box.appendChild(matchCard(m)));
 
     LEAGUES.forEach(league => {
 
@@ -2694,7 +2993,29 @@ window.addEventListener('popstate', event => {
 
 const acKapa = document.getElementById('acKapa');
 
+const emptyLayer = document.getElementById('emptyLayer');
+let settleTimer = null;
+
+/* Penceredeki resmin alt kenarı, pencerenin üstünden kaç piksel aşağıda? */
+function markClearTop() {
+    const banner = emptyLayer.querySelector('.banner');
+    const main = document.getElementById('myMain');
+    const bottom = banner.offsetTop + banner.offsetHeight - main.scrollTop;
+    emptyLayer.style.setProperty('--clear-top', Math.max(0, bottom) + 'px');
+    emptyLayer.style.setProperty('--side', banner.getBoundingClientRect().left -
+        emptyLayer.getBoundingClientRect().left + 'px');
+}
+
 function setTab(name) {
+
+    /* Kayma başlamadan şeffaf üst ayarlanır; yerine oturunca gri olur. */
+    clearTimeout(settleTimer);
+    markClearTop();
+    emptyLayer.classList.remove('settled');
+
+    if (name === 'empty')
+        settleTimer = setTimeout(() => emptyLayer.classList.add('settled'), 340);
+
     document.body.dataset.tab = name;
     acKapa.setAttribute('aria-label', name === 'empty' ? 'Ana sayfaya dön' : 'Sayfayı aç');
 }
