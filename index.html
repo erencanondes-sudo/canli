@@ -1052,6 +1052,11 @@ button {
    altta ayraçla ayrılmış yorum / beğeni / beğenmeme.
 ----------------------------- */
 
+/* Forum'da her ikinci kart: arka plan (#f4f5f7) ile beyazın ortası */
+#forumList .match-card.zebra {
+    background: #fafafb;
+}
+
 .match-card {
     display: block;
     width: 100%;
@@ -3685,7 +3690,15 @@ const forumToolbar = buildTools(document.getElementById('forumTools'), forumStat
     render: () => renderForum()
 });
 
+/* Zebra: kartlar sırayla beyaz / arka planla beyaz arası */
 function renderForum() {
+    drawForum();
+    document.querySelectorAll('#forumList .match-card').forEach((card, i) => {
+        card.classList.toggle('zebra', i % 2 === 1);
+    });
+}
+
+function drawForum() {
 
     const box = document.getElementById('forumList');
     box.textContent = '';
