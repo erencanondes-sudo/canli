@@ -1257,6 +1257,26 @@ button {
 }
 
 /* ORANLAR KARTI: ev sahibi | 1 X 2 | deplasman, altında alt / üst satırları */
+/* Oranlar kartı üst satırı: solda bayrak + lig adı (silik), sağda tarih ve saat (bir tık küçük) */
+.odds-card .match-head {
+    /* Lig adı, bayrak, tarih ve saat: diğer kartlardan bir tık küçük */
+    font-size: .79em;
+}
+
+.oc-league {
+    display: inline-flex;
+    align-items: center;
+    gap: .45em;
+}
+
+.oc-league .flag {
+    box-shadow: 0 0 0 1px rgba(0,0,0,.12);
+}
+
+.odds-card .match-status.upcoming {
+    font-size: .92em;
+}
+
 /* Geniş ekranda (bilgisayar) takımlar ve oranlar çok yayılmasın: ortada, sınırlı */
 .oc-main,
 .oc-markets {
@@ -1272,7 +1292,9 @@ button {
 
     /* Takım adları ile ortadaki çizgi arasında biraz boşluk */
     gap: .8em;
-    margin-top: .2em;
+
+    /* Üstteki lig / tarih satırından biraz aralı */
+    margin-top: .7em;
 }
 
 .oc-team {
@@ -1362,9 +1384,15 @@ button {
     font-weight: 800;
 }
 
-/* Oranlar kartında armalar iki tık küçük (takım adı aynı) */
+/*
+ * Oranlar kartında armalar dört tık küçük (takım adı aynı).
+ * İçindeki kısaltma bir tık daha küçük; yuvarlağın boyu aynı kalır
+ * (2,7 × 0,40 = 3,18 × 0,34).
+ */
 .oc-team .crest {
-    font-size: .48em;
+    font-size: .34em;
+    width: 3.18em;
+    height: 3.18em;
 }
 
 /* -----------------------------
@@ -2950,12 +2978,17 @@ function oddsCard(match) {
     const head = document.createElement('div');
     head.className = 'match-head';
 
+    /* Solda bayrak ve lig adı (silik); sağda tarih ve saat ("Çar 21 Eki 20:00") */
     const when = document.createElement('span');
-    when.textContent = match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
+    when.className = 'oc-league';
+    when.innerHTML = match.league.flag + '<span></span>';
+    when.querySelector('span').textContent = match.league.name;
 
     const status = document.createElement('span');
     status.className = 'match-status ' + match.status;
-    status.textContent = statusText(match);
+    status.textContent = match.status === 'upcoming'
+        ? formatDate(match.date) + ' ' + formatTime(match.date)
+        : statusText(match);
 
     head.appendChild(when);
     head.appendChild(status);
