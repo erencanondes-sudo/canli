@@ -1267,7 +1267,9 @@ button {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: .5em;
+
+    /* Takım adları ile ortadaki çizgi arasında biraz boşluk */
+    gap: .8em;
     margin-top: .2em;
 }
 
@@ -1278,10 +1280,10 @@ button {
 
     /* İki takım da ortadaki çizgiye yaslı */
     justify-content: flex-end;
-    gap: .45em;
+    gap: .35em;
 
     /* Dar ekranda ad ve arma biraz küçülür, uzun adlar sığsın */
-    font-size: min(1em, 3.95vw);
+    font-size: min(1.07em, 3.9vw);
     font-weight: 700;
     color: #1d2340;
 }
@@ -1345,6 +1347,16 @@ button {
 
 .oc-market .odd span {
     display: inline;
+}
+
+/* Oranlar kartında oran yazısı iki tık küçük */
+.odds-card .odd b {
+    font-size: .91em;
+}
+
+/* Oranlar kartında armalar bir tık küçük (takım adı aynı) */
+.oc-team .crest {
+    font-size: .52em;
 }
 
 /* -----------------------------
