@@ -1052,9 +1052,9 @@ button {
    altta ayraçla ayrılmış yorum / beğeni / beğenmeme.
 ----------------------------- */
 
-/* Forum'da her ikinci kart: arka plan (#f4f5f7) ile beyazın ortası */
+/* Forum'da her ikinci kart: çok hafif gri (#fafafb ile beyazın ortası) */
 #forumList .match-card.zebra {
-    background: #fafafb;
+    background: #fcfcfd;
 }
 
 .match-card {
@@ -1254,6 +1254,99 @@ button {
     color: #1d2340;
 }
 
+/* ORANLAR KARTI: ev sahibi | 1 X 2 | deplasman, altında alt / üst satırları */
+/* Geniş ekranda (bilgisayar) takımlar ve oranlar çok yayılmasın: ortada, sınırlı */
+.oc-main,
+.oc-markets {
+    max-width: 26em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.oc-main {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: .5em;
+    margin-top: .2em;
+}
+
+.oc-team {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+
+    /* İki takım da ortadaki çizgiye yaslı */
+    justify-content: flex-end;
+    gap: .45em;
+
+    /* Dar ekranda ad ve arma biraz küçülür, uzun adlar sığsın */
+    font-size: min(1em, 3.95vw);
+    font-weight: 700;
+    color: #1d2340;
+}
+
+/* Deplasman: adı çizginin hemen sağında, arma onun sağında */
+.oc-team.away {
+    flex-direction: row-reverse;
+}
+
+.oc-mid {
+    font-weight: 800;
+    color: #8a8f9c;
+}
+
+.oc-mid.live {
+    color: #d93025;
+}
+
+.oc-team span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.oc-markets {
+    display: grid;
+    gap: .4em;
+    margin-top: .7em;
+    padding-top: .6em;
+    border-top: 1px solid #eef0f4;
+}
+
+.oc-market {
+    display: grid;
+    grid-template-columns: 5.4em 1fr 1fr;
+    align-items: center;
+    gap: .4em;
+}
+
+/* Maç sonucu satırı: üç kutu */
+.oc-market.three {
+    grid-template-columns: 5.4em 1fr 1fr 1fr;
+}
+
+.oc-label {
+    font-size: .86em;
+    font-weight: 700;
+    color: #555a66;
+}
+
+/* Alt / üst kutusu: ad solda, oran sağda (tek satır) */
+.oc-market .odd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .3em;
+    padding: .45em .55em;
+    white-space: nowrap;
+}
+
+.oc-market .odd span {
+    display: inline;
+}
+
 /* -----------------------------
    BOŞ SAYFA
    Mavi top ile alttan açılır (inşaat uygulamasındaki
@@ -1390,6 +1483,14 @@ body[data-tab="empty"] #emptyLayer {
     z-index: 18;
     margin: 0;
     pointer-events: none;
+}
+
+/* Alt menü penceresindeki resim: şimdilik mavi saha (sonra değişecek) */
+#emptyLayer .banner {
+    background:
+        radial-gradient(circle at 50% 50%, transparent 17%, rgba(255,255,255,.35) 17.4%, transparent 18%),
+        linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.35) 49.8%, rgba(255,255,255,.35) 50.2%, transparent 50.2%),
+        repeating-linear-gradient(90deg, #2f6fd8 0 10%, #2a64c6 10% 20%);
 }
 
 /* -----------------------------
@@ -2372,12 +2473,22 @@ function makeOdds(home, away) {
 
     const over = 0.5 + (home.power + away.power - 150) / 120;
 
+    /* Güçlü takımlar daha çok korner, denk maçlar daha çok kart */
+    const corner = 0.48 + (home.power + away.power - 150) / 200;
+    const card = 0.56 - Math.abs(home.power - away.power) / 60;
+
     return {
         home: odd(pHome),
         draw: odd(pDraw),
         away: odd(pAway),
         over: odd(Math.min(0.8, Math.max(0.3, over))),
-        under: odd(Math.min(0.7, Math.max(0.2, 1 - over)))
+        under: odd(Math.min(0.7, Math.max(0.2, 1 - over))),
+
+        /* Korner 9,5 ve kart 4,5 alt / üst */
+        cornerOver: odd(Math.min(0.75, Math.max(0.3, corner))),
+        cornerUnder: odd(Math.min(0.7, Math.max(0.25, 1 - corner))),
+        cardOver: odd(Math.min(0.7, Math.max(0.3, card))),
+        cardUnder: odd(Math.min(0.7, Math.max(0.3, 1 - card)))
     };
 }
 
@@ -2749,7 +2860,8 @@ function matchCard(match, options = {}) {
     /* Alt satır: yorum | beğeni, beğenmeme (şimdilik sahte, çalışmaz).
        Oranlar sayfasında yoktur. */
     if (options.odds) {
-        card.addEventListener('click', () => openDetail(match.id, 'comments'));
+        /* Oranlar'dan açılınca maç sayfası Oranlar sekmesinde */
+        card.addEventListener('click', () => openDetail(match.id, 'odds'));
         return card;
     }
 
@@ -2775,31 +2887,122 @@ function matchCard(match, options = {}) {
     return card;
 }
 
+/* Tek oran kutusu: üstte ad (1 / X / 2, 2,5 Üst...), altta oran.
+   pickable: basınca kupona eklenir / çıkarılır */
+function oddBox(match, label, key, pickable) {
+
+    const box = document.createElement('div');
+    box.className = 'odd';
+    box.innerHTML = '<span></span><b></b>';
+    box.querySelector('span').textContent = label;
+    box.querySelector('b').textContent = match.odds[key];
+
+    if (pickable) {
+        box.classList.add('pickable');
+        box.dataset.match = match.id;
+        box.dataset.key = key;
+        box.classList.toggle('picked', couponPicks.get(match.id) === key);
+        box.addEventListener('click', event => {
+            event.stopPropagation();
+            togglePick(match.id, key);
+        });
+    }
+
+    return box;
+}
+
+/*
+ * ORANLAR SEKMESİ KARTI
+ * Üstte lig / tarih / durum; ortada ev sahibi | 1 X 2 | deplasman;
+ * altta toplam gol, korner ve kart alt / üst.
+ */
+const ODDS_MARKETS = [
+    ['Toplam gol', '2,5', 'under', 'over'],
+    ['Korner', '9,5', 'cornerUnder', 'cornerOver'],
+    ['Toplam kart', '4,5', 'cardUnder', 'cardOver']
+];
+
+function oddsCard(match) {
+
+    const card = document.createElement('button');
+    card.className = 'match-card odds-card';
+
+    const head = document.createElement('div');
+    head.className = 'match-head';
+
+    const when = document.createElement('span');
+    when.textContent = match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
+
+    const status = document.createElement('span');
+    status.className = 'match-status ' + match.status;
+    status.textContent = statusText(match);
+
+    head.appendChild(when);
+    head.appendChild(status);
+    card.appendChild(head);
+
+    /* Ev sahibi | skor (canlıysa) ya da - | deplasman */
+    const main = document.createElement('div');
+    main.className = 'oc-main';
+
+    const team = side => {
+        const el = document.createElement('div');
+        el.className = 'oc-team ' + side;
+        el.appendChild(crest(match[side]));
+        const name = document.createElement('span');
+        name.textContent = match[side].mid || match[side].name;
+        el.appendChild(name);
+        return el;
+    };
+
+    const mid = document.createElement('span');
+    mid.className = 'oc-mid' + (match.status === 'live' ? ' live' : '');
+    mid.textContent = match.status === 'live' ? match.score[0] + ' - ' + match.score[1] : '-';
+
+    main.appendChild(team('home'));
+    main.appendChild(mid);
+    main.appendChild(team('away'));
+    card.appendChild(main);
+
+    /* Maç sonucu (1 X 2) ve alt / üst satırları */
+    const markets = document.createElement('div');
+    markets.className = 'oc-markets';
+
+    const resultRow = document.createElement('div');
+    resultRow.className = 'oc-market three';
+    resultRow.innerHTML = '<span class="oc-label">Maç sonucu</span>';
+    [['1', 'home'], ['X', 'draw'], ['2', 'away']].forEach(([label, key]) => {
+        resultRow.appendChild(oddBox(match, label, key, true));
+    });
+    markets.appendChild(resultRow);
+
+    ODDS_MARKETS.forEach(([title, line, underKey, overKey]) => {
+        const row = document.createElement('div');
+        row.className = 'oc-market';
+        const label = document.createElement('span');
+        label.className = 'oc-label';
+        label.textContent = title;
+        row.appendChild(label);
+        row.appendChild(oddBox(match, line + ' Alt', underKey, true));
+        row.appendChild(oddBox(match, line + ' Üst', overKey, true));
+        markets.appendChild(row);
+    });
+
+    card.appendChild(markets);
+
+    /* Kartın oran dışındaki yerine basınca maç sayfası Oranlar'da açılır */
+    card.addEventListener('click', () => openDetail(match.id, 'odds'));
+
+    return card;
+}
+
 function oddsRow(match, labels, keys, pickable) {
 
     const row = document.createElement('div');
     row.className = 'odds-row';
 
     labels.forEach((label, i) => {
-        const box = document.createElement('div');
-        box.className = 'odd';
-        box.innerHTML = '<span></span><b></b>';
-        box.querySelector('span').textContent = label;
-        box.querySelector('b').textContent = match.odds[keys[i]];
-
-        /* Oranlar sekmesinde: basınca kupona eklenir / çıkarılır */
-        if (pickable) {
-            box.classList.add('pickable');
-            box.dataset.match = match.id;
-            box.dataset.key = keys[i];
-            box.classList.toggle('picked', couponPicks.get(match.id) === keys[i]);
-            box.addEventListener('click', event => {
-                event.stopPropagation();
-                togglePick(match.id, keys[i]);
-            });
-        }
-
-        row.appendChild(box);
+        row.appendChild(oddBox(match, label, keys[i], pickable));
     });
 
     if (labels.length === 2)
@@ -3774,7 +3977,12 @@ function drawForum() {
  */
 const COUPON_KEY = 'canliSkorKupon';
 const COUPONS_KEY = 'canliSkorKuponlar';
-const PICK_NAMES = { home: 'MS 1', draw: 'MS X', away: 'MS 2', under: '2,5 Alt', over: '2,5 Üst' };
+const PICK_NAMES = {
+    home: 'MS 1', draw: 'MS X', away: 'MS 2',
+    under: 'Gol 2,5 Alt', over: 'Gol 2,5 Üst',
+    cornerUnder: 'Korner 9,5 Alt', cornerOver: 'Korner 9,5 Üst',
+    cardUnder: 'Kart 4,5 Alt', cardOver: 'Kart 4,5 Üst'
+};
 
 function readJSON(key, fallback) {
     try {
@@ -4031,7 +4239,7 @@ function renderOdds() {
         return;
     }
 
-    const card = m => box.appendChild(matchCard(m, { odds: true }));
+    const card = m => box.appendChild(oddsCard(m));
 
     if (oddsState.popular) {
         list.slice().sort((a, b) => b.comments - a.comments).slice(0, 20).forEach(card);
@@ -4222,10 +4430,7 @@ function setTab(name) {
     markClearTop();
     emptyLayer.classList.remove('settled');
 
-    const wasOpen = document.body.dataset.tab === 'empty';
-
-    if (wasOpen !== (name === 'empty'))
-        showBannerGhost();
+    /* Resim yine pencereyle birlikte kayar (sabit resim kapalı) */
 
     settleTimer = setTimeout(() => {
         hideBannerGhost();
@@ -4758,6 +4963,8 @@ function renderDetailOdds(match) {
 
     block('MAÇ SONUCU', ['1', 'X', '2'], ['home', 'draw', 'away']);
     block('2,5 GOL ALT / ÜST', ['Alt', 'Üst'], ['under', 'over']);
+    block('9,5 KORNER ALT / ÜST', ['Alt', 'Üst'], ['cornerUnder', 'cornerOver']);
+    block('4,5 KART ALT / ÜST', ['Alt', 'Üst'], ['cardUnder', 'cardOver']);
 
     const note = document.createElement('p');
     note.className = 'odds-note';
