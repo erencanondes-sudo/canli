@@ -109,6 +109,32 @@ button {
         repeating-linear-gradient(90deg, #2f7d43 0 10%, #2a7340 10% 20%);
 }
 
+/*
+ * Ana sayfanın üstündeki resim (reklam alanı olacak): sayfa kayarken
+ * yerinde sabit durur, içerik altından geçer. Çevresinde arka plan
+ * renginde bir şerit var: resmin üstündeki, yanlarındaki,
+ * altındaki boşlukta ve yuvarlak köşelerinde içerik görünmez.
+ */
+#homeBannerWrap {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    margin-bottom: 12px;
+}
+
+/* Şerit gerçek bir katman: altında kalan düğmelere yanlışlıkla basılmaz */
+#homeBannerWrap::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    z-index: -1;
+    background: #f4f5f7;
+}
+
+#homeBannerWrap #homeBanner {
+    margin-bottom: 0;
+}
+
 /* Koyu perde: yazı okunsun */
 #homeBanner::after,
 .banner::after {
@@ -1135,11 +1161,6 @@ button {
 }
 
 /* Kaybeden takım biraz soluk */
-.team-row.lost .team-name,
-.team-row.lost .team-score {
-    color: #8a8f9c;
-    font-weight: 600;
-}
 
 .team-score {
     flex: none;
@@ -1306,13 +1327,13 @@ button {
     justify-content: flex-end;
     gap: .35em;
 
-    /* Dar ekranda ad ve arma biraz küçülür, uzun adlar sığsın */
+    /* Dar ekranda ad biraz küçülür, uzun adlar sığsın */
     font-size: min(1.07em, 3.9vw);
-    font-weight: 700;
+    font-weight: 800;
     color: #1d2340;
 }
 
-/* Deplasman: adı çizginin hemen sağında, arma onun sağında */
+/* Deplasman: adı çizginin hemen sağında */
 .oc-team.away {
     flex-direction: row-reverse;
 }
@@ -1382,17 +1403,6 @@ button {
 .odds-card .odd b {
     font-size: .84em;
     font-weight: 800;
-}
-
-/*
- * Oranlar kartında armalar dört tık küçük (takım adı aynı).
- * İçindeki kısaltma bir tık daha küçük; yuvarlağın boyu aynı kalır
- * (2,7 × 0,40 = 3,18 × 0,34).
- */
-.oc-team .crest {
-    font-size: .34em;
-    width: 3.18em;
-    height: 3.18em;
 }
 
 /* -----------------------------
@@ -1550,7 +1560,9 @@ body[data-tab="empty"] #emptyLayer {
     left: 50%;
     bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
-    z-index: 19;
+
+    /* Maç sayfası ve açılan her şeyin üstünde görünür */
+    z-index: 33;
 }
 
 .ac-kapa {
@@ -1576,7 +1588,8 @@ body[data-tab="empty"] #emptyLayer {
     transition: transform .3s ease;
 }
 
-body[data-tab="empty"] .ac-kapa svg {
+body[data-tab="empty"] .ac-kapa svg,
+body.has-layer .ac-kapa svg {
     transform: rotate(180deg);
 }
 
@@ -2158,10 +2171,13 @@ body[data-tab="empty"] .ac-kapa svg {
     </nav>
 
     <main id="homeMain">
-        <div id="homeBanner">
-            <div class="banner-text">
-                <div class="banner-title">Canlı Skor</div>
-                <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
+        <!-- Üst resim (reklam alanı olacak): sayfa kayarken sabit durur -->
+        <div id="homeBannerWrap">
+            <div id="homeBanner">
+                <div class="banner-text">
+                    <div class="banner-title">Canlı Skor</div>
+                    <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
+                </div>
             </div>
         </div>
 
@@ -2436,6 +2452,14 @@ function poisson(lambda) {
     return k - 1;
 }
 
+/*
+ * Sahte fikstür 17 Ekim 2026'ya göre yazıldı; uygulama hangi gün
+ * açılırsa açılsın bütün tarihler o güne kaydırılır (17 Ekim = bugün).
+ */
+const DATE_SHIFT = Math.round(
+    (new Date(new Date().toDateString()) - new Date('2026-10-17T00:00:00')) / 86400000
+);
+
 const PLAYED_WEEKS = 6;
 const CURRENT_WEEK = 7;
 
@@ -2464,7 +2488,7 @@ const LEAGUES = [
         teams: PL_TEAMS,
         weekDates: [
             '2026-08-22', '2026-08-29', '2026-09-12', '2026-09-19',
-            '2026-09-26', '2026-10-03', '2026-10-17', '2026-10-20',
+            '2026-10-09', '2026-10-12', '2026-10-17', '2026-10-20',
             '2026-10-23'
         ],
         kickoffs: [
@@ -2488,7 +2512,7 @@ const LEAGUES = [
         teams: SL_TEAMS,
         weekDates: [
             '2026-08-14', '2026-08-21', '2026-08-28', '2026-09-11',
-            '2026-09-18', '2026-10-02', '2026-10-16', '2026-10-20',
+            '2026-09-18', '2026-10-13', '2026-10-16', '2026-10-20',
             '2026-10-22'
         ],
         kickoffs: [
@@ -2609,7 +2633,7 @@ function makeMatches(league) {
 
             const [dayOffset, time] = league.kickoffs[i];
             const date = new Date(league.weekDates[week - 1] + 'T' + time + ':00+03:00');
-            date.setDate(date.getDate() + dayOffset);
+            date.setDate(date.getDate() + dayOffset + DATE_SHIFT);
 
             const match = {
                 id: league.id + '-' + week + '-' + (i + 1),
@@ -2882,11 +2906,6 @@ function matchCard(match, options = {}) {
         const row = document.createElement('div');
         row.className = 'team-row';
 
-        if (match.score && match.status === 'done' &&
-            match.score[index] < match.score[1 - index]) {
-            row.classList.add('lost');
-        }
-
         const name = document.createElement('span');
         name.className = 'team-name';
         name.textContent = match[side].name;
@@ -3001,7 +3020,6 @@ function oddsCard(match) {
     const team = side => {
         const el = document.createElement('div');
         el.className = 'oc-team ' + side;
-        el.appendChild(crest(match[side]));
         const name = document.createElement('span');
         name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
@@ -3103,14 +3121,19 @@ let selectedDay = TODAY;
 /* Düğmelerdeki günler, sırayla (oklar için) */
 let dayKeys = [];
 
-/* Gün düğmeleri: maç olan günler + bugün */
+/* Gün düğmeleri: bugünün iki yanında 8 gün (takvimden seçilen gün de eklenir) */
 function renderDays() {
 
     const box = document.getElementById('dayBox');
     box.textContent = '';
 
-    const keys = new Set(MATCHES.map(m => dayKey(m.date)));
-    keys.add(TODAY);
+    /* Bugünün solunda ve sağında 8'er gün */
+    const keys = new Set();
+    for (let d = -8; d <= 8; d++) {
+        const day = new Date(TODAY + 'T12:00:00');
+        day.setDate(day.getDate() + d);
+        keys.add(dayKey(day));
+    }
 
     /* Takvimden maçsız bir gün seçildiyse o da listede olsun */
     keys.add(selectedDay);
@@ -4372,6 +4395,8 @@ function layerOpened(name, url) {
         history.pushState({ depth: openLayers.length }, '', url || location.href);
 
     } catch (error) {}
+
+    syncBall();
 }
 
 function layerClosed(name) {
@@ -4387,9 +4412,24 @@ function layerClosed(name) {
         return;
 
     openLayers.splice(index, 1);
+    syncBall();
 
     ignoredPops++;
     history.back();
+}
+
+/*
+ * Mavi top: açık bir şey varsa (maç sayfası, Kayıtlı Maçlarım, takvim,
+ * menü...) ya da Forum / Analiz / Oranlar sekmesindeyse geri tuşu gibi
+ * çalışır (sekmelerde önce Canlı Skor'a döner), oku aşağı döner.
+ */
+function somethingOpen() {
+    return openLayers.length > 0;
+}
+
+/* Ok aşağı döner: açık bir şey varsa (sadece Forum / Analiz / Oranlar sekmesindeyken yukarı kalır) */
+function syncBall() {
+    document.body.classList.toggle('has-layer', openLayers.some(name => name !== 'homeMode'));
 }
 
 window.addEventListener('popstate', event => {
@@ -4417,6 +4457,8 @@ window.addEventListener('popstate', event => {
 
     while (openLayers.length > depth)
         LAYER_HIDERS[openLayers.pop()]();
+
+    syncBall();
 });
 
 
@@ -4512,8 +4554,30 @@ function showTab(name) {
         layerClosed('empty');
 }
 
+/*
+ * Mavi top: açık bir şey varsa onu kapatır (geri). Yoksa ana sayfa aşağı
+ * kaydırılmışsa önce yukarı çıkar; sayfa zaten yukarıdaysa Kayıtlı Maçlarım açılır.
+ */
 acKapa.addEventListener('click', () => {
-    showTab(document.body.dataset.tab === 'empty' ? 'home' : 'empty');
+
+    /* Açık bir şey varsa en üsttekini kapatır (geri tuşu gibi) */
+    if (somethingOpen()) {
+        history.back();
+        return;
+    }
+
+    if (document.body.dataset.tab === 'empty') {
+        showTab('home');
+        return;
+    }
+
+    if (homeMain.scrollTop > 4) {
+        homeMain.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+
+    setMyPageInstant('saved');
+    showTab('empty');
 });
 
 /* Sarı top: Kuponlarım açılır */
