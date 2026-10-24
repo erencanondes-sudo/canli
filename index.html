@@ -4898,7 +4898,15 @@ homeMain.addEventListener('touchmove', event => {
 
     setHomeSwipeX(atEdge ? dx * 0.25 : dx);
 
-}, { passive: true });
+    /*
+     * Yana kaydırırken sayfa yukarı aşağı kaymasın. Yoksa parmak kalkınca
+     * sayfa bir süre kendi kendine kayar; telefon o sırada yapılan ilk
+     * dokunuşu (örneğin mavi topa) kaymayı durdurmaya harcar.
+     */
+    if (event.cancelable)
+        event.preventDefault();
+
+}, { passive: false });
 
 function endHomeSwipe() {
 
