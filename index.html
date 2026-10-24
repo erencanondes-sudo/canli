@@ -152,6 +152,21 @@ button {
     opacity: .9;
 }
 
+/*
+ * Reklamın altındaki 16px boş şerit (tıklanamaz). Kayan içerik bunun
+ * altında kesilir; hiçbir düğme reklama 16px'ten fazla yaklaşamaz.
+ */
+#homeAdGap {
+    flex: none;
+    height: 16px;
+    pointer-events: none;
+}
+
+/* Şerit + 2px = sekmelerle reklam arası sabit 18px */
+#homeMain {
+    padding-top: 2px;
+}
+
 #homeTitleRow {
     display: flex;
     align-items: center;
@@ -168,6 +183,9 @@ button {
     flex: 1;
     gap: .35em;
     min-width: 0;
+
+    /* Menü düğmesine göre ortalanmaz: reklamla arası her ekranda sabit 18px */
+    align-self: flex-start;
     margin-right: .35em;
     font-size: min(16px, 3.4vw);
 }
@@ -1865,19 +1883,19 @@ body.ball-left .ac-kapa svg {
 
 #detailCloseBtn {
     position: absolute;
-    top: 15px;
+    top: 68px;
     z-index: 2;
-    height: 40px;
+    height: 30px;
     background: rgba(0,0,0,.4);
     color: white;
 }
 
 #detailCloseBtn {
     right: 12px;
-    width: 40px;
+    width: 30px;
     padding: 0;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 14px;
 }
 
 .sb-league {
@@ -2749,11 +2767,20 @@ body.ball-left .ac-kapa svg {
     animation: adBar 30s ease var(--off) infinite both;
 }
 
-/* İçerik sayfasının en üstündeki ince reklam (tam genişlik, 50px; reklam 320x50) */
+/*
+ * İçerik sayfasının en üstündeki ince reklam: sabit 320x50, köşeleri hafif oval.
+ * Skor alanının yeşil zemini en üste kadar çıkar; reklam onun üstüne biner.
+ */
 #detailAd {
-    position: relative;
-    flex: none;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    z-index: 4;
+    width: 320px;
     height: 50px;
+    transform: translateX(-50%);
+    border-radius: 0 0 .4em .4em;
+    overflow: hidden;
 }
 
 .ad-thin {
@@ -2877,6 +2904,9 @@ body.ball-left .ac-kapa svg {
             <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
         </div>
     </div>
+
+    <!-- Reklamla kayan içerik arasında tıklanamayan boş şerit -->
+    <div id="homeAdGap"></div>
 
     <main id="homeMain">
 
