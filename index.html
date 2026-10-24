@@ -2522,6 +2522,103 @@ const LEAGUES = [
         live: { 0: 71 },
         todayDone: [1],
         todayLater: [2]
+    },
+
+    /*
+     * !!! SAHTE: aşağıdaki dört lig görünüm denemesi için.
+     * Takımlar Premier Lig ve Süper Lig takımlarından (sırası değiştirilerek)
+     * alındı; gerçek veri gelince kendi takımları olacak.
+     */
+    {
+        id: 'es',
+        name: 'La Liga',
+        country: 'İspanya',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="30" height="20" fill="#c60b1e"/>' +
+            '<rect y="5" width="30" height="10" fill="#ffc400"/></svg>',
+        teams: [...PL_TEAMS.slice(7), ...PL_TEAMS.slice(0, 7)],
+        weekDates: [
+            '2026-08-16', '2026-08-23', '2026-08-30', '2026-09-13',
+            '2026-09-20', '2026-10-10', '2026-10-17', '2026-10-21',
+            '2026-10-24'
+        ],
+        kickoffs: [
+            [0, '15:00'], [0, '17:15'], [0, '19:30'], [0, '22:00'], [1, '15:00'],
+            [1, '17:15'], [1, '19:30'], [1, '22:00'], [2, '21:00'], [2, '22:00']
+        ],
+        live: { 1: 52 },
+        todayDone: [0],
+        todayLater: [2]
+    },
+    {
+        id: 'it',
+        name: 'Serie A',
+        country: 'İtalya',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="10" height="20" fill="#009246"/>' +
+            '<rect x="10" width="10" height="20" fill="#fff"/>' +
+            '<rect x="20" width="10" height="20" fill="#ce2b37"/></svg>',
+        teams: [...PL_TEAMS.slice(13), ...PL_TEAMS.slice(0, 13)],
+        weekDates: [
+            '2026-08-23', '2026-08-30', '2026-09-13', '2026-09-20',
+            '2026-09-27', '2026-10-11', '2026-10-17', '2026-10-21',
+            '2026-10-25'
+        ],
+        kickoffs: [
+            [0, '16:00'], [0, '19:00'], [0, '21:45'], [1, '13:30'], [1, '16:00'],
+            [1, '16:00'], [1, '19:00'], [1, '21:45'], [2, '19:30'], [2, '21:45']
+        ],
+        live: { 0: 38 },
+        todayDone: [],
+        todayLater: [1, 2]
+    },
+    {
+        id: 'de',
+        name: 'Bundesliga',
+        country: 'Almanya',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="30" height="20" fill="#ffce00"/>' +
+            '<rect width="30" height="13.34" fill="#dd0000"/>' +
+            '<rect width="30" height="6.67" fill="#000"/></svg>',
+        teams: [...SL_TEAMS.slice(5), ...SL_TEAMS.slice(0, 5)],
+        weekDates: [
+            '2026-08-22', '2026-08-29', '2026-09-12', '2026-09-19',
+            '2026-09-26', '2026-10-10', '2026-10-17', '2026-10-21',
+            '2026-10-24'
+        ],
+        kickoffs: [
+            [0, '16:30'], [0, '16:30'], [0, '16:30'], [0, '16:30'], [0, '19:30'],
+            [1, '16:30'], [1, '18:30'], [1, '20:30'], [2, '21:30']
+        ],
+        live: { 0: 81, 1: 14 },
+        todayDone: [2, 3],
+        todayLater: [4]
+    },
+    {
+        id: 'fr',
+        name: 'Ligue 1',
+        country: 'Fransa',
+        flag:
+            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
+            '<rect width="10" height="20" fill="#002395"/>' +
+            '<rect x="10" width="10" height="20" fill="#fff"/>' +
+            '<rect x="20" width="10" height="20" fill="#ed2939"/></svg>',
+        teams: [...SL_TEAMS.slice(11), ...SL_TEAMS.slice(0, 11)],
+        weekDates: [
+            '2026-08-15', '2026-08-22', '2026-08-29', '2026-09-12',
+            '2026-09-19', '2026-10-09', '2026-10-17', '2026-10-21',
+            '2026-10-23'
+        ],
+        kickoffs: [
+            [0, '18:00'], [0, '20:00'], [0, '22:05'], [1, '16:00'], [1, '18:15'],
+            [1, '18:15'], [1, '20:15'], [1, '22:45'], [2, '22:00']
+        ],
+        live: {},
+        todayDone: [0],
+        todayLater: [1, 2]
     }
 ];
 
@@ -4559,6 +4656,12 @@ function showTab(name) {
  * kaydırılmışsa önce yukarı çıkar; sayfa zaten yukarıdaysa Kayıtlı Maçlarım açılır.
  */
 acKapa.addEventListener('click', () => {
+
+    /* Forum / Analiz / Oranlar sekmesi aşağı kaydırılmışsa önce sekmenin başına çıkar */
+    if (openLayers[openLayers.length - 1] === 'homeMode' && homeMain.scrollTop > 4) {
+        homeMain.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
 
     /* Açık bir şey varsa en üsttekini kapatır (geri tuşu gibi) */
     if (somethingOpen()) {
