@@ -172,7 +172,7 @@ button {
 }
 
 /*
- * ÜST DÜĞMELER: Canlı Skor / Forum / Analiz / Oranlar
+ * ÜST DÜĞMELER: Canlı Skor / AI Kuponu / Analiz / Oranlar
  * Satırın genişliğine yayılırlar; yazı boyutu ekranla orantılı.
  */
 #homeModeBox {
@@ -210,8 +210,42 @@ button {
 #dayRow {
     display: flex;
     align-items: center;
-    gap: .5em;
+    gap: .35em;
     margin: 0 0 8px;
+}
+
+/* Spor seçimi: seçili top koyu çerçeveli, diğeri soluk */
+#sportBox {
+    flex: none;
+    display: flex;
+    gap: .3em;
+    font-size: 13px;
+}
+
+.sport-btn {
+    width: 2.6em;
+    height: 2.6em;
+    padding: 0;
+    font-size: inherit;
+    border: 1px solid #d5d8de;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .45;
+    filter: grayscale(.6);
+}
+
+.sport-btn.active {
+    border: 2px solid #1d2340;
+    opacity: 1;
+    filter: none;
+}
+
+.sport-btn svg {
+    width: 1.55em;
+    height: 1.55em;
 }
 
 #dayBox {
@@ -516,13 +550,12 @@ button {
     color: #8a8f9c;
 }
 
-/* Forum ve Oranlar araması: araç satırının altında, tam genişlik */
-#forumSearchBox,
+/* Oranlar araması: araç satırının altında, tam genişlik */
 #oddsSearchBox {
     margin: 0 0 10px;
 }
 
-/* Forum'da "Popüler" düğmesi (Zaman gibi) */
+/* Oranlar'da "Popüler" düğmesi (Zaman gibi) */
 .tb-popular.active {
     border-color: #1d2340;
     background: #1d2340;
@@ -1077,11 +1110,6 @@ button {
    Üstte hafta ve saat, ortada iki takım ve skor,
    altta ayraçla ayrılmış yorum / beğeni / beğenmeme.
 ----------------------------- */
-
-/* Forum'da her ikinci kart: çok hafif gri (#fafafb ile beyazın ortası) */
-#forumList .match-card.zebra {
-    background: #fcfcfd;
-}
 
 .match-card {
     display: block;
@@ -2164,7 +2192,7 @@ body.has-layer .ac-kapa svg {
 <div id="homePage">
     <nav id="homeMenu">
         <button data-go="live">Canlı Skor</button>
-        <button data-go="forum">Forum</button>
+        <button data-go="ai">AI Kuponu</button>
         <button data-go="analysis">Analiz</button>
         <button data-go="odds">Oranlar</button>
         <button id="menuClose">Kapat</button>
@@ -2184,7 +2212,7 @@ body.has-layer .ac-kapa svg {
         <div id="homeTitleRow">
             <div id="homeModeBox">
                 <button data-mode="live" class="active">Canlı Skor</button>
-                <button data-mode="forum">Forum</button>
+                <button data-mode="ai">AI Kuponu</button>
                 <button data-mode="analysis">Analiz</button>
                 <button data-mode="odds">Oranlar</button>
             </div>
@@ -2218,6 +2246,23 @@ body.has-layer .ac-kapa svg {
                             <div id="calDays"></div>
                         </div>
                     </div>
+
+                    <!-- Spor seçimi: futbol / basketbol -->
+                    <div id="sportBox">
+                        <button class="sport-btn active" data-sport="football" aria-label="Futbol">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10.5" fill="#fff" stroke="#1d2340" stroke-width="1.5"/>
+                                <polygon points="12,7.3 16.1,10.3 14.5,15.1 9.5,15.1 7.9,10.3" fill="#1d2340"/>
+                                <path d="M12 7.3V2.2M16.1 10.3l4.8-1.6M14.5 15.1l3 4.1M9.5 15.1l-3 4.1M7.9 10.3L3.1 8.7" stroke="#1d2340" stroke-width="1.3" fill="none"/>
+                            </svg>
+                        </button>
+                        <button class="sport-btn" data-sport="basketball" aria-label="Basketbol">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10.5" fill="#f08a24" stroke="#7a3a0a" stroke-width="1.3"/>
+                                <path d="M1.5 12h21M12 1.5v21M5 4.6c3.4 3.6 3.4 11.2 0 14.8M19 4.6c-3.4 3.6-3.4 11.2 0 14.8" stroke="#7a3a0a" stroke-width="1.2" fill="none"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="toolRow" class="tool-row"></div>
@@ -2225,16 +2270,8 @@ body.has-layer .ac-kapa svg {
 
                 <div id="liveList"></div>
             </div>
-            <div class="home-page" data-page="forum">
-                <div id="forumTools" class="tool-row"></div>
-                <label id="forumSearchBox" class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>
-                    </svg>
-                    <input id="forumSearchInput" type="search" placeholder="Arama yap" autocomplete="off">
-                </label>
-                <div id="forumList"></div>
+            <div class="home-page" data-page="ai">
+                <p class="home-empty">AI kuponları yakında burada olacak.</p>
             </div>
             <div class="home-page" data-page="analysis">
                 <p class="home-empty">Analizler yakında burada olacak.</p>
@@ -3392,9 +3429,9 @@ function scoreRow(match, showDate, showLeague) {
 }
 
 /*
- * ARAÇ SATIRI (Canlı Skor, Forum ve Oranlar'da aynı)
+ * ARAÇ SATIRI (Canlı Skor ve Oranlar'da aynı)
  * Her sayfanın kendi durumu vardır:
- *   popular  : (sadece Forum) en çok yorum alanlar
+ *   popular  : (sadece Oranlar) en çok yorum alanlar
  *   liveOnly : "Canlı" açık; o an oynanan maçlar
  *   timeOrder: "Zaman" açık; ligler ayrılmadan saat sırasıyla
  *   leagues  : Ligler menüsünde işaretli ligler (boşsa hepsi)
@@ -3508,7 +3545,7 @@ function buildTools(row, state, options) {
         changed();
     });
 
-    /* Arama kutusu (Forum'da ayrı satırda durur) */
+    /* Arama kutusu (Oranlar'da ayrı satırda durur) */
     tools.input = options.input || null;
 
     if (options.search) {
@@ -3544,7 +3581,7 @@ function buildTools(row, state, options) {
     return tools;
 }
 
-/* Arama ve Ligler süzgeci (Forum ve Oranlar için ortak) */
+/* Arama ve Ligler süzgeci (Oranlar için) */
 function filterMatches(list, tools) {
 
     const state = tools.state;
@@ -3586,10 +3623,31 @@ function lower(text) {
 }
 
 /* Canlı Skor: lig lig, tek satır */
+/* Seçili spor: 'football' ya da 'basketball' (basketbol şimdilik boş) */
+let sport = 'football';
+
+document.querySelectorAll('.sport-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        sport = button.dataset.sport;
+        document.querySelectorAll('.sport-btn').forEach(b => {
+            b.classList.toggle('active', b === button);
+        });
+        renderLive();
+    });
+});
+
 function renderLive() {
 
     const box = document.getElementById('liveList');
     box.textContent = '';
+
+    if (sport === 'basketball') {
+        const empty = document.createElement('p');
+        empty.className = 'home-empty';
+        empty.textContent = 'Basketbol maçları yakında burada olacak.';
+        box.appendChild(empty);
+        return;
+    }
 
     const query = lower(searchInput.value.trim());
     const searching = query.length > 0;
@@ -4050,99 +4108,6 @@ myMain.addEventListener('touchend', endMySwipe, { passive: true });
 myMain.addEventListener('touchcancel', endMySwipe, { passive: true });
 
 /*
- * FORUM
- * Maçlar ayrıntılı kartlarla (yorum, beğeni...). Üstteki araç satırı:
- *   Popüler : en çok yorum alan maçlar
- *   Zaman   : en yeni üstte (önce canlı, sonra oynanacak, sonra oynanmış)
- *   ikisi de kapalı: lig lig, hafta hafta (önce canlı maçlar)
- *   Canlı ve Ligler süzer, arama takım adına göre bulur.
- */
-const forumState = { popular: true, liveOnly: false, timeOrder: false, leagues: new Set() };
-const forumSearchInput = document.getElementById('forumSearchInput');
-
-const forumToolbar = buildTools(document.getElementById('forumTools'), forumState, {
-    popular: true,
-    input: forumSearchInput,
-    render: () => renderForum()
-});
-
-/* Zebra: kartlar sırayla beyaz / arka planla beyaz arası */
-function renderForum() {
-    drawForum();
-    document.querySelectorAll('#forumList .match-card').forEach((card, i) => {
-        card.classList.toggle('zebra', i % 2 === 1);
-    });
-}
-
-function drawForum() {
-
-    const box = document.getElementById('forumList');
-    box.textContent = '';
-
-    const all = filterMatches(MATCHES, forumToolbar);
-
-    if (!all.length) {
-        const empty = document.createElement('p');
-        empty.className = 'home-empty';
-        empty.textContent =
-            forumSearchInput.value.trim() ? '"' + forumSearchInput.value.trim() + '" için maç bulunamadı.' :
-            forumState.liveOnly ? 'Şu an oynanan maç yok.' : 'Maç yok.';
-        box.appendChild(empty);
-        return;
-    }
-
-    if (forumState.popular) {
-
-        all
-            .slice()
-            .sort((a, b) => b.comments - a.comments)
-            .slice(0, 20)
-            .forEach(m => box.appendChild(matchCard(m)));
-
-        return;
-    }
-
-    if (forumState.timeOrder) {
-
-        const order = { live: 0, upcoming: 1, done: 2 };
-
-        all
-            .slice()
-            .sort((a, b) =>
-                order[a.status] - order[b.status] ||
-                (a.status === 'upcoming' ? a.date - b.date : b.date - a.date)
-            )
-            .forEach(m => box.appendChild(matchCard(m)));
-
-        return;
-    }
-
-    const live = all.filter(m => m.status === 'live');
-
-    live.forEach(m => box.appendChild(matchCard(m)));
-
-    LEAGUES.forEach(league => {
-
-        for (let week = LAST_WEEK; week >= 1; week--) {
-
-            const list = all.filter(m =>
-                m.league === league && m.week === week && m.status !== 'live'
-            );
-
-            if (!list.length)
-                continue;
-
-            box.appendChild(weekTitle(
-                league.name.toLocaleUpperCase('tr') + ' · ' + week + '. HAFTA' +
-                (week >= CURRENT_WEEK ? ' · OYNANACAK' : '')
-            ));
-
-            list.forEach(m => box.appendChild(matchCard(m)));
-        }
-    });
-}
-
-/*
  * KUPON
  * Her maçtan bir seçim (1 / X / 2). Aynı maçta başka orana basınca
  * seçim değişir, seçili olana tekrar basınca çıkar.
@@ -4377,7 +4342,7 @@ function renderCoupons() {
 
 /*
  * Oranlar: bu hafta ve önümüzdeki haftaların maçları, 1 / X / 2 ile.
- * Araç satırı Forum'daki gibi: Popüler, Canlı, Ligler, Zaman; arama altta.
+ * Araç satırı: Popüler, Canlı, Ligler, Zaman; arama altta.
  *   Popüler : en çok yorum alan maçlar
  *   Zaman   : ligler ayrılmadan saat sırasıyla
  *   ikisi de kapalı: lig lig, hafta hafta
@@ -4444,7 +4409,6 @@ function renderOdds() {
 
 renderDays();
 renderLive();
-renderForum();
 renderSaved();
 renderOdds();
 renderCoupons();
@@ -4517,14 +4481,14 @@ function layerClosed(name) {
 
 /*
  * Mavi top: açık bir şey varsa (maç sayfası, Kayıtlı Maçlarım, takvim,
- * menü...) ya da Forum / Analiz / Oranlar sekmesindeyse geri tuşu gibi
+ * menü...) ya da AI Kuponu / Analiz / Oranlar sekmesindeyse geri tuşu gibi
  * çalışır (sekmelerde önce Canlı Skor'a döner), oku aşağı döner.
  */
 function somethingOpen() {
     return openLayers.length > 0;
 }
 
-/* Ok aşağı döner: açık bir şey varsa (sadece Forum / Analiz / Oranlar sekmesindeyken yukarı kalır) */
+/* Ok aşağı döner: açık bir şey varsa (sadece AI Kuponu / Analiz / Oranlar sekmesindeyken yukarı kalır) */
 function syncBall() {
     document.body.classList.toggle('has-layer', openLayers.some(name => name !== 'homeMode'));
 }
@@ -4657,7 +4621,7 @@ function showTab(name) {
  */
 acKapa.addEventListener('click', () => {
 
-    /* Forum / Analiz / Oranlar sekmesi aşağı kaydırılmışsa önce sekmenin başına çıkar */
+    /* AI Kuponu / Analiz / Oranlar sekmesi aşağı kaydırılmışsa önce sekmenin başına çıkar */
     if (openLayers[openLayers.length - 1] === 'homeMode' && homeMain.scrollTop > 4) {
         homeMain.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -4728,7 +4692,7 @@ document.getElementById('couponBall').addEventListener('click', () => {
    ANA SAYFANIN DÖRT SAYFASI
 ================================================= */
 
-const HOME_ORDER = ['live', 'forum', 'analysis', 'odds'];
+const HOME_ORDER = ['live', 'ai', 'analysis', 'odds'];
 
 const homeMain = document.getElementById('homeMain');
 const homeTrack = document.getElementById('homeTrack');
@@ -4795,7 +4759,7 @@ function setHomeSwipeX(px) {
 homeMain.addEventListener('touchstart', event => {
 
     /* Gün düğmeleri kendi içinde yana kayar; sayfa değişmez. */
-    if (event.touches.length !== 1 || event.target.closest('#liveTools, .tool-row, #forumSearchBox, #oddsSearchBox')) {
+    if (event.touches.length !== 1 || event.target.closest('#liveTools, .tool-row, #oddsSearchBox')) {
         homeSwipe = null;
         return;
     }
@@ -5192,7 +5156,7 @@ function renderDetailOdds(match) {
     box.appendChild(note);
 }
 
-/* tab: açılışta seçili sekme (Forum ve Oranlar'dan Yorumlar) */
+/* tab: açılışta seçili sekme (Oranlar'dan açılınca Oranlar) */
 function openDetail(id, tab = 'summary') {
 
     const match = MATCH_BY_ID.get(id);
