@@ -214,7 +214,7 @@ button {
     margin: 0 0 8px;
 }
 
-/* Spor seçimi: seçili top koyu çerçeveli, diğeri soluk */
+/* Spor seçimi: seçili top koyu çerçeveli, diğeri biraz açık */
 #sportBox {
     flex: none;
     display: flex;
@@ -233,12 +233,14 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: .45;
-    filter: grayscale(.6);
+
+    /* Seçili olmayan top da canlı görünür, sadece biraz açık */
+    opacity: .75;
 }
 
 .sport-btn.active {
-    border: 2px solid #1d2340;
+    /* Kalın çerçeve içe doğru; düğmenin boyu aynı kalır */
+    border: .25em solid #1d2340;
     opacity: 1;
     filter: none;
 }
@@ -248,14 +250,22 @@ button {
     height: 1.55em;
 }
 
+/*
+ * Gün kutusu: her zaman 4 gün sığar (dün, bugün, yarın, öbür gün).
+ * Düğme genişliği ve yazı boyu kutunun genişliğine göre ayarlanır (cqw).
+ */
 #dayBox {
+    --day-gap: 1.8%;
+
     position: relative;
     flex: 1;
     min-width: 0;
     display: flex;
-    gap: .4em;
+    gap: var(--day-gap);
     overflow-x: auto;
     scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    container-type: inline-size;
     font-size: 11px;
 }
 
@@ -265,18 +275,21 @@ button {
 
 /* İki satır: üstte gün (Cmt), altta tarih (17.10) */
 #dayBox button {
-    flex: none;
+    flex: 0 0 calc((100% - 3 * var(--day-gap)) / 4);
+    min-width: 0;
+    scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     line-height: 1.15;
-    min-width: 3.6em;
-    padding: .3em .6em;
+    padding: .3em .1em;
     border: 1px solid #d5d8de;
     border-radius: .9em;
     background: white;
-    font-size: inherit;
+
+    /* Yazı kutuya göre küçülür (dar telefonda da 4 gün sığsın) */
+    font-size: clamp(7px, 6.4cqw, 11px);
     font-weight: 700;
     color: #555a66;
     white-space: nowrap;
@@ -296,13 +309,23 @@ button {
 /* Gün düğmelerinin iki yanındaki oklar: önceki / sonraki gün */
 .day-arrow {
     flex: none;
-    width: 1em;
+
+    /* Dar: okun tarih tarafında boşluk kalmaz */
+    width: .6em;
     height: 1.4em;
     padding: 0;
     background: none;
     color: #1d2340;
     font-size: 22px;
     line-height: 1;
+}
+
+#dayPrev {
+    text-align: left;
+}
+
+#dayNext {
+    text-align: right;
 }
 
 .day-arrow:disabled {
@@ -1621,6 +1644,11 @@ body.has-layer .ac-kapa svg {
     transform: rotate(180deg);
 }
 
+/* AI Kuponu / Analiz / Oranlar başındayken: ok sola (Canlı Skor'a döner) */
+body.ball-left .ac-kapa svg {
+    transform: rotate(-90deg);
+}
+
 /*
  * KUPON TOPU (koyu sarı)
  * Oranlardan seçim yapılınca mavi topun hizasında, sağda belirir.
@@ -2192,7 +2220,7 @@ body.has-layer .ac-kapa svg {
 <div id="homePage">
     <nav id="homeMenu">
         <button data-go="live">Canlı Skor</button>
-        <button data-go="ai">AI Kuponu</button>
+        <button data-go="ai">Ai Kuponu</button>
         <button data-go="analysis">Analiz</button>
         <button data-go="odds">Oranlar</button>
         <button id="menuClose">Kapat</button>
@@ -2212,7 +2240,7 @@ body.has-layer .ac-kapa svg {
         <div id="homeTitleRow">
             <div id="homeModeBox">
                 <button data-mode="live" class="active">Canlı Skor</button>
-                <button data-mode="ai">AI Kuponu</button>
+                <button data-mode="ai">Ai Kuponu</button>
                 <button data-mode="analysis">Analiz</button>
                 <button data-mode="odds">Oranlar</button>
             </div>
@@ -2251,9 +2279,14 @@ body.has-layer .ac-kapa svg {
                     <div id="sportBox">
                         <button class="sport-btn active" data-sport="football" aria-label="Futbol">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10.5" fill="#fff" stroke="#1d2340" stroke-width="1.5"/>
-                                <polygon points="12,7.3 16.1,10.3 14.5,15.1 9.5,15.1 7.9,10.3" fill="#1d2340"/>
-                                <path d="M12 7.3V2.2M16.1 10.3l4.8-1.6M14.5 15.1l3 4.1M9.5 15.1l-3 4.1M7.9 10.3L3.1 8.7" stroke="#1d2340" stroke-width="1.3" fill="none"/>
+                                <defs><clipPath id="ballClip"><circle cx="12" cy="12" r="10.5"/></clipPath></defs>
+                                <circle cx="12" cy="12" r="10.5" fill="#fff"/>
+                                <g clip-path="url(#ballClip)">
+                                    <polygon points="12.00,4.70 8.86,2.42 10.06,-1.27 13.94,-1.27 15.14,2.42" fill="#1d2340"/><polygon points="18.94,9.74 20.14,6.05 24.02,6.05 25.22,9.74 22.08,12.02" fill="#1d2340"/><polygon points="16.29,17.91 20.17,17.91 21.37,21.60 18.23,23.88 15.09,21.60" fill="#1d2340"/><polygon points="7.71,17.91 8.91,21.60 5.77,23.88 2.63,21.60 3.83,17.91" fill="#1d2340"/><polygon points="5.06,9.74 1.92,12.02 -1.22,9.74 -0.02,6.05 3.86,6.05" fill="#1d2340"/>
+                                    <g stroke="#1d2340" stroke-width=".9" fill="none" stroke-linecap="round"><path d="M12.00 8.40L12.00 3.80"/><path d="M9.77 3.07L5.77 3.42"/><path d="M14.23 3.07L18.23 3.42"/><path d="M15.42 10.89L19.80 9.47"/><path d="M19.80 7.12L18.23 3.42"/><path d="M21.18 11.36L22.08 15.28"/><path d="M14.12 14.91L16.82 18.63"/><path d="M19.05 17.91L22.08 15.28"/><path d="M15.45 20.53L12.00 22.60"/><path d="M9.88 14.91L7.18 18.63"/><path d="M8.55 20.53L12.00 22.60"/><path d="M4.95 17.91L1.92 15.28"/><path d="M8.58 10.89L4.20 9.47"/><path d="M2.82 11.36L1.92 15.28"/><path d="M4.20 7.12L5.77 3.42"/></g>
+                                </g>
+                                <polygon points="14.12,9.09 15.42,13.11 12.00,15.60 8.58,13.11 9.88,9.09" fill="#1d2340"/>
+                                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#1d2340" stroke-width="1.2"/>
                             </svg>
                         </button>
                         <button class="sport-btn" data-sport="basketball" aria-label="Basketbol">
@@ -2271,7 +2304,7 @@ body.has-layer .ac-kapa svg {
                 <div id="liveList"></div>
             </div>
             <div class="home-page" data-page="ai">
-                <p class="home-empty">AI kuponları yakında burada olacak.</p>
+                <p class="home-empty">Ai kuponları yakında burada olacak.</p>
             </div>
             <div class="home-page" data-page="analysis">
                 <p class="home-empty">Analizler yakında burada olacak.</p>
@@ -3307,11 +3340,13 @@ function renderDays() {
 
     dayKeys = list;
 
-    /* Seçili gün görünür olsun (ortada). */
+    /* Seçili gün soldan ikinci sırada: önceki gün, seçili gün, sonraki iki gün */
     const active = box.querySelector('button.active');
 
-    if (active)
-        box.scrollLeft = active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2;
+    if (active) {
+        const step = active.offsetWidth + parseFloat(getComputedStyle(box).columnGap || 0);
+        box.scrollLeft = active.offsetLeft - step;
+    }
 }
 
 /*
@@ -4488,10 +4523,6 @@ function somethingOpen() {
     return openLayers.length > 0;
 }
 
-/* Ok aşağı döner: açık bir şey varsa (sadece AI Kuponu / Analiz / Oranlar sekmesindeyken yukarı kalır) */
-function syncBall() {
-    document.body.classList.toggle('has-layer', openLayers.some(name => name !== 'homeMode'));
-}
 
 window.addEventListener('popstate', event => {
 
@@ -4619,32 +4650,76 @@ function showTab(name) {
  * Mavi top: açık bir şey varsa onu kapatır (geri). Yoksa ana sayfa aşağı
  * kaydırılmışsa önce yukarı çıkar; sayfa zaten yukarıdaysa Kayıtlı Maçlarım açılır.
  */
+/*
+ * Mavi topun durumu, geçmiş (history) beklenmeden o anki ekrandan okunur;
+ * böylece sekme kayarken ya da sayfa yukarı kayarken de hemen çalışır.
+ *   'close' : üstte açık bir şey var (maç sayfası, pencere, takvim...) → kapatır, ok aşağı
+ *   'up'    : sayfa aşağıda → başa çıkar, ok yukarı
+ *   'home'  : AI Kuponu / Analiz / Oranlar başında → Canlı Skor'a döner, ok sola
+ *   'saved' : Canlı Skor başında → Kayıtlı Maçlarım'ı açar, ok yukarı
+ */
+let ballScrolling = false;   /* top az önce yukarı kaydırdı (kayma bitmese de başta sayılır) */
+
+function ballAction() {
+
+    if (confirmBox.classList.contains('open') ||
+        calendarPop.classList.contains('open') ||
+        openLeagueMenu ||
+        homeMenu.classList.contains('open') ||
+        detailSheet.classList.contains('open') ||
+        document.body.dataset.tab === 'empty')
+        return 'close';
+
+    if (homeMain.scrollTop > 4 && !ballScrolling)
+        return 'up';
+
+    return homeMode !== 'live' ? 'home' : 'saved';
+}
+
+function syncBall() {
+    /* Sayfa ilk kurulurken bazı öğeler henüz yoksa sessizce geç */
+    try {
+        const action = ballAction();
+        document.body.classList.toggle('has-layer', action === 'close');
+        document.body.classList.toggle('ball-left', action === 'home');
+    } catch (error) {}
+}
+
 acKapa.addEventListener('click', () => {
 
-    /* AI Kuponu / Analiz / Oranlar sekmesi aşağı kaydırılmışsa önce sekmenin başına çıkar */
-    if (openLayers[openLayers.length - 1] === 'homeMode' && homeMain.scrollTop > 4) {
+    const action = ballAction();
+
+    if (action === 'close') {
+
+        /* En üstteki kapanır */
+        if (confirmBox.classList.contains('open')) closeConfirm();
+        else if (calendarPop.classList.contains('open')) closeCalendar();
+        else if (openLeagueMenu) closeLeagueMenu();
+        else if (homeMenu.classList.contains('open')) closeHomeMenu();
+        else if (document.body.dataset.tab === 'empty' &&
+                 (emptyLayer.classList.contains('raised') || !detailSheet.classList.contains('open')))
+            showTab('home');
+        else closeDetail();
+
+    } else if (action === 'up') {
+
+        ballScrolling = true;
         homeMain.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+
+    } else if (action === 'home') {
+
+        ballScrolling = false;
+        homeMain.scrollTop = 0;
+        setHomeMode('live');
+
+    } else {
+
+        ballScrolling = false;
+        setMyPageInstant('saved');
+        showTab('empty');
     }
 
-    /* Açık bir şey varsa en üsttekini kapatır (geri tuşu gibi) */
-    if (somethingOpen()) {
-        history.back();
-        return;
-    }
-
-    if (document.body.dataset.tab === 'empty') {
-        showTab('home');
-        return;
-    }
-
-    if (homeMain.scrollTop > 4) {
-        homeMain.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-    }
-
-    setMyPageInstant('saved');
-    showTab('empty');
+    syncBall();
 });
 
 /* Sarı top: Kuponlarım açılır */
@@ -4695,6 +4770,16 @@ document.getElementById('couponBall').addEventListener('click', () => {
 const HOME_ORDER = ['live', 'ai', 'analysis', 'odds'];
 
 const homeMain = document.getElementById('homeMain');
+/* Kullanıcı kendisi kaydırırsa "yukarı kayıyor" bilgisi silinir */
+['touchstart', 'wheel'].forEach(type => {
+    homeMain.addEventListener(type, () => { ballScrolling = false; }, { passive: true });
+});
+
+homeMain.addEventListener('scroll', () => {
+    if (homeMain.scrollTop <= 4)
+        ballScrolling = false;
+    syncBall();
+}, { passive: true });
 const homeTrack = document.getElementById('homeTrack');
 const homeModeBox = document.getElementById('homeModeBox');
 
@@ -4725,6 +4810,8 @@ function setHomeModeView(mode) {
         if (!homeSwipe)
             homeTrack.classList.remove('both');
     }, 320);
+
+    syncBall();
 }
 
 /*
