@@ -95,8 +95,7 @@ button {
  * İnşaat uygulamasındaki resmin yerinde; resim yerine kodla
  * çizilmiş bir saha (hiçbir şey indirilmez).
  */
-#homeBanner,
-.banner {
+#homeBanner {
     position: relative;
     aspect-ratio: 3.4 / 1;
     margin-bottom: 12px;
@@ -110,12 +109,12 @@ button {
 }
 
 /*
- * Ana sayfanın ve Kayıtlı Maçlarım'ın üstündeki resim (reklam alanı olacak): ekranın en üstünde,
+ * Ana sayfanın üstündeki resim (reklam alanı): ekranın en üstünde,
  * tam genişlikte, 100px boyunda. Kaydırılan alanın dışında olduğu için
- * hep yerinde durur; içerik altında kayar.
+ * hep yerinde durur; içerik altında kayar. Kayıtlı Maçlarım açılınca da
+ * yerinde kalır (o sayfa bunun 16px altından başlar).
  */
-#homeBanner,
-#emptyLayer .banner {
+#homeBanner {
     flex: none;
     height: 100px;
     aspect-ratio: auto;
@@ -124,8 +123,7 @@ button {
 }
 
 /* Koyu perde: yazı okunsun */
-#homeBanner::after,
-.banner::after {
+#homeBanner::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -162,9 +160,9 @@ button {
     pointer-events: none;
 }
 
-/* Şerit + 2px = sekmelerle reklam arası sabit 18px */
+/* Sekmelerle reklam arası yalnızca şerit kadar: sabit 16px */
 #homeMain {
-    padding-top: 2px;
+    padding-top: 0;
 }
 
 #homeTitleRow {
@@ -184,7 +182,7 @@ button {
     gap: .35em;
     min-width: 0;
 
-    /* Menü düğmesine göre ortalanmaz: reklamla arası her ekranda sabit 18px */
+    /* Menü düğmesine göre ortalanmaz: reklamla arası her ekranda sabit 16px */
     align-self: flex-start;
     margin-right: .35em;
     font-size: min(16px, 3.4vw);
@@ -1468,9 +1466,13 @@ button {
    haritanın yeri; şimdilik boş).
 ----------------------------- */
 
+/* Tam sayfa değil: üstteki reklam (100px) yerinde kalır, 16px boşluk bırakılır */
 #emptyLayer {
     position: fixed;
-    inset: 0;
+    top: calc(100px + 16px);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 18;
     background: #f4f5f7;
     display: flex;
@@ -1485,7 +1487,7 @@ button {
     flex: 1;
     overflow-y: auto;
     scrollbar-gutter: stable;
-    padding: 12px var(--side-gap) 180px;
+    padding: 0 var(--side-gap) 180px;
 }
 
 /* Kayıtlı Maçlarım / Kuponlarım düğmeleri (ana sayfadaki sekmeler gibi) */
@@ -1563,14 +1565,9 @@ body[data-tab="empty"] #emptyLayer {
 /* Maç sayfası açıkken sarı topla açılan Kuponlarım, maç sayfasının üstüne gelir */
 #emptyLayer.raised {
     z-index: 31;
-}
 
-/* Alt menü penceresindeki resim: şimdilik mavi saha (sonra değişecek) */
-#emptyLayer .banner {
-    background:
-        radial-gradient(circle at 50% 50%, transparent 17%, rgba(255,255,255,.35) 17.4%, transparent 18%),
-        linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.35) 49.8%, rgba(255,255,255,.35) 50.2%, transparent 50.2%),
-        repeating-linear-gradient(90deg, #2f6fd8 0 10%, #2a64c6 10% 20%);
+    /* Maç sayfasındaki ince reklam (50px) yerinde kalır, 16px boşluk bırakılır */
+    top: calc(50px + 16px);
 }
 
 /* -----------------------------
@@ -2632,7 +2629,7 @@ body.ball-left .ac-kapa svg {
     display: flex;
     justify-content: center;
     overflow: hidden;
-    background: #0d1424;
+    background: black;
 }
 
 .ad-box {
@@ -3016,13 +3013,6 @@ body.ball-left .ac-kapa svg {
 
 <!-- BOŞ SAYFA (mavi top ile açılır) -->
 <div id="emptyLayer">
-    <div class="banner">
-        <div class="banner-text">
-            <div class="banner-title">Canlı Skor</div>
-            <div class="banner-sub">Premier Lig · Süper Lig · 2026-27</div>
-        </div>
-    </div>
-
     <main id="myMain">
 
         <div id="myTabs">
@@ -6709,9 +6699,9 @@ document.addEventListener('keydown', event => {
         openDetail(id);
 })();
 
-/* Reklamı iki üst resmin üzerine koy (ikisi aynı anda başlar, aynı sahnede olur) */
-document.querySelectorAll('#homeBanner, #emptyLayer .banner').forEach(banner =>
-    banner.appendChild(document.getElementById('adTemplate').content.cloneNode(true)));
+/* Reklamı ana sayfanın üst resminin üzerine koy */
+document.getElementById('homeBanner').appendChild(
+    document.getElementById('adTemplate').content.cloneNode(true));
 
 /* İçerik sayfasının (ve analiz içeriğinin) en üstündeki ince reklam */
 document.getElementById('detailAd').appendChild(
