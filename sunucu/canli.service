@@ -1,0 +1,15 @@
+[Unit]
+Description=Canli skor sunucusu
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=canli
+WorkingDirectory=/opt/canli/sunucu
+EnvironmentFile=/etc/canli/anahtar.env
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
