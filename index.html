@@ -2767,19 +2767,21 @@ body.ball-left .ac-kapa svg {
 }
 
 /*
- * İçerik sayfasının en üstündeki ince reklam: sabit 320x50, köşeleri hafif oval.
- * Skor alanının yeşil zemini en üste kadar çıkar; reklam onun üstüne biner.
+ * İçerik sayfasının en üstündeki ince reklam: ekran genişliğinde, 50px boyunda
+ * siyah zemin; sabit 320x50 reklam onun üstüne biner (alt köşeleri hafif oval).
+ * Skor alanının yeşil zemini bu şeridin arkasından en üste kadar çıkar.
  */
 #detailAd {
     position: absolute;
     top: 0;
-    left: 50%;
+    left: 0;
+    right: 0;
     z-index: 4;
-    width: 320px;
     height: 50px;
-    transform: translateX(-50%);
+}
+
+#detailAd .ad-box {
     border-radius: 0 0 .4em .4em;
-    overflow: hidden;
 }
 
 .ad-thin {
@@ -5457,21 +5459,27 @@ function anCard(m) {
      * Kapanan kartın üst kenarı olduğu yerde kalır.
      */
     card.addEventListener('click', () => {
+
+        /* Kapanma hareketi sürerken basılırsa bekle */
+        if (card.classList.contains('closing'))
+            return;
+
         const open = !card.classList.contains('open');
         const topBefore = card.getBoundingClientRect().top;
 
         document.querySelectorAll('.an-card.open').forEach(c => {
-            c.classList.remove('open');
-            c.querySelector('.an-hint').textContent = 'Detay ▾';
+            if (c !== card)
+                foldAnCard(c, false);
         });
-        card.classList.toggle('open', open);
-        card.querySelector('.an-hint').textContent = open ? 'Kapat ▴' : 'Detay ▾';
 
-        const shift = card.getBoundingClientRect().top - (open ? homeMain.getBoundingClientRect().top : topBefore);
-        if (open)
-            homeMain.scrollTo({ top: homeMain.scrollTop + shift, behavior: 'smooth' });
-        else
-            homeMain.scrollTop += shift;
+        if (open) {
+            foldAnCard(card, true);
+            scrollAnCardTop(card);
+        } else {
+            foldAnCard(card, false, () => {
+                homeMain.scrollTop += card.getBoundingClientRect().top - topBefore;
+            });
+        }
     });
 
     card.querySelector('.an-deep').addEventListener('click', event => {
@@ -5480,6 +5488,64 @@ function anCard(m) {
     });
 
     return card;
+}
+
+/* Kart 0.15 saniyede büyüyerek açılır, küçülerek kapanır */
+function foldAnCard(card, open, done) {
+
+    const expand = card.querySelector('.an-expand');
+    card.querySelector('.an-hint').textContent = open ? 'Kapat ▴' : 'Detay ▾';
+
+    if (open)
+        card.classList.add('open');
+    else
+        card.classList.add('closing');
+
+    const css = getComputedStyle(expand);
+    const full = {
+        height: expand.offsetHeight + 'px', marginTop: css.marginTop,
+        paddingTop: css.paddingTop, borderTopWidth: css.borderTopWidth, overflow: 'hidden'
+    };
+    const none = { height: 0, marginTop: 0, paddingTop: 0, borderTopWidth: 0, overflow: 'hidden' };
+
+    const anim = expand.animate(open ? [none, full] : [full, none],
+        { duration: 150, easing: 'ease-out', fill: open ? 'none' : 'forwards' });
+
+    if (!open)
+        anim.onfinish = () => {
+            card.classList.remove('open', 'closing');
+            anim.cancel();
+            if (done)
+                done();
+        };
+}
+
+/*
+ * Açılan kart yavaşça kayıp en üste, şeridin hemen altına gelir (0.6 sn).
+ * Üstte kapanan kart varsa hedef her karede yeniden ölçülür.
+ */
+let anScrollRun = 0;
+
+function scrollAnCardTop(card) {
+
+    const run = ++anScrollRun;
+    const start = homeMain.scrollTop;
+    const begin = performance.now();
+
+    (function step(now) {
+        if (run !== anScrollRun)
+            return;
+
+        const t = Math.min(1, (now - begin) / 600);
+        const ease = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const target = homeMain.scrollTop +
+            card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top;
+
+        homeMain.scrollTop = start + (target - start) * ease;
+
+        if (t < 1)
+            requestAnimationFrame(step);
+    })(begin);
 }
 
 function renderAnalysis() {
