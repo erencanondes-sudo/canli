@@ -1014,11 +1014,13 @@ button {
 }
 
 /* Menü düğmesi: simge üstteki alanın sağ kenarıyla aynı hizada */
+/* Boyu sekmeler kadar: satırı uzatmaz, alttaki satırla arası 8px kalır */
 #menuBtn {
     flex: none;
+    align-self: stretch;
     width: 32px;
-    height: 40px;
     padding: 0;
+    line-height: 1;
     background: none;
     color: #333;
     font-size: 24px;
@@ -1619,6 +1621,7 @@ body[data-tab="empty"] #emptyLayer {
 
 .ac-kapa svg {
     position: relative;
+    top: 1px;
     width: 23px;
     height: 23px;
     transition: transform .3s ease;
@@ -2265,7 +2268,6 @@ body.ball-left .ac-kapa svg {
     background: white;
     border: 1px solid transparent;
     border-radius: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,.10);
     font-size: 14px;
     color: #222;
     cursor: pointer;
@@ -5450,14 +5452,26 @@ function anCard(m) {
     });
 
     /* Aynı anda tek kart açık */
+    /*
+     * Açılan kart en üste, şeridin hemen altına gelir.
+     * Kapanan kartın üst kenarı olduğu yerde kalır.
+     */
     card.addEventListener('click', () => {
         const open = !card.classList.contains('open');
+        const topBefore = card.getBoundingClientRect().top;
+
         document.querySelectorAll('.an-card.open').forEach(c => {
             c.classList.remove('open');
             c.querySelector('.an-hint').textContent = 'Detay ▾';
         });
         card.classList.toggle('open', open);
         card.querySelector('.an-hint').textContent = open ? 'Kapat ▴' : 'Detay ▾';
+
+        const shift = card.getBoundingClientRect().top - (open ? homeMain.getBoundingClientRect().top : topBefore);
+        if (open)
+            homeMain.scrollTo({ top: homeMain.scrollTop + shift, behavior: 'smooth' });
+        else
+            homeMain.scrollTop += shift;
     });
 
     card.querySelector('.an-deep').addEventListener('click', event => {
