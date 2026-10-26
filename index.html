@@ -2539,6 +2539,65 @@ body.ball-left .ac-kapa svg {
     color: #1a56db;
 }
 /* =====================================================
+   GOL BİLDİRİMİ (uygulama içi): en üstte, tam genişlik, 100px
+===================================================== */
+#goalToast {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .2em;
+    padding: 0 4%;
+    background: #1a73e8;
+    color: white;
+    box-shadow: 0 .2em .8em rgba(0, 0, 0, .25);
+    transform: translateY(-110%);
+    transition: transform .3s ease;
+    pointer-events: none;
+}
+
+#goalToast.show {
+    transform: translateY(0);
+}
+
+.gt-title {
+    font-size: 1.15em;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+
+.gt-match {
+    font-size: 1em;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.gt-match b {
+    font-weight: 800;
+}
+
+.gt-player {
+    font-size: .85em;
+    opacity: .9;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Gol atan takımın yanındaki top (10 saniye) */
+.score-team .goal-ball {
+    flex: none;
+    font-size: .9em;
+}
+
+/* =====================================================
    REKLAM (üst resmin üzerinde, tam genişlik, 100px boy)
    İki reklam, video gibi sahne sahne oynar; her biri 15 saniye.
    Hepsi 30 saniyelik tek döngü: ilk yarı 1. reklam, ikinci yarı 2. reklam.
@@ -2551,6 +2610,11 @@ body.ball-left .ac-kapa svg {
     justify-content: center;
     overflow: hidden;
     background: black;
+}
+
+/* ŞİMDİLİK GİZLİ: reklamlar görünmez, siyah şerit kalır. Açmak için bu kuralı sil. */
+.ad-strip .ad-box {
+    display: none;
 }
 
 .ad-box {
@@ -3035,6 +3099,12 @@ body.ball-left .ac-kapa svg {
 </div>
 
 <!-- REKLAM ŞABLONU: üst resimlerin üzerine konur -->
+<div id="goalToast" aria-live="polite">
+    <div class="gt-title">⚽ GOL!</div>
+    <div class="gt-match"></div>
+    <div class="gt-player"></div>
+</div>
+
 <template id="adTemplate">
     <div class="ad-strip">
         <div class="ad-box">
@@ -3444,8 +3514,151 @@ function watchLive() {
                 liveRows.set(String(row[0]), row);
             });
         }
+        findGoals();
         refreshViews();
     }, () => {});
+}
+
+/*
+ * GOL: canlı maçın skoru bir öncekinden büyükse gol olmuştur.
+ * İlk açılışta ve uygulama öne geldiğinde skorlar yalnızca not edilir.
+ */
+const lastScores = new Map();   /* maç no → [ev, dep] */
+const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
+const goalQueue = [];
+
+function findGoals() {
+
+    const seen = new Set();
+
+    liveRows.forEach((row, id) => {
+
+        const score = [row[8] || 0, row[9] || 0];
+        const before = lastScores.get(id);
+
+        if (before) {
+            ['home', 'away'].forEach((side, i) => {
+                if (score[i] > before[i]) {
+                    goalUntil.set(id + '-' + side, Date.now() + 10000);
+                    goalQueue.push({ row: row, side: side });
+                }
+            });
+        }
+
+        lastScores.set(id, score);
+        seen.add(id);
+    });
+
+    /* Biten maçlar listeden çıkar */
+    lastScores.forEach((score, id) => {
+        if (!seen.has(id)) lastScores.delete(id);
+    });
+
+    if (goalQueue.length) {
+        showNextGoal();
+        setTimeout(refreshViews, 10100);
+    }
+}
+
+function hasBall(id, side) {
+    return (goalUntil.get(id + '-' + side) || 0) > Date.now();
+}
+
+/*
+ * Bildirim: birden fazla gol varsa her biri 2 saniye görünür, sonra
+ * hemen diğeri gelir; son bildirim 4 saniye kalır. Her golde ses çalar.
+ */
+let toastBusy = false;
+
+function showNextGoal() {
+
+    if (toastBusy || !goalQueue.length)
+        return;
+
+    toastBusy = true;
+    showGoal(goalQueue.shift());
+}
+
+function showGoal({ row, side }) {
+
+    const match = rowToMatch(row);
+    const toast = document.getElementById('goalToast');
+    const box = toast.querySelector('.gt-match');
+
+    box.textContent = '';
+    if (minuteText(match))
+        box.appendChild(document.createTextNode(minuteText(match) + ' · '));
+
+    [['home', match.home.mid || match.home.name], ['away', match.away.mid || match.away.name]].forEach(([s, name], i) => {
+        const el = document.createElement(s === side ? 'b' : 'span');
+        el.textContent = name;
+        if (i === 1)
+            box.appendChild(document.createTextNode(' ' + match.score[0] + ' - ' + match.score[1] + ' '));
+        box.appendChild(el);
+    });
+
+    /* Golü atan: o takımın son golü */
+    const goal = (match.events || []).filter(e => e.type === 'goal' && e.side === side).pop();
+    toast.querySelector('.gt-player').textContent = goal && goal.player ? goal.player : '';
+
+    toast.classList.add('show');
+    goalSound();
+
+    /* 2 sn sonra sırada gol varsa ona geç; yoksa 2 sn daha (toplam 4 sn) kal */
+    setTimeout(() => {
+
+        if (goalQueue.length) {
+            showGoal(goalQueue.shift());
+            return;
+        }
+
+        setTimeout(() => {
+            if (goalQueue.length) {
+                showGoal(goalQueue.shift());
+                return;
+            }
+            toast.classList.remove('show');
+            toastBusy = false;
+        }, 2000);
+
+    }, 2000);
+}
+
+/*
+ * GOL SESİ: kodla üretilen kısa üç notalık ses (dosya indirilmez).
+ * Tarayıcılar ses için önce bir dokunuş ister; ilk dokunuşta ses açılır.
+ */
+let audioCtx = null;
+
+document.addEventListener('pointerdown', () => {
+    try {
+        if (!audioCtx)
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended')
+            audioCtx.resume();
+    } catch (error) {}
+}, { passive: true });
+
+function goalSound() {
+
+    if (!audioCtx || audioCtx.state !== 'running')
+        return;
+
+    const start = audioCtx.currentTime;
+
+    [660, 880, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const t = start + i * 0.13;
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + (i === 2 ? 0.45 : 0.12));
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.5);
+    });
 }
 
 /* Seçili günün 1. grubu hemen, diğer grupları liste sonuna gelince */
@@ -3549,6 +3762,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         if (liveUnsub) liveUnsub();
         liveUnsub = null;
+        lastScores.clear();
         const day = watchedDay && watchedDay.day;
         const groups = watchedDay ? Array.from(watchedDay.groups.keys()) : [];
         unwatchDay();
@@ -4034,6 +4248,17 @@ function scoreRow(match, showDate, showLeague) {
         const name = document.createElement('span');
         name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
+
+        /* Gol atan takımın yanında top (10 saniye): soldaki takımda solda, sağdakinde sağda */
+        if (match.status === 'live' && hasBall(match.id, side)) {
+            const ball = document.createElement('i');
+            ball.className = 'goal-ball';
+            ball.textContent = '⚽';
+            if (side === 'home')
+                el.insertBefore(ball, name);
+            else
+                el.appendChild(ball);
+        }
 
         return el;
     };
