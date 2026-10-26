@@ -6,7 +6,7 @@ Bir doküman değişmediyse yeniden yazılmaz.
 | Koleksiyon / doküman | Ne var | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|
 | `gunler/{gün}-{grup}` | O günün maçları, 50'şer maçlık gruplar | Ana sayfa | Maç başlayınca, bitince, fikstür değişince | grup başına ~2–30 KB |
-| `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Ana sayfa, maç sayfası | Canlı maç varken: 19:00–21:00 5 sn, 21:30–23:30 3 sn, diğer saatler 15 sn'de bir | ~1–5 KB |
+| `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Ana sayfa, maç sayfası | Canlı maç varken 8 sn'de bir, yalnızca 12:30–01:00 arası | ~1–5 KB |
 | `maclar/{maç no}` | İstatistik ve kadro | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
 | `sistem/durum` | Sunucunun durumu | Yalnızca sen | Dakikada bir | < 1 KB |
 

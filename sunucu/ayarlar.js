@@ -7,6 +7,7 @@ module.exports = {
 
     /* Ligler. Sıra önemli: ana sayfa grupları bu sıraya göre dolar. */
     LIGLER: [
+        { no: 135, ad: 'Serie A' },
         { no: 203, ad: 'Süper Lig' },
         { no: 204, ad: '1. Lig' },
         { no: 206, ad: 'Türkiye Kupası' }
@@ -14,13 +15,10 @@ module.exports = {
 
     GRUP_BOYU: 50,                  /* ana sayfa dokümanı başına maç */
 
-    TUR_ARALIK: 15000,              /* canlı skor ve yazma: 15 sn (aşağıdaki saatlerin dışında) */
-
-    /* Belli saatlerde daha sık (Türkiye saati): [başlangıç, bitiş, aralık] */
-    HIZLI_SAATLER: [
-        ['19:00', '21:00', 5000],
-        ['21:30', '23:30', 3000]
-    ],
+    /* Canlı skor yalnızca bu saatler arasında çekilir (Türkiye saati, gece yarısını geçebilir) */
+    CANLI_SAAT: ['12:30', '01:00'],
+    TUR_ARALIK: 8000,               /* canlı saatlerde: canlı skor ve yazma 8 sn */
+    BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 60000,            /* canlı maç detayı: 1 dk */
     FIKSTUR_BUGUN: 15 * 60000,      /* bugünün fikstürü: 15 dk */
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */

@@ -1,6 +1,6 @@
 /*
  * Canlı skor sunucusu.
- * Her turda (19:00–21:00 5 sn, 21:30–23:30 3 sn, diğer saatler 15 sn; ayarlar.js):
+ * Canlı saatlerde (12:30–01:00) 8 sn'de bir tur, dışında 1 dk'da bir (ayarlar.js):
  *   1. Gerekirse fikstür (dün, bugün, yarın) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
@@ -33,12 +33,14 @@ const gunAdi = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: A.SAAT
 const durumu = k => k.f.fixture.status.short;
 const SAAT = '&timezone=' + A.SAAT_DILIMI;
 
-/* Türkiye saatine göre turun aralığı */
-function turAraligi() {
+/* Türkiye saatine göre canlı saatlerde miyiz? (aralık gece yarısını geçebilir) */
+function canliSaatte() {
     const saat = new Date().toLocaleTimeString('en-GB', { timeZone: A.SAAT_DILIMI, hour: '2-digit', minute: '2-digit' });
-    const hizli = A.HIZLI_SAATLER.find(([bas, son]) => saat >= bas && saat <= son);
-    return hizli ? hizli[2] : A.TUR_ARALIK;
+    const [bas, son] = A.CANLI_SAAT;
+    return bas <= son ? saat >= bas && saat <= son : saat >= bas || saat <= son;
 }
+
+const turAraligi = () => canliSaatte() ? A.TUR_ARALIK : A.BEKLEME_ARALIK;
 
 function gunler() {
     const n = Date.now();
@@ -89,6 +91,7 @@ async function fiksturCek(gun) {
 
 /* Canlı maç var mı, ya da birazdan başlayacak maç var mı? */
 function canliGerekli() {
+    if (!canliSaatte()) return false;
     const t = simdi();
     for (const k of maclar.values()) {
         const d = durumu(k);
@@ -119,6 +122,7 @@ async function canliCek() {
 function detaySec() {
     const t = simdi();
     const yedek = api.yedekte();
+    const canliSaat = canliSaatte();
     const secim = [];
 
     for (const [no, k] of maclar) {
@@ -127,7 +131,7 @@ function detaySec() {
 
         if (k.kontrol || (BITTI.has(d) && !k.sonHal)) secim.push(no);
         else if (yedek) continue;
-        else if (CANLI.has(d) && detayli.get(lig)) secim.push(no);
+        else if (CANLI.has(d)) { if (canliSaat && detayli.get(lig)) secim.push(no); }
         else if (BITTI.has(d) && !k.duzeltildi && t - k.bitis >= A.DUZELTME_SONRA) secim.push(no);
         else if (d === 'NS' && detayli.get(lig) && !k.kadro &&
                  k.f.fixture.timestamp - t <= A.KADRO_ONCESI && t - k.kadroDeneme >= A.KADRO_ARALIK) {
