@@ -42,7 +42,7 @@ Maç bitince olaylarıyla birlikte gruba yazılır ve `canli/simdi`'den çıkar.
 Her satır sırası sabit bir listedir:
 
 ```
-[1584444, 203, 1792944000, "FT", 90, 5, 994, 6343, 2, 0, 2, 0, [olaylar]]
+[1584444, 203, 1792944000, "FT", 90, 5, 994, 6343, 2, 0, 2, 0, [olaylar], 9]
 ```
 
 | Sıra | Ne | Örnek |
@@ -60,6 +60,7 @@ Her satır sırası sabit bir listedir:
 | 10 | İlk yarı ev sahibi | 2 |
 | 11 | İlk yarı deplasman | 0 |
 | 12 | Olaylar (yalnızca biten ve canlı maçlarda) | `[[3, null, 0, "g", "n", "A. Antunes", null], …]` |
+| 13 | Hafta. Ligde sayı (9), kupada tur adı API'nin yazdığı gibi ("Round of 16") | 9 |
 
 Boş olan yerlerde `null` yazar.
 

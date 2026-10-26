@@ -49,7 +49,14 @@ function olaylar(f) {
     ]);
 }
 
-/* Maç satırı: [no, lig, saat, durum, dakika, uzatma, ev, dep, ev gol, dep gol, ev İY, dep İY, olaylar] */
+/* Hafta: "Regular Season - 9" → 9; kupa turları olduğu gibi ("Round of 16") */
+function hafta(r) {
+    if (!r) return null;
+    const m = /^Regular Season - (\d+)$/.exec(r);
+    return m ? Number(m[1]) : r;
+}
+
+/* Maç satırı: [no, lig, saat, durum, dakika, uzatma, ev, dep, ev gol, dep gol, ev İY, dep İY, olaylar, hafta] */
 function satir(f, olay) {
     return [
         f.fixture.id,
@@ -64,7 +71,8 @@ function satir(f, olay) {
         f.goals.away,
         f.score.halftime.home,
         f.score.halftime.away,
-        olay
+        olay,
+        hafta(f.league.round)
     ];
 }
 
@@ -72,7 +80,7 @@ function satir(f, olay) {
 function yerTutucu(f) {
     return [
         f.fixture.id, f.league.id, f.fixture.timestamp, 'CANLI', null, null,
-        f.teams.home.id, f.teams.away.id, null, null, null, null, []
+        f.teams.home.id, f.teams.away.id, null, null, null, null, [], hafta(f.league.round)
     ];
 }
 

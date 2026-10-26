@@ -1,0 +1,30 @@
+rules_version = '2';
+
+/*
+ * Firestore kuralları
+ * Uygulama yalnızca okur; yazmayı sunucu yapar (sunucu bu kurallara takılmaz).
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /gunler/{gun} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /canli/{dokuman} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /maclar/{mac} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    /* Geri kalan her şey (sistem/durum dahil) kapalı */
+    match /{belge=**} {
+      allow read, write: if false;
+    }
+  }
+}

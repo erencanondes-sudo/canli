@@ -1199,35 +1199,6 @@ button {
     font-weight: 600;
 }
 
-.team-row {
-    display: flex;
-    align-items: center;
-    gap: .6em;
-    padding: .2em 0;
-}
-
-.team-name {
-    flex: 1;
-    min-width: 0;
-    font-size: 1.07em;
-    font-weight: 700;
-    color: #1d2340;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-/* Kaybeden takım biraz soluk */
-
-.team-score {
-    flex: none;
-    min-width: 1.4em;
-    text-align: right;
-    font-size: 1.2em;
-    font-weight: 800;
-    color: #1d2340;
-}
-
 /*
  * Takım arması yerine: takım renklerinde yuvarlak ve kısa adı.
  * (Gerçek armalar kullanılmaz.)
@@ -1247,65 +1218,6 @@ button {
     /* İnce çerçeve: beyaz formalı takımlar da beyaz kartta görünsün */
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
 }
-
-/* Alttaki satır: yorum, beğeni, beğenmeme (üstünde ince ayraç) */
-.match-stats {
-    display: flex;
-    align-items: center;
-    gap: 1.1em;
-    margin-top: .5em;
-    padding-top: calc(.5em + 1px);
-    border-top: 1px solid #e6e8ee;
-    font-size: .857em;
-    font-weight: 600;
-    color: #555a66;
-    white-space: nowrap;
-}
-
-.stat {
-    display: inline-flex;
-    align-items: center;
-    gap: .35em;
-}
-
-.stat svg {
-    width: 1.15em;
-    height: 1.15em;
-}
-
-.stat.comment {
-    position: relative;
-    padding-right: calc(1.5em + 1px);
-    margin-right: calc(.4em + 1px);
-}
-
-.stat.comment svg {
-    width: 1.25em;
-    height: 1.25em;
-}
-
-/* Yorum ile beğeni arasındaki dik ayraç */
-.stat.comment::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 15%;
-    height: 70%;
-    border-right: 1px solid #d9dce4;
-}
-
-.stat.like {
-    margin-right: calc(.25em + 3px);
-}
-
-.stat.like svg,
-.stat.dislike svg {
-    width: 1.4em;
-    height: 1.4em;
-}
-
-.stat.like svg    { color: #16a34a; }
-.stat.dislike svg { color: #dc2626; }
 
 /* Oranlar sayfasındaki 1 / X / 2 kutuları */
 .odds-row {
@@ -2067,6 +1979,13 @@ body.ball-left .ac-kapa svg {
     padding: .38em 0;
     border-bottom: 1px solid #f1f2f5;
     color: #333;
+}
+
+.lineup-player span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .lineup-player b {
@@ -3223,447 +3142,437 @@ body.ball-left .ac-kapa svg {
 <script>
 
 /* =================================================
-   !!! SAHTE VERİ - GERÇEK API BAĞLANINCA KALDIRILACAK !!!
+   VERİ (Firestore)
    -------------------------------------------------
-   Premier Lig ve Süper Lig 2026-27 için uydurma maçlar:
-   1-6. haftalar oynanmış, 7. haftada birkaç maç canlı,
-   diğerleri oynanacak.
-   Skorlar, olaylar, istatistikler, oranlar ve yorum /
-   beğeni sayıları rastgele üretilir (her açılışta aynı
-   çıksın diye sabit bir tohumla).
+   Veriyi sunucu API-Football'dan çekip yazar; uygulama
+   yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
+     gunler/{gün}-{grup} : günün maçları (50'şer maçlık gruplar)
+     canli/simdi         : şu an oynanan maçlar
+     maclar/{maç no}     : istatistik ve kadro (maç açılınca)
 ================================================= */
 
-/* Takımlar: ad, kısa ad, renkler, güç (sadece sahte skor üretmek için),
-   mid: canlı skor satırına sığmayan adların kısaltılmışı */
-const PL_TEAMS = [
-    { name: 'Arsenal',           short: 'ARS', bg: '#db0007', fg: '#fff', power: 88 },
-    { name: 'Aston Villa',       short: 'AVL', bg: '#670e36', fg: '#95bfe5', power: 78 },
-    { name: 'Bournemouth',       short: 'BOU', bg: '#da291c', fg: '#000', power: 72 },
-    { name: 'Brentford',         short: 'BRE', bg: '#e30613', fg: '#fff', power: 72 },
-    { name: 'Brighton',          short: 'BHA', bg: '#0057b8', fg: '#fff', power: 74 },
-    { name: 'Chelsea',           short: 'CHE', bg: '#034694', fg: '#fff', power: 82 },
-    { name: 'Coventry City',     short: 'COV', bg: '#59cbe8', fg: '#000', power: 64, mid: 'Coventry' },
-    { name: 'Crystal Palace',    short: 'CRY', bg: '#1b458f', fg: '#c4122e', power: 72, mid: 'C. Palace' },
-    { name: 'Everton',           short: 'EVE', bg: '#003399', fg: '#fff', power: 70 },
-    { name: 'Fulham',            short: 'FUL', bg: '#ffffff', fg: '#000', power: 70 },
-    { name: 'Hull City',         short: 'HUL', bg: '#f5a12d', fg: '#000', power: 62 },
-    { name: 'Ipswich Town',      short: 'IPS', bg: '#3a64a3', fg: '#fff', power: 64, mid: 'Ipswich' },
-    { name: 'Leeds United',      short: 'LEE', bg: '#ffffff', fg: '#1d428a', power: 67, mid: 'Leeds' },
-    { name: 'Liverpool',         short: 'LIV', bg: '#c8102e', fg: '#fff', power: 87 },
-    { name: 'Manchester City',   short: 'MCI', bg: '#6cabdd', fg: '#1c2c5b', power: 86, mid: 'Man. City' },
-    { name: 'Manchester United', short: 'MUN', bg: '#da291c', fg: '#fbe122', power: 78, mid: 'Man. United' },
-    { name: 'Newcastle',         short: 'NEW', bg: '#241f20', fg: '#fff', power: 80 },
-    { name: 'Nottingham Forest', short: 'NFO', bg: '#dd0000', fg: '#fff', power: 72, mid: 'Nott. Forest' },
-    { name: 'Sunderland',        short: 'SUN', bg: '#eb172b', fg: '#fff', power: 66 },
-    { name: 'Tottenham Hotspur', short: 'TOT', bg: '#132257', fg: '#fff', power: 77, mid: 'Tottenham' }
-];
+const FIREBASE_SURUM = '12.19.0';
 
-const SL_TEAMS = [
-    { name: 'Galatasaray',     short: 'GS',  bg: '#a90432', fg: '#fdb912', power: 86 },
-    { name: 'Fenerbahçe',      short: 'FB',  bg: '#002d72', fg: '#ffed00', power: 84 },
-    { name: 'Beşiktaş',        short: 'BJK', bg: '#111111', fg: '#ffffff', power: 79 },
-    { name: 'Trabzonspor',     short: 'TS',  bg: '#7a1f3d', fg: '#5cb8e6', power: 77 },
-    { name: 'Başakşehir',      short: 'İBF', bg: '#1d3a6e', fg: '#f26522', power: 72 },
-    { name: 'Göztepe',         short: 'GÖZ', bg: '#ffd200', fg: '#e30613', power: 72 },
-    { name: 'Samsunspor',      short: 'SAM', bg: '#e30613', fg: '#ffffff', power: 71 },
-    { name: 'Kasımpaşa',       short: 'KAS', bg: '#003da5', fg: '#ffffff', power: 66 },
-    { name: 'Eyüpspor',        short: 'EYP', bg: '#5c2d91', fg: '#ffd200', power: 66 },
-    { name: 'Çaykur Rizespor', short: 'RİZ', bg: '#00843d', fg: '#ffffff', power: 67, mid: 'Rizespor' },
-    { name: 'Konyaspor',       short: 'KON', bg: '#007a3d', fg: '#ffffff', power: 66 },
-    { name: 'Kocaelispor',     short: 'KOC', bg: '#111111', fg: '#3bb54a', power: 65 },
-    { name: 'Alanyaspor',      short: 'ALA', bg: '#f28c00', fg: '#00843d', power: 67 },
-    { name: 'Gaziantep FK',    short: 'GFK', bg: '#d71920', fg: '#111111', power: 66, mid: 'Gaziantep' },
-    { name: 'Gençlerbirliği',  short: 'GB',  bg: '#e30613', fg: '#111111', power: 63 },
-    { name: 'Erzurumspor FK',  short: 'ERZ', bg: '#004b93', fg: '#ffffff', power: 62, mid: 'Erzurumspor' },
-    { name: 'Amedspor',        short: 'AMD', bg: '#007a3d', fg: '#e30613', power: 62 },
-    { name: 'Çorum FK',        short: 'ÇOR', bg: '#c8102e', fg: '#111111', power: 60 }
-];
+const FIREBASE_AYAR = {
+    apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',
+    authDomain: 'canli-b4406.firebaseapp.com',
+    projectId: 'canli-b4406',
+    storageBucket: 'canli-b4406.firebasestorage.app',
+    messagingSenderId: '940094284577',
+    appId: '1:940094284577:web:fbb51f2875b55090485460'
+};
 
-/* Sabit tohumlu rastgele sayı üreticisi (her açılışta aynı veri) */
-function seededRandom(seed) {
-    return function () {
-        seed |= 0;
-        seed = seed + 0x6D2B79F5 | 0;
-        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-        return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-}
-
-const rand = seededRandom(20262027);
-
-function randInt(min, max) {
-    return min + Math.floor(rand() * (max - min + 1));
-}
-
-/* Ortalaması lambda olan rastgele gol sayısı */
-function poisson(lambda) {
-    const limit = Math.exp(-lambda);
-    let k = 0;
-    let p = 1;
-
-    do {
-        k++;
-        p *= rand();
-    } while (p > limit);
-
-    return k - 1;
-}
-
-/*
- * Sahte fikstür 17 Ekim 2026'ya göre yazıldı; uygulama hangi gün
- * açılırsa açılsın bütün tarihler o güne kaydırılır (17 Ekim = bugün).
- */
-const DATE_SHIFT = Math.round(
-    (new Date(new Date().toDateString()) - new Date('2026-10-17T00:00:00')) / 86400000
-);
-
-const PLAYED_WEEKS = 6;
-const CURRENT_WEEK = 7;
-
-/* 8. ve 9. haftalar oynanacak (önümüzdeki günlerde de maç olsun) */
-const LAST_WEEK = 9;
-
-/*
- * LİGLER
- * weekDates : haftaların ilk günü (Eylül ve Ekim'de milli ara var)
- * kickoffs  : [ilk günden kaç gün sonra, saat], haftanın her maçı için
- * live      : 7. haftada canlı gösterilen maçlar ve dakikaları (sahte)
- * todayDone : 7. haftada bugün erken oynanıp bitmiş sayılan maçlar
- * todayLater: 7. haftada bugün biraz sonra başlayacak sayılan maçlar
- * (Böylece "Bugün"de canlı, bitmiş ve başlamamış maçlar birlikte görünür.)
- */
-const LEAGUES = [
-    {
-        id: 'pl',
-        name: 'Premier Lig',
-        country: 'İngiltere',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="30" height="20" fill="#fff"/>' +
-            '<rect x="12.5" width="5" height="20" fill="#ce1124"/>' +
-            '<rect y="7.5" width="30" height="5" fill="#ce1124"/></svg>',
-        teams: PL_TEAMS,
-        weekDates: [
-            '2026-08-22', '2026-08-29', '2026-09-12', '2026-09-19',
-            '2026-10-09', '2026-10-12', '2026-10-17', '2026-10-20',
-            '2026-10-23'
-        ],
-        kickoffs: [
-            [0, '14:30'], [0, '17:00'], [0, '17:00'], [0, '17:00'], [0, '17:00'],
-            [0, '19:30'], [1, '16:00'], [1, '16:00'], [1, '18:30'], [2, '22:00']
-        ],
-        live: { 0: 63, 1: 27 },
-        todayDone: [2],
-        todayLater: [3]
-    },
-    {
-        id: 'sl',
-        name: 'Süper Lig',
-        country: 'Türkiye',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="30" height="20" fill="#e30a17"/>' +
+/* Bayraklar (kodla çizilmiş) */
+const FLAGS = (() => {
+    const svg = inner => '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' + inner + '</svg>';
+    return {
+        tr: svg('<rect width="30" height="20" fill="#e30a17"/>' +
             '<circle cx="11.25" cy="10" r="5" fill="#fff"/>' +
             '<circle cx="12.5" cy="10" r="4" fill="#e30a17"/>' +
-            '<polygon fill="#fff" points="16.6,10 21.9,8.27 18.62,12.78 18.62,7.22 21.9,11.73"/></svg>',
-        teams: SL_TEAMS,
-        weekDates: [
-            '2026-08-14', '2026-08-21', '2026-08-28', '2026-09-11',
-            '2026-09-18', '2026-10-13', '2026-10-16', '2026-10-20',
-            '2026-10-22'
-        ],
-        kickoffs: [
-            [0, '20:00'], [1, '14:30'], [1, '17:00'], [1, '20:00'], [2, '14:30'],
-            [2, '17:00'], [2, '20:00'], [3, '19:00'], [3, '20:00']
-        ],
-        live: { 0: 71 },
-        todayDone: [1],
-        todayLater: [2]
-    },
+            '<polygon fill="#fff" points="16.6,10 21.9,8.27 18.62,12.78 18.62,7.22 21.9,11.73"/>'),
+        en: svg('<rect width="30" height="20" fill="#fff"/>' +
+            '<rect x="12.5" width="5" height="20" fill="#ce1124"/>' +
+            '<rect y="7.5" width="30" height="5" fill="#ce1124"/>'),
+        es: svg('<rect width="30" height="20" fill="#c60b1e"/><rect y="5" width="30" height="10" fill="#ffc400"/>'),
+        it: svg('<rect width="10" height="20" fill="#009246"/><rect x="10" width="10" height="20" fill="#fff"/>' +
+            '<rect x="20" width="10" height="20" fill="#ce2b37"/>'),
+        de: svg('<rect width="30" height="20" fill="#ffce00"/><rect width="30" height="13.34" fill="#dd0000"/>' +
+            '<rect width="30" height="6.67" fill="#000"/>'),
+        fr: svg('<rect width="10" height="20" fill="#002395"/><rect x="10" width="10" height="20" fill="#fff"/>' +
+            '<rect x="20" width="10" height="20" fill="#ed2939"/>')
+    };
+})();
 
-    /*
-     * !!! SAHTE: aşağıdaki dört lig görünüm denemesi için.
-     * Takımlar Premier Lig ve Süper Lig takımlarından (sırası değiştirilerek)
-     * alındı; gerçek veri gelince kendi takımları olacak.
-     */
-    {
-        id: 'es',
-        name: 'La Liga',
-        country: 'İspanya',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="30" height="20" fill="#c60b1e"/>' +
-            '<rect y="5" width="30" height="10" fill="#ffc400"/></svg>',
-        teams: [...PL_TEAMS.slice(7), ...PL_TEAMS.slice(0, 7)],
-        weekDates: [
-            '2026-08-16', '2026-08-23', '2026-08-30', '2026-09-13',
-            '2026-09-20', '2026-10-10', '2026-10-17', '2026-10-21',
-            '2026-10-24'
-        ],
-        kickoffs: [
-            [0, '15:00'], [0, '17:15'], [0, '19:30'], [0, '22:00'], [1, '15:00'],
-            [1, '17:15'], [1, '19:30'], [1, '22:00'], [2, '21:00'], [2, '22:00']
-        ],
-        live: { 1: 52 },
-        todayDone: [0],
-        todayLater: [2]
-    },
-    {
-        id: 'it',
-        name: 'Serie A',
-        country: 'İtalya',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="10" height="20" fill="#009246"/>' +
-            '<rect x="10" width="10" height="20" fill="#fff"/>' +
-            '<rect x="20" width="10" height="20" fill="#ce2b37"/></svg>',
-        teams: [...PL_TEAMS.slice(13), ...PL_TEAMS.slice(0, 13)],
-        weekDates: [
-            '2026-08-23', '2026-08-30', '2026-09-13', '2026-09-20',
-            '2026-09-27', '2026-10-11', '2026-10-17', '2026-10-21',
-            '2026-10-25'
-        ],
-        kickoffs: [
-            [0, '16:00'], [0, '19:00'], [0, '21:45'], [1, '13:30'], [1, '16:00'],
-            [1, '16:00'], [1, '19:00'], [1, '21:45'], [2, '19:30'], [2, '21:45']
-        ],
-        live: { 0: 38 },
-        todayDone: [],
-        todayLater: [1, 2]
-    },
-    {
-        id: 'de',
-        name: 'Bundesliga',
-        country: 'Almanya',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="30" height="20" fill="#ffce00"/>' +
-            '<rect width="30" height="13.34" fill="#dd0000"/>' +
-            '<rect width="30" height="6.67" fill="#000"/></svg>',
-        teams: [...SL_TEAMS.slice(5), ...SL_TEAMS.slice(0, 5)],
-        weekDates: [
-            '2026-08-22', '2026-08-29', '2026-09-12', '2026-09-19',
-            '2026-09-26', '2026-10-10', '2026-10-17', '2026-10-21',
-            '2026-10-24'
-        ],
-        kickoffs: [
-            [0, '16:30'], [0, '16:30'], [0, '16:30'], [0, '16:30'], [0, '19:30'],
-            [1, '16:30'], [1, '18:30'], [1, '20:30'], [2, '21:30']
-        ],
-        live: { 0: 81, 1: 14 },
-        todayDone: [2, 3],
-        todayLater: [4]
-    },
-    {
-        id: 'fr',
-        name: 'Ligue 1',
-        country: 'Fransa',
-        flag:
-            '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' +
-            '<rect width="10" height="20" fill="#002395"/>' +
-            '<rect x="10" width="10" height="20" fill="#fff"/>' +
-            '<rect x="20" width="10" height="20" fill="#ed2939"/></svg>',
-        teams: [...SL_TEAMS.slice(11), ...SL_TEAMS.slice(0, 11)],
-        weekDates: [
-            '2026-08-15', '2026-08-22', '2026-08-29', '2026-09-12',
-            '2026-09-19', '2026-10-09', '2026-10-17', '2026-10-21',
-            '2026-10-23'
-        ],
-        kickoffs: [
-            [0, '18:00'], [0, '20:00'], [0, '22:05'], [1, '16:00'], [1, '18:15'],
-            [1, '18:15'], [1, '20:15'], [1, '22:45'], [2, '22:00']
-        ],
-        live: {},
-        todayDone: [0],
-        todayLater: [1, 2]
-    }
+/* Ligler: sunucudaki sırayla (sunucu/ayarlar.js). Ligler menüsü bu listeden çizilir. */
+const LEAGUES = [
+    { id: 203, name: 'Süper Lig', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 204, name: '1. Lig', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 206, name: 'Türkiye Kupası', country: 'Türkiye', flag: FLAGS.tr }
 ];
 
-/* Kazanma / beraberlik / kaybetme olasılığından basit oranlar */
-function makeOdds(home, away) {
+const LEAGUE_BY_ID = new Map(LEAGUES.map(league => [league.id, league]));
 
-    const diff = (home.power + 4 - away.power) / 25;
+/* Listede olmayan bir lig gelirse dokümandaki adıyla eklenir */
+function leagueInfo(id) {
+    if (!LEAGUE_BY_ID.has(id)) {
+        const league = { id: id, name: (leagueNames.get(id) || {}).ad || 'Lig ' + id, country: '', flag: '' };
+        LEAGUES.push(league);
+        LEAGUE_BY_ID.set(id, league);
+    }
+    return LEAGUE_BY_ID.get(id);
+}
 
-    let pHome = 0.45 + diff * 0.5;
-    let pAway = 0.30 - diff * 0.45;
+/*
+ * Takım rozetleri: tanınan takımlar kendi renkleriyle,
+ * diğerleri adından üretilen renkle. Ad, dokümanın "takimlar" listesinden.
+ */
+const TEAM_STYLES = [
+    ['galatasaray', 'GS', '#a90432', '#fdb912'],
+    ['fenerbahçe', 'FB', '#002d72', '#ffed00'],
+    ['beşiktaş', 'BJK', '#111111', '#ffffff'],
+    ['trabzonspor', 'TS', '#7a1f3d', '#5cb8e6'],
+    ['başakşehir', 'İBF', '#1d3a6e', '#f26522'],
+    ['göztepe', 'GÖZ', '#ffd200', '#e30613'],
+    ['samsunspor', 'SAM', '#e30613', '#ffffff'],
+    ['kasımpaşa', 'KAS', '#003da5', '#ffffff'],
+    ['eyüpspor', 'EYP', '#5c2d91', '#ffd200'],
+    ['rizespor', 'RİZ', '#00843d', '#ffffff'],
+    ['konyaspor', 'KON', '#007a3d', '#ffffff'],
+    ['kocaelispor', 'KOC', '#111111', '#3bb54a'],
+    ['alanyaspor', 'ALA', '#f28c00', '#00843d'],
+    ['gaziantep', 'GFK', '#d71920', '#111111'],
+    ['gençlerbirliği', 'GB', '#e30613', '#111111'],
+    ['erzurum', 'ERZ', '#004b93', '#ffffff'],
+    ['amed', 'AMD', '#007a3d', '#e30613'],
+    ['çorum', 'ÇOR', '#c8102e', '#111111']
+];
 
-    pHome = Math.min(0.85, Math.max(0.08, pHome));
-    pAway = Math.min(0.80, Math.max(0.06, pAway));
+const teamNames = new Map();     /* takım no → ad */
+const leagueNames = new Map();   /* lig no → { ad, detay } */
+const teamCache = new Map();
 
-    let pDraw = Math.max(0.12, 1 - pHome - pAway);
+/* Adın sonundaki kulüp kısaltmaları atılır: "Gençlerbirliği S.K." → "Gençlerbirliği" */
+function shortName(name) {
+    return name.replace(/\s+(S\.?K\.?|F\.?K\.?|A\.?Ş\.?|SK|FK|JK|BK)$/i, '').trim();
+}
 
-    const sum = pHome + pDraw + pAway;
-    const margin = 1.07;
+/* Adından sabit bir renk: aynı takım hep aynı renkte */
+function nameColor(name) {
+    let hash = 0;
+    for (const ch of name) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    const hue = hash % 360;
+    const light = 30 + (hash >> 9) % 25;
+    return { bg: 'hsl(' + hue + ', 55%, ' + light + '%)', fg: '#ffffff' };
+}
 
-    const odd = p => Math.max(1.05, (1 / (p / sum * margin))).toFixed(2);
+function teamInfo(id) {
 
-    const over = 0.5 + (home.power + away.power - 150) / 120;
+    const name = teamNames.get(id) || 'Takım ' + id;
+    const key = id + '|' + name;
 
-    /* Güçlü takımlar daha çok korner, denk maçlar daha çok kart */
-    const corner = 0.48 + (home.power + away.power - 150) / 200;
-    const card = 0.56 - Math.abs(home.power - away.power) / 60;
+    if (!teamCache.has(key)) {
+        const plain = lower(name);
+        const style = TEAM_STYLES.find(([word]) => plain.includes(word));
+        const mid = shortName(name);
+        const color = style ? { bg: style[2], fg: style[3] } : nameColor(name);
+
+        teamCache.set(key, {
+            name: name,
+            mid: mid !== name ? mid : undefined,
+            short: style ? style[1] : mid.replace(/[^\p{L}]/gu, '').slice(0, 3).toLocaleUpperCase('tr'),
+            bg: color.bg,
+            fg: color.fg
+        });
+    }
+    return teamCache.get(key);
+}
+
+const LIVE_CODES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE', 'CANLI']);
+const DONE_CODES = new Set(['FT', 'AET', 'PEN']);
+
+/* Oynanmayacak maçların kısa yazısı (saat yerine) */
+const OTHER_LABELS = { PST: 'ERT', CANC: 'İPT', ABD: 'YRD', AWD: 'HÜK', WO: 'HÜK' };
+
+/* Olaylardan yalnızca goller ve kartlar (kaçan penaltı gol değildir) */
+function rowEvents(list) {
+    return list
+        .filter(e => (e[3] === 'g' && e[4] !== 'kp') || e[3] === 'k')
+        .map(([minute, extra, side, type, detail, player]) => ({
+            side: side === 1 ? 'away' : 'home',
+            type: type === 'g' ? 'goal' : detail === 's' ? 'yellow' : 'red',
+            detail: detail,
+            minute: minute,
+            extra: extra,
+            player: player
+        }));
+}
+
+/* Satır biçimi: sunucu/VERITABANI.md → "Maç satırı" */
+function rowToMatch(row) {
+
+    const [no, league, time, code, minute, extra, home, away, hg, ag, , , events, week] = row;
+
+    const status = LIVE_CODES.has(code) ? 'live' : DONE_CODES.has(code) ? 'done' : 'upcoming';
 
     return {
-        home: odd(pHome),
-        draw: odd(pDraw),
-        away: odd(pAway),
-        over: odd(Math.min(0.8, Math.max(0.3, over))),
-        under: odd(Math.min(0.7, Math.max(0.2, 1 - over))),
-
-        /* Korner 9,5 ve kart 4,5 alt / üst */
-        cornerOver: odd(Math.min(0.75, Math.max(0.3, corner))),
-        cornerUnder: odd(Math.min(0.7, Math.max(0.25, 1 - corner))),
-        cardOver: odd(Math.min(0.7, Math.max(0.3, card))),
-        cardUnder: odd(Math.min(0.7, Math.max(0.3, 1 - card)))
+        id: String(no),
+        league: leagueInfo(league),
+        week: week,
+        date: new Date(time * 1000),
+        home: teamInfo(home),
+        away: teamInfo(away),
+        code: code,
+        status: status,
+        minute: minute,
+        extra: extra,
+        score: hg === null || hg === undefined ? null : [hg, ag],
+        events: status === 'upcoming' ? null : rowEvents(events || [])
     };
 }
 
-/* Bir maçın olayları: goller (dakikalarıyla) ve sarı / kırmızı kartlar */
-function makeEvents(homeGoals, awayGoals, maxMinute) {
+/* "9. Hafta" ya da kupa turu */
+const ROUND_NAMES = {
+    'Final': 'Final', 'Semi-finals': 'Yarı final', 'Quarter-finals': 'Çeyrek final',
+    'Round of 16': 'Son 16', 'Round of 32': 'Son 32', 'Round of 64': 'Son 64',
+    'Group Stage': 'Grup aşaması', 'Play-offs': 'Play-off'
+};
 
-    const events = [];
-
-    const add = (side, type, count) => {
-        for (let i = 0; i < count; i++)
-            events.push({ side: side, type: type, minute: randInt(2, maxMinute) });
-    };
-
-    add('home', 'goal', homeGoals);
-    add('away', 'goal', awayGoals);
-    add('home', 'yellow', randInt(0, 3));
-    add('away', 'yellow', randInt(0, 3));
-
-    if (rand() < 0.08)
-        add(rand() < 0.5 ? 'home' : 'away', 'red', 1);
-
-    return events.sort((a, b) => a.minute - b.minute);
+function roundText(match) {
+    if (typeof match.week === 'number') return match.week + '. Hafta';
+    if (!match.week) return '';
+    const tour = /^(\d+)(st|nd|rd|th) Round$/.exec(match.week);
+    if (tour) return tour[1] + '. Tur';
+    return ROUND_NAMES[match.week] || match.week;
 }
 
-/* Maç istatistikleri (gollerle uyumlu) */
-function makeStats(home, away, homeGoals, awayGoals, ratio) {
-
-    const possession = Math.round(
-        Math.min(72, Math.max(28, 50 + (home.power - away.power) * 0.8 + randInt(-6, 6)))
-    );
-
-    const side = (goals, strength) => {
-        const shots = Math.round((randInt(6, 12) + strength / 12) * ratio);
-        const onTarget = Math.max(goals, Math.round(shots * (0.3 + rand() * 0.2)));
-        return {
-            shots: Math.max(shots, onTarget),
-            onTarget: onTarget,
-            corners: Math.round(randInt(2, 8) * ratio),
-            fouls: Math.round(randInt(7, 14) * ratio)
-        };
-    };
-
-    return {
-        possession: [possession, 100 - possession],
-        home: side(homeGoals, home.power),
-        away: side(awayGoals, away.power)
-    };
+/* Lig · hafta · tarih (hafta yoksa yazılmaz) */
+function matchWhen(match) {
+    return [match.league.name, roundText(match), formatDate(match.date)].filter(Boolean).join(' · ');
 }
 
-/* Fikstür: "daire yöntemi" ile her hafta herkes bir maç yapar. */
-function makeMatches(league) {
+/* Canlı maçın dakikası: "63'", "45+2'", devre arasında "İY" */
+function minuteText(match) {
+    if (match.code === 'HT') return 'İY';
+    if (!match.minute) return '';
+    return match.minute + (match.extra ? '+' + match.extra : '') + "'";
+}
 
-    const TEAMS = league.teams;
-    const ids = TEAMS.map((team, index) => index);
-    const matches = [];
+/* Uygulamanın kullandığı maç listesi (gelen dokümanlardan kurulur) */
+const MATCHES = [];
+const MATCH_BY_ID = new Map();
 
-    for (let week = 1; week <= LAST_WEEK; week++) {
+const groupRows = new Map();     /* "gün-grup" → satırlar */
+const liveRows = new Map();      /* maç no → satır */
+const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
-        for (let i = 0; i < ids.length / 2; i++) {
+function rebuildMatches() {
 
-            let a = ids[i];
-            let b = ids[ids.length - 1 - i];
+    const rows = new Map();
 
-            /* Ev sahipliği haftadan haftaya değişsin */
-            if ((week + i) % 2 === 0)
-                [a, b] = [b, a];
+    groupRows.forEach(list => list.forEach(row => rows.set(String(row[0]), row)));
+    liveRows.forEach((row, id) => rows.set(id, row));
 
-            const home = TEAMS[a];
-            const away = TEAMS[b];
+    MATCHES.length = 0;
+    MATCH_BY_ID.clear();
 
-            const [dayOffset, time] = league.kickoffs[i];
-            const date = new Date(league.weekDates[week - 1] + 'T' + time + ':00+03:00');
-            date.setDate(date.getDate() + dayOffset + DATE_SHIFT);
+    rows.forEach(row => {
+        const match = rowToMatch(row);
+        const detail = matchDetails.get(match.id);
+        if (detail) Object.assign(match, detail);
+        MATCHES.push(match);
+        MATCH_BY_ID.set(match.id, match);
+    });
+}
 
-            const match = {
-                id: league.id + '-' + week + '-' + (i + 1),
-                league: league,
-                week: week,
-                date: date,
-                home: home,
-                away: away,
-                odds: makeOdds(home, away),
-                comments: randInt(1, 40),
-                likes: randInt(1, 60),
-                dislikes: randInt(0, 25)
-            };
+/* Dokümandaki takım ve lig adları */
+function readNames(data) {
+    Object.entries(data.takimlar || {}).forEach(([id, name]) => teamNames.set(Number(id), name));
+    Object.entries(data.ligler || {}).forEach(([id, info]) => leagueNames.set(Number(id), info));
+}
 
-            const liveMinute = week === CURRENT_WEEK ? league.live[i] : undefined;
-            const doneToday = week === CURRENT_WEEK && league.todayDone.includes(i);
-            const laterToday = week === CURRENT_WEEK && league.todayLater.includes(i);
+/* Lig kadro / istatistik veriyor mu? (bilinmiyorsa evet) */
+function leagueHasDetail(id) {
+    const info = leagueNames.get(id);
+    return !info || info.detay !== false;
+}
 
-            /* Bugün biraz sonra başlayacak (gün bitmeden) */
-            if (laterToday) {
-                const start = new Date(Date.now() + 45 * 60000);
-                start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5, 0, 0);
-                const endOfDay = new Date();
-                endOfDay.setHours(23, 55, 0, 0);
-                match.date = start > endOfDay ? endOfDay : start;
-            }
+/* ---------- Firestore bağlantısı ---------- */
 
-            if (week <= PLAYED_WEEKS || liveMinute || doneToday) {
+let fs = null;
+let db = null;
+let dataError = false;
 
-                const minute = liveMinute || 90;
-                const ratio = minute / 90;
+/* Gün: { day, count, groups: Map(grup → kapatma fonksiyonu), loaded: Set } */
+let watchedDay = null;
+let liveUnsub = null;
+let detailUnsub = null;
+let pendingLink = null;
 
-                const homeGoals = poisson((1.35 + (home.power - away.power) / 30) * ratio);
-                const awayGoals = poisson((1.05 + (away.power - home.power) / 30) * ratio);
-
-                match.status = liveMinute ? 'live' : 'done';
-
-                /* Canlı maç "şu an" oynanıyor: başlama saati dakikası kadar önce */
-                if (liveMinute) {
-                    match.date = new Date(Date.now() - (liveMinute + 15) * 60000);
-                    match.date.setSeconds(0, 0);
-                }
-
-                /* Bugün erken oynanmış: yaklaşık 3 saat önce başlamış */
-                if (doneToday) {
-                    match.date = new Date(Date.now() - 3 * 3600000);
-                    match.date.setMinutes(Math.floor(match.date.getMinutes() / 15) * 15, 0, 0);
-
-                    if (dayKey(match.date) !== dayKey(new Date())) {
-                        match.date = new Date();
-                        match.date.setHours(0, 30, 0, 0);
-                    }
-                }
-                match.minute = minute;
-                match.score = [homeGoals, awayGoals];
-                match.events = makeEvents(homeGoals, awayGoals, minute);
-                match.stats = makeStats(home, away, homeGoals, awayGoals, ratio);
-
-            } else {
-
-                match.status = 'upcoming';
-            }
-
-            matches.push(match);
-        }
-
-        /* İlk takım sabit kalır, diğerleri bir sıra döner. */
-        ids.splice(1, 0, ids.pop());
+async function startData() {
+    try {
+        const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
+        const app = await import(base + 'firebase-app.js');
+        fs = await import(base + 'firebase-firestore.js');
+        db = fs.getFirestore(app.initializeApp(FIREBASE_AYAR));
+    } catch (error) {
+        dataError = true;
+        refreshViews();
+        return;
     }
 
-    return matches;
+    watchLive();
+    watchDay(selectedDay);
 }
 
-const MATCHES = LEAGUES.flatMap(makeMatches);
-const MATCH_BY_ID = new Map(MATCHES.map(match => [match.id, match]));
+/* Değişiklik gelince ekranlar bir kez yeniden çizilir */
+let refreshQueued = false;
+
+function refreshViews() {
+
+    if (refreshQueued)
+        return;
+
+    refreshQueued = true;
+
+    requestAnimationFrame(() => {
+        refreshQueued = false;
+        rebuildMatches();
+        renderLive();
+        renderSaved();
+        renderOdds();
+        renderCouponBall();
+        refreshDetail();
+
+        /* Paylaşılan bağlantıdaki maç geldiyse açılır */
+        if (pendingLink && MATCH_BY_ID.has(pendingLink)) {
+            const id = pendingLink;
+            pendingLink = null;
+            openDetail(id);
+        }
+    });
+}
+
+function watchLive() {
+
+    if (liveUnsub || !db)
+        return;
+
+    liveUnsub = fs.onSnapshot(fs.doc(db, 'canli', 'simdi'), snap => {
+        liveRows.clear();
+        if (snap.exists()) {
+            const data = snap.data();
+            readNames(data);
+            (data.maclar || []).forEach(text => {
+                const row = JSON.parse(text);
+                liveRows.set(String(row[0]), row);
+            });
+        }
+        refreshViews();
+    }, () => {});
+}
+
+/* Seçili günün 1. grubu hemen, diğer grupları liste sonuna gelince */
+function watchDay(day) {
+
+    if (!db)
+        return;
+
+    if (watchedDay && watchedDay.day === day)
+        return;
+
+    unwatchDay();
+    watchedDay = { day: day, count: null, groups: new Map(), loaded: new Set() };
+    watchGroup(1);
+}
+
+function watchGroup(group) {
+
+    const state = watchedDay;
+
+    if (!state || state.groups.has(group))
+        return;
+
+    const key = state.day + '-' + group;
+
+    state.groups.set(group, fs.onSnapshot(fs.doc(db, 'gunler', key), snap => {
+
+        const data = snap.exists() ? snap.data() : null;
+
+        if (data) readNames(data);
+        groupRows.set(key, data ? (data.maclar || []).map(text => JSON.parse(text)) : []);
+
+        if (group === 1)
+            state.count = data ? data.grup_sayisi : 0;
+
+        state.loaded.add(group);
+        refreshViews();
+    }, () => {
+        state.loaded.add(group);
+        refreshViews();
+    }));
+}
+
+function unwatchDay() {
+    if (watchedDay)
+        watchedDay.groups.forEach(unsub => unsub());
+    watchedDay = null;
+}
+
+/* Seçili gün yükleniyor mu? */
+function dayLoading() {
+    return !dataError && (!watchedDay || watchedDay.day !== selectedDay || !watchedDay.loaded.has(1));
+}
+
+/* Yüklenmemiş bir sonraki grup (yoksa 0) */
+function nextGroup() {
+    const state = watchedDay;
+    if (!state || !state.count)
+        return 0;
+    for (let group = 2; group <= state.count; group++)
+        if (!state.groups.has(group))
+            return group;
+    return 0;
+}
+
+/* Maç sayfası açıkken istatistik ve kadro */
+function watchDetail(match) {
+
+    unwatchDetail();
+
+    if (!db || !leagueHasDetail(match.league.id))
+        return;
+
+    const id = match.id;
+
+    detailUnsub = fs.onSnapshot(fs.doc(db, 'maclar', id), snap => {
+        if (!snap.exists())
+            return;
+        const data = snap.data();
+        matchDetails.set(id, {
+            stats: data.istatistik ? JSON.parse(data.istatistik) : null,
+            lineup: data.kadro ? JSON.parse(data.kadro) : null
+        });
+        refreshViews();
+    }, () => {});
+}
+
+function unwatchDetail() {
+    if (detailUnsub)
+        detailUnsub();
+    detailUnsub = null;
+}
+
+/* Uygulama arka plana geçince dinleme durur, öne gelince sürer */
+document.addEventListener('visibilitychange', () => {
+
+    if (!db)
+        return;
+
+    if (document.hidden) {
+        if (liveUnsub) liveUnsub();
+        liveUnsub = null;
+        const day = watchedDay && watchedDay.day;
+        const groups = watchedDay ? Array.from(watchedDay.groups.keys()) : [];
+        unwatchDay();
+        unwatchDetail();
+        hiddenState = { day: day, groups: groups };
+        return;
+    }
+
+    watchLive();
+
+    if (hiddenState && hiddenState.day) {
+        watchDay(hiddenState.day);
+        hiddenState.groups.forEach(group => watchGroup(group));
+    }
+
+    if (detailId && MATCH_BY_ID.has(detailId))
+        watchDetail(MATCH_BY_ID.get(detailId));
+
+    hiddenState = null;
+});
+
+let hiddenState = null;
 
 
 /* =================================================
@@ -3797,11 +3706,11 @@ function crest(team) {
     return el;
 }
 
-/* "CANLI 63'" / "MS" / "17:00" */
+/* "CANLI 63'" / "MS" / "17:00" / "ERT" */
 function statusText(match) {
-    if (match.status === 'live') return "CANLI " + match.minute + "'";
+    if (match.status === 'live') return ('CANLI ' + minuteText(match)).trim();
     if (match.status === 'done') return 'MS';
-    return formatTime(match.date);
+    return OTHER_LABELS[match.code] || formatTime(match.date);
 }
 
 const ICONS = {
@@ -3811,103 +3720,13 @@ const ICONS = {
         'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M12 3v1.2"/>' +
         '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/>' +
-        '<path d="M9.8 18a2.2 2.2 0 0 0 4.4 0"/></svg>',
-    comment:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-        '<path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/>' +
-        '<path d="M7.5 9h9"/><path d="M7.5 13h6"/></svg>',
-    like:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-        '<path d="M7 11v9H4.5a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 4.5 11z"/>' +
-        '<path d="M7 11l3.5-7a2 2 0 0 1 2.5 2.4L12.3 10H18a2 2 0 0 1 2 2.3l-1.1 6A2 2 0 0 1 16.9 20H7"/></svg>',
-    dislike:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-        '<g transform="rotate(180 12 12)">' +
-        '<path d="M7 11v9H4.5a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 4.5 11z"/>' +
-        '<path d="M7 11l3.5-7a2 2 0 0 1 2.5 2.4L12.3 10H18a2 2 0 0 1 2 2.3l-1.1 6A2 2 0 0 1 16.9 20H7"/></g></svg>'
+        '<path d="M9.8 18a2.2 2.2 0 0 0 4.4 0"/></svg>'
 };
 
 
 /* =================================================
    MAÇ KARTI
 ================================================= */
-
-function matchCard(match, options = {}) {
-
-    const card = document.createElement('button');
-    card.className = 'match-card';
-
-    /* Üst satır: hafta ve tarih solda, durum sağda */
-    const head = document.createElement('div');
-    head.className = 'match-head';
-
-    const when = document.createElement('span');
-    when.textContent = match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
-
-    const status = document.createElement('span');
-    status.className = 'match-status ' + match.status;
-    status.textContent = statusText(match);
-
-    head.appendChild(when);
-    head.appendChild(status);
-    card.appendChild(head);
-
-    /* İki takım ve skorları */
-    [['home', 0], ['away', 1]].forEach(([side, index]) => {
-
-        const row = document.createElement('div');
-        row.className = 'team-row';
-
-        const name = document.createElement('span');
-        name.className = 'team-name';
-        name.textContent = match[side].name;
-
-        const score = document.createElement('span');
-        score.className = 'team-score';
-        score.textContent = match.score ? match.score[index] : '';
-
-        row.appendChild(crest(match[side]));
-        row.appendChild(name);
-        row.appendChild(score);
-        card.appendChild(row);
-    });
-
-    /* Oranlar sayfasında 1 / X / 2 */
-    if (options.odds)
-        card.appendChild(oddsRow(match, ['1', 'X', '2'], ['home', 'draw', 'away'], true));
-
-    /* Alt satır: yorum | beğeni, beğenmeme (şimdilik sahte, çalışmaz).
-       Oranlar sayfasında yoktur. */
-    if (options.odds) {
-        /* Oranlar'dan açılınca maç sayfası Oranlar sekmesinde */
-        card.addEventListener('click', () => openDetail(match.id, 'odds'));
-        return card;
-    }
-
-    const stats = document.createElement('div');
-    stats.className = 'match-stats';
-
-    [
-        ['comment', match.comments + ' yorum'],
-        ['like', match.likes],
-        ['dislike', match.dislikes]
-    ].forEach(([kind, value]) => {
-        const stat = document.createElement('span');
-        stat.className = 'stat ' + kind;
-        stat.innerHTML = ICONS[kind];
-        stat.appendChild(document.createTextNode(String(value)));
-        stats.appendChild(stat);
-    });
-
-    card.appendChild(stats);
-
-    card.addEventListener('click', () => openDetail(match.id, 'comments'));
-
-    return card;
-}
 
 /* Tek oran kutusu: üstte ad (1 / X / 2, 2,5 Üst...), altta oran.
    pickable: basınca kupona eklenir / çıkarılır */
@@ -3983,7 +3802,7 @@ function oddsCard(match) {
 
     const mid = document.createElement('span');
     mid.className = 'oc-mid' + (match.status === 'live' ? ' live' : '');
-    mid.textContent = match.status === 'live' ? match.score[0] + ' - ' + match.score[1] : '-';
+    mid.textContent = match.status === 'live' && match.score ? match.score[0] + ' - ' + match.score[1] : '-';
 
     main.appendChild(team('home'));
     main.appendChild(mid);
@@ -4150,6 +3969,7 @@ function selectDay(key) {
     if (key !== TODAY)
         liveState.liveOnly = false;
 
+    watchDay(key);
     renderDays();
     renderLive();
 }
@@ -4187,7 +4007,7 @@ function scoreRow(match, showDate, showLeague) {
 
         if (showDate) {
             date.appendChild(document.createTextNode(
-                (showLeague ? ' · ' : '') + dayLabel(dayKey(match.date)) + ' · ' + match.week + '. Hafta'
+                (showLeague ? ' · ' : '') + [dayLabel(dayKey(match.date)), roundText(match)].filter(Boolean).join(' · ')
             ));
         }
 
@@ -4197,8 +4017,8 @@ function scoreRow(match, showDate, showLeague) {
     const status = document.createElement('span');
     status.className = 'score-status' + (match.status === 'live' ? ' live' : '');
     status.textContent =
-        match.status === 'live' ? match.minute + "'" :
-        match.status === 'done' ? 'MS' : formatTime(match.date);
+        match.status === 'live' ? minuteText(match) || 'CANLI' :
+        match.status === 'done' ? 'MS' : OTHER_LABELS[match.code] || formatTime(match.date);
 
     const team = (side, index) => {
 
@@ -4541,15 +4361,35 @@ function renderLive() {
         box.appendChild(block);
     });
 
+    const waiting = !liveOnly && !searching && dayLoading();
+
     if (!any) {
         const empty = document.createElement('p');
         empty.className = 'home-empty';
         empty.textContent =
+            dataError ? 'Bağlantı kurulamadı. İnternetini kontrol edip sayfayı yenile.' :
+            waiting ? 'Maçlar yükleniyor…' :
             searching ? '"' + searchInput.value.trim() + '" için maç bulunamadı.' :
             liveOnly ? 'Şu an oynanan maç yok.' : 'Bu gün maç yok.';
         box.appendChild(empty);
     }
+
+    /* Günün diğer maçları (2. ve 3. grup) liste sonuna gelince iner */
+    if (!liveOnly && !searching && !waiting && nextGroup()) {
+        const more = document.createElement('p');
+        more.className = 'home-empty';
+        more.textContent = 'Diğer maçlar yükleniyor…';
+        box.appendChild(more);
+        moreObserver.observe(more);
+    }
 }
+
+const moreObserver = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting)) {
+        moreObserver.disconnect();
+        watchGroup(nextGroup());
+    }
+});
 
 /* Menünün dışına dokununca menü kapanır (dokunulan yer çalışmaz). */
 let leagueSwallow = false;
@@ -4960,15 +4800,21 @@ function writeJSON(key, value) {
 }
 
 /* Yeni kupon: maç id → seçim */
-const couponPicks = new Map(
-    readJSON(COUPON_KEY, []).filter(([id]) => MATCH_BY_ID.has(id))
-);
+const couponPicks = new Map(readJSON(COUPON_KEY, []));
 
 /* Kaydedilen kuponlar: en yenisi başta */
 let savedCoupons = readJSON(COUPONS_KEY, []);
 
 function pickOdd(id, key) {
     return parseFloat(MATCH_BY_ID.get(id).odds[key]);
+}
+
+/* Maçı ve oranı gelmiş seçimler (veri gelene kadar diğerleri gösterilmez) */
+function validPicks(picks) {
+    return picks.filter(([id, key]) => {
+        const match = MATCH_BY_ID.get(id);
+        return match && match.odds && match.odds[key];
+    });
 }
 
 function picksTotal(picks) {
@@ -5000,7 +4846,7 @@ function couponChanged() {
 function renderCouponBall() {
 
     const ball = document.getElementById('couponBall');
-    const picks = Array.from(couponPicks);
+    const picks = validPicks(Array.from(couponPicks));
 
     ball.classList.toggle('show', picks.length > 0);
 
@@ -5079,7 +4925,7 @@ function renderCoupons() {
     const box = document.getElementById('myCoupons');
     box.textContent = '';
 
-    const picks = Array.from(couponPicks);
+    const picks = validPicks(Array.from(couponPicks));
 
     /* Yeni kupon (henüz kaydedilmemiş) */
     if (picks.length) {
@@ -5122,7 +4968,7 @@ function renderCoupons() {
 
     /* Kaydedilen kuponlar */
     const list = savedCoupons
-        .map(c => ({ ...c, picks: c.picks.filter(([id]) => MATCH_BY_ID.has(id)) }))
+        .map(c => ({ ...c, picks: validPicks(c.picks) }))
         .filter(c => c.picks.length);
 
     if (list.length) {
@@ -5164,13 +5010,12 @@ function renderCoupons() {
 }
 
 /*
- * Oranlar: bu hafta ve önümüzdeki haftaların maçları, 1 / X / 2 ile.
+ * Oranlar: oranı gelmiş, bitmemiş maçlar, 1 / X / 2 ile.
  * Araç satırı: Popüler, Canlı, Ligler, Zaman; arama altta.
  *   Popüler : en çok yorum alan maçlar
  *   Zaman   : ligler ayrılmadan saat sırasıyla
  *   ikisi de kapalı: lig lig, hafta hafta
  */
-const ODDS_FIRST_WEEK = CURRENT_WEEK;
 const oddsState = { popular: true, liveOnly: false, timeOrder: false, leagues: new Set() };
 const oddsSearchInput = document.getElementById('oddsSearchInput');
 
@@ -5185,15 +5030,16 @@ function renderOdds() {
     const box = document.getElementById('oddsList');
     box.textContent = '';
 
-    const list = filterMatches(
-        MATCHES.filter(m => m.week >= ODDS_FIRST_WEEK && m.status !== 'done'), oddsToolbar
-    ).sort((a, b) => a.date - b.date);
+    const withOdds = MATCHES.filter(m => m.odds && m.status !== 'done');
+
+    const list = filterMatches(withOdds, oddsToolbar).sort((a, b) => a.date - b.date);
 
     if (!list.length) {
         const query = oddsSearchInput.value.trim();
         const empty = document.createElement('p');
         empty.className = 'home-empty';
         empty.textContent =
+            !withOdds.length ? 'Tahmini oranlar yakında burada olacak.' :
             query ? '"' + query + '" için maç bulunamadı.' :
             oddsState.liveOnly ? 'Şu an oynanan maç yok.' : 'Maç yok.';
         box.appendChild(empty);
@@ -5203,7 +5049,7 @@ function renderOdds() {
     const card = m => box.appendChild(oddsCard(m));
 
     if (oddsState.popular) {
-        list.slice().sort((a, b) => b.comments - a.comments).slice(0, 20).forEach(card);
+        list.slice().sort((a, b) => (b.comments || 0) - (a.comments || 0)).slice(0, 20).forEach(card);
         return;
     }
 
@@ -5214,19 +5060,15 @@ function renderOdds() {
 
     LEAGUES.forEach(league => {
 
-        for (let week = ODDS_FIRST_WEEK; week <= LAST_WEEK; week++) {
+        const own = list.filter(m => m.league === league);
+        const rounds = Array.from(new Set(own.map(roundText)));
 
-            const own = list.filter(m => m.league === league && m.week === week);
-
-            if (!own.length)
-                continue;
-
+        rounds.forEach(round => {
             box.appendChild(weekTitle(
-                league.name.toLocaleUpperCase('tr') + ' · ' + week + '. HAFTA ORANLARI'
+                [league.name, round].filter(Boolean).join(' · ').toLocaleUpperCase('tr') + ' ORANLARI'
             ));
-
-            own.forEach(card);
-        }
+            own.filter(m => roundText(m) === round).forEach(card);
+        });
     });
 }
 
@@ -5249,14 +5091,12 @@ const AN_FLAGS = (() => {
     const svg = inner => '<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">' + inner + '</svg>';
     const h3 = (a, b, c) => svg('<rect width="30" height="20" fill="' + c + '"/><rect width="30" height="13.34" fill="' + b + '"/><rect width="30" height="6.67" fill="' + a + '"/>');
     const v3 = (a, b, c) => svg('<rect width="10" height="20" fill="' + a + '"/><rect x="10" width="10" height="20" fill="' + b + '"/><rect x="20" width="10" height="20" fill="' + c + '"/>');
-    const flagOf = name => (LEAGUES.find(l => l.name === name) || {}).flag;
-
-    const england = flagOf('Premier Lig');
-    const turkey = flagOf('Süper Lig');
-    const spain = flagOf('La Liga');
-    const italy = flagOf('Serie A');
-    const germany = flagOf('Bundesliga');
-    const france = flagOf('Ligue 1');
+    const england = FLAGS.en;
+    const turkey = FLAGS.tr;
+    const spain = FLAGS.es;
+    const italy = FLAGS.it;
+    const germany = FLAGS.de;
+    const france = FLAGS.fr;
     const netherlands = h3('#ae1c28', '#fff', '#21468b');
     const belgium = v3('#000', '#fdda24', '#ef3340');
     const portugal = svg('<rect width="30" height="20" fill="#da291c"/><rect width="12" height="20" fill="#046a38"/><circle cx="12" cy="10" r="3.6" fill="#ffe900"/>');
@@ -5819,6 +5659,7 @@ renderSaved();
 renderOdds();
 renderCoupons();
 renderCouponBall();
+startData();
 
 
 /* =================================================
@@ -6406,20 +6247,22 @@ function renderSummary(match) {
         home.className = 'home';
         const minute = document.createElement('div');
         minute.className = 'minute';
-        minute.textContent = event.minute + "'";
+        minute.textContent = event.minute + (event.extra ? '+' + event.extra : '') + "'";
         const away = document.createElement('div');
 
         const label = document.createElement('span');
         label.className = 'event-label';
 
+        /* Oyuncu adı varsa ad, yoksa olayın adı yazar */
         if (event.type === 'goal') {
-            label.textContent = '⚽ Gol';
+            label.textContent = '⚽ ' + (event.player || 'Gol') +
+                (event.detail === 'p' ? ' (P)' : event.detail === 'kk' ? ' (KK)' : '');
         } else {
             const icon = document.createElement('span');
             icon.className = 'card-icon' + (event.type === 'red' ? ' red' : '');
             label.appendChild(icon);
             label.appendChild(document.createTextNode(
-                event.type === 'red' ? 'Kırmızı kart' : 'Sarı kart'
+                event.player || (event.type === 'red' ? 'Kırmızı kart' : 'Sarı kart')
             ));
         }
 
@@ -6431,7 +6274,7 @@ function renderSummary(match) {
         box.appendChild(row);
     });
 
-    if (match.status === 'done') {
+    if (match.status === 'done' && match.score) {
         const end = document.createElement('div');
         end.className = 'half-line';
         end.textContent = 'MAÇ SONU · ' + match.score[0] + ' - ' + match.score[1];
@@ -6444,24 +6287,27 @@ function renderStats(match) {
     const box = document.getElementById('statsBox');
     box.textContent = '';
 
-    if (!match.stats) {
+    if (!match.stats || !match.stats[0] || !match.stats[1]) {
         const p = document.createElement('p');
         p.className = 'tab-empty';
-        p.textContent = 'İstatistikler maç başlayınca görünecek.';
+        p.textContent = leagueHasDetail(match.league.id)
+            ? 'İstatistikler maç başlayınca görünecek.'
+            : 'Bu lig için istatistik verisi yok.';
         box.appendChild(p);
         return;
     }
 
-    const s = match.stats;
+    /* Sıra: sunucu/VERITABANI.md → "İstatistik sırası" */
+    const [h, a] = match.stats.map(list => list.map(value => value || 0));
 
-    const cards = side => match.events.filter(e => e.side === side && e.type !== 'goal').length;
+    const cards = side => (match.events || []).filter(e => e.side === side && e.type !== 'goal').length;
 
     [
-        ['Topla oynama', s.possession[0] + '%', s.possession[1] + '%', s.possession[0], s.possession[1]],
-        ['Şut', s.home.shots, s.away.shots],
-        ['İsabetli şut', s.home.onTarget, s.away.onTarget],
-        ['Korner', s.home.corners, s.away.corners],
-        ['Faul', s.home.fouls, s.away.fouls],
+        ['Topla oynama', h[9] + '%', a[9] + '%', h[9], a[9]],
+        ['Şut', h[2], a[2]],
+        ['İsabetli şut', h[0], a[0]],
+        ['Korner', h[7], a[7]],
+        ['Faul', h[6], a[6]],
         ['Kart', cards('home'), cards('away')]
     ].forEach(([label, h, a, hv, av]) => {
 
@@ -6490,21 +6336,30 @@ function renderStats(match) {
     });
 }
 
-/*
- * KADRO
- * !!! ŞİMDİLİK ÖRNEK - gerçek veri bağlanınca doldurulacak !!!
- */
-const FORMATION = [['KL', 1], ['DF', 4], ['OS', 3], ['FV', 3]];
+/* KADRO: sunucu/VERITABANI.md → "Kadro" */
+const POSITIONS = { G: 'KL', D: 'DF', M: 'OS', F: 'FV' };
 
 function renderLineup(match) {
 
     const box = document.getElementById('lineupBox');
     box.textContent = '';
 
+    if (!match.lineup || !match.lineup.some(Boolean)) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = leagueHasDetail(match.league.id)
+            ? 'Kadrolar maçtan yaklaşık 1 saat önce açıklanır.'
+            : 'Bu lig için kadro verisi yok.';
+        box.appendChild(p);
+        return;
+    }
+
     const grid = document.createElement('div');
     grid.className = 'lineup';
 
-    [match.home, match.away].forEach(team => {
+    [match.home, match.away].forEach((team, side) => {
+
+        const [formation, , players] = match.lineup[side] || [];
 
         const col = document.createElement('div');
 
@@ -6516,41 +6371,39 @@ function renderLineup(match) {
         head.appendChild(name);
         col.appendChild(head);
 
-        const formation = document.createElement('div');
-        formation.className = 'lineup-formation';
-        formation.textContent = '4-3-3';
-        col.appendChild(formation);
+        const form = document.createElement('div');
+        form.className = 'lineup-formation';
+        form.textContent = formation || '–';
+        col.appendChild(form);
 
-        let number = 1;
-
-        FORMATION.forEach(([position, count]) => {
-            for (let i = 0; i < count; i++) {
-                const row = document.createElement('div');
-                row.className = 'lineup-player';
-                row.innerHTML = '<b></b><span></span><small></small>';
-                row.querySelector('b').textContent = number;
-                row.querySelector('span').textContent = 'Oyuncu ' + number;
-                row.querySelector('small').textContent = position;
-                col.appendChild(row);
-                number++;
-            }
+        (players || []).forEach(([number, player, position]) => {
+            const row = document.createElement('div');
+            row.className = 'lineup-player';
+            row.innerHTML = '<b></b><span></span><small></small>';
+            row.querySelector('b').textContent = number === null ? '' : number;
+            row.querySelector('span').textContent = player || '';
+            row.querySelector('small').textContent = POSITIONS[position] || '';
+            col.appendChild(row);
         });
 
         grid.appendChild(col);
     });
 
     box.appendChild(grid);
-
-    const note = document.createElement('p');
-    note.className = 'odds-note';
-    note.textContent = 'Kadrolar örnektir; gerçek veri bağlanınca dolacak.';
-    box.appendChild(note);
 }
 
 function renderDetailOdds(match) {
 
     const box = document.getElementById('oddsBox');
     box.textContent = '';
+
+    if (!match.odds) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'Tahmini oranlar yakında eklenecek.';
+        box.appendChild(p);
+        return;
+    }
 
     const block = (title, labels, keys) => {
         const wrap = document.createElement('div');
@@ -6570,7 +6423,7 @@ function renderDetailOdds(match) {
 
     const note = document.createElement('p');
     note.className = 'odds-note';
-    note.textContent = 'Oranlar örnektir; gerçek değildir.';
+    note.textContent = 'Oranlar tahminidir.';
     box.appendChild(note);
 }
 
@@ -6585,25 +6438,8 @@ function openDetail(id, tab = 'summary') {
     detailId = id;
     setDetailMode(false);
 
-    document.getElementById('sbLeague').textContent =
-        match.league.name + ' · ' + match.week + '. Hafta · ' + formatDate(match.date);
-
-    sbTeam(document.getElementById('sbHome'), match.home);
-    sbTeam(document.getElementById('sbAway'), match.away);
-
-    document.getElementById('sbScoreText').textContent =
-        match.score ? match.score[0] + ' - ' + match.score[1] : formatTime(match.date);
-
-    const status = document.getElementById('sbStatus');
-    status.textContent =
-        match.status === 'live' ? "CANLI · " + match.minute + "'" :
-        match.status === 'done' ? 'MAÇ SONU' : 'OYNANACAK';
-    status.className = match.status === 'live' ? 'live' : '';
-
-    renderSummary(match);
-    renderStats(match);
-    renderLineup(match);
-    renderDetailOdds(match);
+    fillDetail(match);
+    watchDetail(match);
 
     /* Bölüm sabit yükseklikte, ilk sekmede başlar. */
     applyDetailLift();
@@ -6618,9 +6454,39 @@ function openDetail(id, tab = 'summary') {
     layerOpened('detail', LINK_PREFIX + encodeURIComponent(id));
 }
 
+/* Skor tablosu ve sekmeler (yeni veri gelince sekme ve kaydırma yerinde kalır) */
+function fillDetail(match) {
+
+    document.getElementById('sbLeague').textContent = matchWhen(match);
+
+    sbTeam(document.getElementById('sbHome'), match.home);
+    sbTeam(document.getElementById('sbAway'), match.away);
+
+    document.getElementById('sbScoreText').textContent =
+        match.score ? match.score[0] + ' - ' + match.score[1] : formatTime(match.date);
+
+    const status = document.getElementById('sbStatus');
+    status.textContent =
+        match.status === 'live' ? ('CANLI · ' + minuteText(match)).replace(/ · $/, '') :
+        match.status === 'done' ? 'MAÇ SONU' :
+        OTHER_LABELS[match.code] ? 'OYNANMAYACAK' : 'OYNANACAK';
+    status.className = match.status === 'live' ? 'live' : '';
+
+    renderSummary(match);
+    renderStats(match);
+    renderLineup(match);
+    renderDetailOdds(match);
+}
+
+function refreshDetail() {
+    if (detailId && MATCH_BY_ID.has(detailId) && detailSheet.classList.contains('open'))
+        fillDetail(MATCH_BY_ID.get(detailId));
+}
+
 function hideDetail() {
     detailSheet.classList.remove('open');
     detailId = null;
+    unwatchDetail();
 }
 
 function closeDetail() {
@@ -6775,8 +6641,8 @@ document.addEventListener('keydown', event => {
         history.replaceState(null, '', location.href.split('#')[0]);
     } catch (error) {}
 
-    if (MATCH_BY_ID.has(id))
-        openDetail(id);
+    /* Maç verisi gelince açılır */
+    pendingLink = id;
 })();
 
 /* Reklamı ana sayfanın üst resminin üzerine koy */
