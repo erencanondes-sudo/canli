@@ -1,6 +1,6 @@
 /*
  * Canlı skor sunucusu.
- * Her 15 saniyede bir tur:
+ * Her turda (19:00–21:00 5 sn, 21:30–23:30 3 sn, diğer saatler 15 sn; ayarlar.js):
  *   1. Gerekirse fikstür (dün, bugün, yarın) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
@@ -32,6 +32,13 @@ const simdi = () => Math.floor(Date.now() / 1000);
 const gunAdi = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: A.SAAT_DILIMI });
 const durumu = k => k.f.fixture.status.short;
 const SAAT = '&timezone=' + A.SAAT_DILIMI;
+
+/* Türkiye saatine göre turun aralığı */
+function turAraligi() {
+    const saat = new Date().toLocaleTimeString('en-GB', { timeZone: A.SAAT_DILIMI, hour: '2-digit', minute: '2-digit' });
+    const hizli = A.HIZLI_SAATLER.find(([bas, son]) => saat >= bas && saat <= son);
+    return hizli ? hizli[2] : A.TUR_ARALIK;
+}
 
 function gunler() {
     const n = Date.now();
@@ -286,7 +293,7 @@ async function tur() {
         console.error('Durum yazılamadı: ' + e.message);
     }
 
-    setTimeout(tur, Math.max(1000, A.TUR_ARALIK - (Date.now() - basla)));
+    setTimeout(tur, Math.max(1000, turAraligi() - (Date.now() - basla)));
 }
 
 if (require.main === module) {

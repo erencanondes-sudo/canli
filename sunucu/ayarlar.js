@@ -14,7 +14,13 @@ module.exports = {
 
     GRUP_BOYU: 50,                  /* ana sayfa dokümanı başına maç */
 
-    TUR_ARALIK: 15000,              /* canlı skor ve yazma: 15 sn */
+    TUR_ARALIK: 15000,              /* canlı skor ve yazma: 15 sn (aşağıdaki saatlerin dışında) */
+
+    /* Belli saatlerde daha sık (Türkiye saati): [başlangıç, bitiş, aralık] */
+    HIZLI_SAATLER: [
+        ['19:00', '21:00', 5000],
+        ['21:30', '23:30', 3000]
+    ],
     DETAY_ARALIK: 60000,            /* canlı maç detayı: 1 dk */
     FIKSTUR_BUGUN: 15 * 60000,      /* bugünün fikstürü: 15 dk */
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
