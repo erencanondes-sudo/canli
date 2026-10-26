@@ -3526,7 +3526,8 @@ function watchDetail(match) {
         const data = snap.data();
         matchDetails.set(id, {
             stats: data.istatistik ? JSON.parse(data.istatistik) : null,
-            lineup: data.kadro ? JSON.parse(data.kadro) : null
+            lineup: data.kadro ? JSON.parse(data.kadro) : null,
+            updated: data.guncellendi ? data.guncellendi.toDate() : null
         });
         refreshViews();
     }, () => {});
@@ -6330,6 +6331,14 @@ function renderStats(match) {
 
         box.appendChild(line);
     });
+
+    /* Verinin son değiştiği saat (sunucunun yazdığı an) */
+    if (match.updated) {
+        const note = document.createElement('p');
+        note.className = 'odds-note';
+        note.textContent = 'Son güncelleme: ' + formatTime(match.updated);
+        box.appendChild(note);
+    }
 }
 
 /* KADRO: sunucu/VERITABANI.md → "Kadro" */
