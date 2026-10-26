@@ -2687,7 +2687,7 @@ body.ball-left .ac-kapa svg {
 
 /*
  * İçerik sayfasının en üstündeki ince reklam: ekran genişliğinde, 50px boyunda
- * siyah zemin; sabit 320x50 reklam onun üstüne biner (alt köşeleri hafif oval).
+ * siyah zemin; sabit 320x50 reklam onun üstüne biner (köşeler düz).
  * Skor alanının yeşil zemini bu şeridin arkasından en üste kadar çıkar.
  */
 #detailAd {
@@ -2697,10 +2697,6 @@ body.ball-left .ac-kapa svg {
     right: 0;
     z-index: 4;
     height: 50px;
-}
-
-#detailAd .ad-box {
-    border-radius: 0 0 .4em .4em;
 }
 
 .ad-thin {
@@ -5330,16 +5326,18 @@ function anCard(m) {
     return card;
 }
 
-/* Kart 0.15 saniyede büyüyerek açılır, küçülerek kapanır */
+/* Kart anında açılır (yukarı kayarken büyümesin diye), 0.15 saniyede küçülerek kapanır */
 function foldAnCard(card, open, done) {
 
     const expand = card.querySelector('.an-expand');
     card.querySelector('.an-hint').textContent = open ? 'Kapat ▴' : 'Detay ▾';
 
-    if (open)
+    if (open) {
         card.classList.add('open');
-    else
-        card.classList.add('closing');
+        return;
+    }
+
+    card.classList.add('closing');
 
     const css = getComputedStyle(expand);
     const full = {
@@ -5348,16 +5346,14 @@ function foldAnCard(card, open, done) {
     };
     const none = { height: 0, marginTop: 0, paddingTop: 0, borderTopWidth: 0, overflow: 'hidden' };
 
-    const anim = expand.animate(open ? [none, full] : [full, none],
-        { duration: 150, easing: 'ease-out', fill: open ? 'none' : 'forwards' });
+    const anim = expand.animate([full, none], { duration: 150, easing: 'ease-out', fill: 'forwards' });
 
-    if (!open)
-        anim.onfinish = () => {
-            card.classList.remove('open', 'closing');
-            anim.cancel();
-            if (done)
-                done();
-        };
+    anim.onfinish = () => {
+        card.classList.remove('open', 'closing');
+        anim.cancel();
+        if (done)
+            done();
+    };
 }
 
 /*
