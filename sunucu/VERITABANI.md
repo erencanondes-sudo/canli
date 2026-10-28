@@ -1,15 +1,15 @@
 # Veritabanı (Firestore)
 
-Bütün dokümanları yalnızca sunucu yazar. Her dokümanda `guncellendi` alanı son yazma zamanıdır.
+Dokümanları sunucu yazar; yalnızca `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı) yazar. Her dokümanda `guncellendi` alanı son yazma zamanıdır.
 Bir doküman değişmediyse yeniden yazılmaz.
 
-| Koleksiyon / doküman | Ne var | Kim okur | Ne zaman değişir | Boyut |
-|---|---|---|---|---|
-| `gunler/{gün}-{grup}` | O günün maçları, 50'şer maçlık gruplar | Ana sayfa | Maç başlayınca, bitince, fikstür değişince | grup başına ~2–30 KB |
-| `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Ana sayfa, maç sayfası | Canlı maç varken 8 sn'de bir, yalnızca 12:30–01:00 arası | ~1–5 KB |
-| `maclar/{maç no}` | İstatistik ve kadro | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
-| `sistem/durum` | Sunucunun durumu | Yalnızca sen | Dakikada bir | < 1 KB |
-| `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
+| Koleksiyon / doküman | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
+|---|---|---|---|---|---|
+| `gunler/{gün}-{grup}` | O günün maçları, 50'şer maçlık gruplar | Sunucu | Ana sayfa | Maç başlayınca, bitince, fikstür değişince | grup başına ~2–30 KB |
+| `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Sunucu | Ana sayfa, maç sayfası | Canlı maç varken 8 sn'de bir, yalnızca 12:30–01:00 arası | ~1–5 KB |
+| `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
+| `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
+| `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
 ---
 
