@@ -5,12 +5,14 @@
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
  *   4. Değişen dokümanları yaz (önce ana sayfa grupları, sonra canlı doküman)
+ *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js)
  */
 
 const A = require('./ayarlar');
 const api = require('./api');
 const B = require('./bicim');
 const db = require('./veritabani');
+const bildirim = require('./bildirim');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -47,18 +49,25 @@ function gunler() {
     return [gunAdi(n - 864e5), gunAdi(n), gunAdi(n + 864e5)];
 }
 
-/* API'den gelen maçı kaydeder; olay içermeyen cevaplarda eski olayları korur */
-function kaydet(f) {
+/*
+ * API'den gelen maçı kaydeder; olay içermeyen cevaplarda eski olayları korur.
+ * Canlı maçın skoru, dakikası ve olayları yalnızca canlı istekten alınır
+ * (fikstür ve ayrıntı cevapları geride kalabiliyor; skor geri gidip yanlış bildirim olmasın).
+ */
+function kaydet(f, canliIstek) {
     const no = f.fixture.id;
     let k = maclar.get(no);
     if (!k) {
         k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false };
         maclar.set(no, k);
     }
+    if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
+        return k;
     k.f = f;
     k.gun = f.fixture.date.slice(0, 10);
     if (f.events) k.olaylar = B.olaylar(f);
     if (BITTI.has(f.fixture.status.short) && !k.bitis) k.bitis = simdi();
+    bildirim.kontrol(f, k.olaylar, canliSaatte());
     return k;
 }
 
@@ -107,7 +116,7 @@ async function canliCek() {
     const gelen = new Set();
     for (const f of liste) {
         if (!LIG_SIRA.has(f.league.id)) continue;
-        kaydet(f);
+        kaydet(f, true);
         gelen.add(f.fixture.id);
     }
 
@@ -302,6 +311,7 @@ async function tur() {
 
 if (require.main === module) {
     console.log('Sunucu başladı: ' + A.LIGLER.map(l => l.ad).join(', '));
+    bildirim.zilDinle();
     tur();
 }
 

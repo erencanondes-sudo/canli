@@ -22,6 +22,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /* Zil kayıtları: herkes yalnızca kendi kaydını yazar (görünmez giriş), kimse okuyamaz */
+    match /zil/{kimlik} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+        && request.auth.uid == kimlik
+        && request.resource.data.keys().hasOnly(['token', 'maclar', 'guncellendi'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() < 400
+        && request.resource.data.maclar is list
+        && request.resource.data.maclar.size() <= 100;
+      allow delete: if false;
+    }
+
     /* Geri kalan her şey (sistem/durum dahil) kapalı */
     match /{belge=**} {
       allow read, write: if false;

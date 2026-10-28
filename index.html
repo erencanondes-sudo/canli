@@ -3219,6 +3219,9 @@ body.ball-left .ac-kapa svg {
 
 const FIREBASE_SURUM = '12.19.0';
 
+/* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
+const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';
+
 const FIREBASE_AYAR = {
     apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',
     authDomain: 'canli-b4406.firebaseapp.com',
@@ -3460,7 +3463,8 @@ async function startData() {
         const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
         const app = await import(base + 'firebase-app.js');
         fs = await import(base + 'firebase-firestore.js');
-        db = fs.getFirestore(app.initializeApp(FIREBASE_AYAR));
+        fbApp = app.initializeApp(FIREBASE_AYAR);
+        db = fs.getFirestore(fbApp);
     } catch (error) {
         dataError = true;
         refreshViews();
@@ -3469,6 +3473,107 @@ async function startData() {
 
     watchLive();
     watchDay(selectedDay);
+
+    /* İzin daha önce verildiyse: cihaz kimliği değişmiş olabilir, gerekirse zil kaydı yenilenir */
+    if (bildirimVar() && Notification.permission === 'granted' && savedIds.size)
+        zilYazSonra();
+}
+
+/* =================================================
+   BİLDİRİM (zil açılan maçlar)
+   -------------------------------------------------
+   İlk zil açılışında tarayıcı izin ister. İzin verilirse
+   görünmez giriş (anonim) yapılır, cihaz kimliği alınır ve
+   kayıtlı maçlar zil/{gizli kimlik} dokümanına yazılır.
+   Sunucu bunu görüp cihazı maçların bildirimlerine abone eder.
+================================================= */
+
+let fbApp = null;
+let bildirimHazir = null;
+let zilTimer = null;
+let izinSoruluyor = false;
+
+const ZIL_SON_KEY = 'canliSkorZilSon';
+
+function bildirimVar() {
+    return !!BILDIRIM_ANAHTARI && !!db && 'Notification' in window &&
+        'serviceWorker' in navigator && location.protocol === 'https:';
+}
+
+/* Zil açıldı / kapandı (kullanıcının dokunuşu içinde çağrılır: izin penceresi ancak böyle açılır) */
+function zilDegisti(acildi) {
+
+    if (!bildirimVar())
+        return;
+
+    if (Notification.permission === 'granted') {
+        zilYazSonra();
+        return;
+    }
+
+    if (acildi && Notification.permission === 'default' && !izinSoruluyor) {
+        izinSoruluyor = true;
+        Notification.requestPermission().then(izin => {
+            izinSoruluyor = false;
+            if (izin === 'granted')
+                zilYazSonra();
+        });
+    }
+}
+
+/* Lig zilinde birçok maç birden değişir: 1 sn bekleyip tek seferde yazılır */
+function zilYazSonra() {
+    clearTimeout(zilTimer);
+    zilTimer = setTimeout(zilYaz, 1000);
+}
+
+function bildirimHazirla() {
+
+    if (!bildirimHazir) {
+        bildirimHazir = (async () => {
+            const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
+            const [authLib, msgLib] = await Promise.all([
+                import(base + 'firebase-auth.js'),
+                import(base + 'firebase-messaging.js')
+            ]);
+
+            const auth = authLib.getAuth(fbApp);
+            await auth.authStateReady();
+            const user = auth.currentUser || (await authLib.signInAnonymously(auth)).user;
+
+            const worker = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            const token = await msgLib.getToken(msgLib.getMessaging(fbApp), {
+                vapidKey: BILDIRIM_ANAHTARI,
+                serviceWorkerRegistration: worker
+            });
+
+            return { uid: user.uid, token: token };
+        })();
+    }
+
+    return bildirimHazir;
+}
+
+async function zilYaz() {
+    try {
+        const { uid, token } = await bildirimHazirla();
+        const list = Array.from(savedIds).filter(id => /^\d+$/.test(id)).slice(-100);
+        const key = token + '|' + list.join(',');
+
+        /* Değişen bir şey yoksa yazılmaz */
+        if (readJSON(ZIL_SON_KEY, '') === key)
+            return;
+
+        await fs.setDoc(fs.doc(db, 'zil', uid), {
+            token: token,
+            maclar: list,
+            guncellendi: fs.serverTimestamp()
+        });
+
+        writeJSON(ZIL_SON_KEY, key);
+    } catch (error) {
+        bildirimHazir = null;
+    }
 }
 
 /* Değişiklik gelince ekranlar bir kez yeniden çizilir */
@@ -3821,6 +3926,8 @@ function toggleSaved(id) {
     try {
         localStorage.setItem(SAVED_KEY, JSON.stringify(Array.from(savedIds)));
     } catch (error) {}
+
+    zilDegisti(savedIds.has(id));
 
     /* Aynı maçın bütün zilleri yerinde güncellenir (liste baştan çizilmez) */
     document.querySelectorAll('.score-bell[data-id="' + id + '"]').forEach(bell => {
@@ -4875,6 +4982,8 @@ document.getElementById('savedClear').addEventListener('click', () => {
             try {
                 localStorage.setItem(SAVED_KEY, '[]');
             } catch (error) {}
+
+            zilDegisti(false);
 
             document.querySelectorAll('.score-bell.on').forEach(bell => bell.classList.remove('on'));
             refreshLeagueBells();

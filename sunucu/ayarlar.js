@@ -3,6 +3,7 @@
 module.exports = {
 
     PROJE: 'canli-b4406',
+    SITE_ADRES: 'https://erencanondes-sudo.github.io/canli/',   /* bildirime basınca açılan adres */
     SAAT_DILIMI: 'Europe/Istanbul',
 
     /* Ligler. Sıra önemli: ana sayfa grupları bu sıraya göre dolar. */

@@ -9,6 +9,7 @@ Bir doküman değişmediyse yeniden yazılmaz.
 | `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Ana sayfa, maç sayfası | Canlı maç varken 8 sn'de bir, yalnızca 12:30–01:00 arası | ~1–5 KB |
 | `maclar/{maç no}` | İstatistik ve kadro | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
 | `sistem/durum` | Sunucunun durumu | Yalnızca sen | Dakikada bir | < 1 KB |
+| `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
 ---
 
@@ -158,3 +159,18 @@ Yalnızca kadro ve istatistik veren liglerde yazılır. Olaylar burada yok, ana 
 | `kalan_istek` / `gunluk_hak` | API-Football'da bugün kalan istek / günlük hak |
 | `acilistan_beri_istek` / `acilistan_beri_yazma` | Sunucu son açıldığından beri API isteği / Firestore yazması |
 | `son_hata` | Son turdaki hata (yoksa `null`) |
+
+---
+
+## `zil/{gizli kimlik}`
+
+Kullanıcı bir maçın zilini açınca (ve bildirim izni verdiyse) site yazar. Gizli kimlik, görünmez girişin (anonim) verdiği kimliktir; üyelik gerekmez.
+
+| Alan | Açıklama |
+|---|---|
+| `token` | Cihazın bildirim kimliği (Firebase verir) |
+| `maclar` | Zili açık maçların numaraları, en fazla 100 |
+| `guncellendi` | Son yazma zamanı |
+
+Sunucu bu kayıtları dinler ve cihazı her maçın bildirim konusuna (`mac-{maç no}`) abone eder. Bildirimler:
+gol, VAR gol iptali, kırmızı kart, maç başladı, devre arası, maç sonu. Yalnızca canlı saatlerde (12:30–01:00) gönderilir.
