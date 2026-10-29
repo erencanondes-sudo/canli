@@ -1,24 +1,27 @@
 /*
  * Bildirimlerin arka plan dosyası: site kapalıyken gelen bildirimi gösterir.
- * Bildirime basınca maçın sayfası açılır (bağlantıyı sunucu gönderir).
- * Uygulama açıkken gelen bildirimi site gösterir; ona basılınca açık sayfada maç açılır.
+ * Bildirime basılınca (uygulamanın açıkken gösterdiği bildirim dahil):
+ * uygulama açıksa öne gelir ve maç açık sayfada açılır; kapalıysa maçın bağlantısı açılır.
+ * Firebase'in kendi tıklama davranışından önce çalışır (o, açık uygulamada maçı açmıyor).
  */
 
 self.addEventListener('notificationclick', event => {
     const data = event.notification.data || {};
-    if (!data.link || data.FCM_MSG)
+    const fcm = data.FCM_MSG || {};
+    const link = data.link || (fcm.fcmOptions && fcm.fcmOptions.link) || '';
+    const mac = link.split('#mac=')[1];
+    if (!mac)
         return;
+    event.stopImmediatePropagation();
     event.notification.close();
     event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
         const page = list.find(client => client.url.startsWith(self.registration.scope));
         if (!page)
-            return clients.openWindow(data.link);
-        page.postMessage({ mac: data.mac });
+            return clients.openWindow(link);
+        page.postMessage({ mac: mac });
         return page.focus();
     }));
 });
-importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
     apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',

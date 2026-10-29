@@ -3494,7 +3494,6 @@ let dataError = false;
 let watchedDay = null;   /* seçili gün */
 let namesUnsub = null;
 let detailUnsub = null;
-let pendingLink = null;
 
 async function startData() {
     try {
@@ -3600,7 +3599,7 @@ function bildirimHazirla() {
                 worker.showNotification(note.title || '', {
                     body: note.body || '',
                     icon: note.icon,
-                    data: { link: link, mac: link.split(LINK_PREFIX)[1] || null }
+                    data: { link: link }
                 });
             });
 
@@ -3652,13 +3651,6 @@ function refreshViews() {
         renderOdds();
         renderCouponBall();
         refreshDetail();
-
-        /* Paylaşılan bağlantıdaki maç geldiyse açılır */
-        if (pendingLink && MATCH_BY_ID.has(pendingLink)) {
-            const id = pendingLink;
-            pendingLink = null;
-            openDetail(id);
-        }
     });
 }
 
@@ -6996,19 +6988,27 @@ function renderDetailOdds(match) {
     box.appendChild(note);
 }
 
-/* tab: açılışta seçili sekme (Oranlar'dan açılınca Oranlar) */
+/*
+ * tab: açılışta seçili sekme (Oranlar'dan açılınca Oranlar)
+ * Maçın verisi henüz gelmediyse (bağlantı ya da bildirimle açılış) sayfa boş açılır, veri gelince dolar.
+ */
+let detailWaiting = false;
+
 function openDetail(id, tab = 'summary') {
 
     const match = MATCH_BY_ID.get(id);
 
-    if (!match)
-        return;
-
     detailId = id;
     setDetailMode(false);
 
-    fillDetail(match);
-    watchDetail(match);
+    if (match) {
+        detailWaiting = false;
+        fillDetail(match);
+        watchDetail(match);
+    } else {
+        detailWaiting = true;
+        emptyDetail();
+    }
 
     /* Bölüm sabit yükseklikte, ilk sekmede başlar. */
     applyDetailLift();
@@ -7047,14 +7047,45 @@ function fillDetail(match) {
     renderDetailOdds(match);
 }
 
+/* Veri beklenirken: skor tablosu boş, Özet'te "Yükleniyor…" (bugünün listesinde yoksa "Maç bulunamadı.") */
+function emptyDetail() {
+
+    ['sbLeague', 'sbHome', 'sbAway', 'sbScoreText', 'sbStatus', 'summaryBox', 'statsBox', 'lineupBox', 'oddsBox']
+        .forEach(id => { document.getElementById(id).textContent = ''; });
+    document.getElementById('sbStatus').className = '';
+
+    const today = days.get(TODAY);
+    const p = document.createElement('p');
+    p.className = 'tab-empty';
+    p.textContent = today && today.loaded ? 'Maç bulunamadı.' : 'Yükleniyor…';
+    document.getElementById('summaryBox').appendChild(p);
+}
+
 function refreshDetail() {
-    if (detailId && MATCH_BY_ID.has(detailId) && detailSheet.classList.contains('open'))
-        fillDetail(MATCH_BY_ID.get(detailId));
+
+    if (!detailId || !detailSheet.classList.contains('open'))
+        return;
+
+    const match = MATCH_BY_ID.get(detailId);
+
+    if (!match) {
+        if (detailWaiting)
+            emptyDetail();
+        return;
+    }
+
+    if (detailWaiting) {
+        detailWaiting = false;
+        watchDetail(match);
+    }
+
+    fillDetail(match);
 }
 
 function hideDetail() {
     detailSheet.classList.remove('open');
     detailId = null;
+    detailWaiting = false;
     unwatchDetail();
 }
 
@@ -7210,17 +7241,16 @@ document.addEventListener('keydown', event => {
         history.replaceState(null, '', location.href.split('#')[0]);
     } catch (error) {}
 
-    /* Maç verisi gelince açılır */
-    pendingLink = id;
+    /* Maç sayfası hemen açılır; veri gelince dolar */
+    openDetail(id);
 })();
 
 /* Uygulama açıkken gösterilen bildirime basılınca maç açılır (firebase-messaging-sw.js gönderir) */
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', event => {
-        if (event.data && event.data.mac) {
-            pendingLink = String(event.data.mac);
-            refreshViews();
-        }
+        const id = event.data && event.data.mac ? String(event.data.mac) : null;
+        if (id && !(detailId === id && detailSheet.classList.contains('open')))
+            openDetail(id);
     });
 }
 
