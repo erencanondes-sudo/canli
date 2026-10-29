@@ -3709,8 +3709,8 @@ const fastWarns = new Map();    /* maç no → "2-2" | "k" */
 const scoreSources = new Map(); /* maç no → { api, apiAt, fast, fastAt } (değişme anları) */
 const warnScores = new Map();   /* maç no → uyarı geldiğinde gösterilen skor */
 const shownScores = new Map();  /* maç no → son gösterilen skor */
-const quietUntil = new Map();   /* maç no → skor değiştikten sonra "k" uyarısının gösterilmeyeceği an (2 dk) */
-const QUIET_TIME = 120000;
+const quietUntil = new Map();   /* maç no → skor değiştikten sonra "k" uyarısının gösterilmeyeceği an (1 dk) */
+const QUIET_TIME = 60000;
 let fastUnsubs = [];
 
 function sourceOf(id) {
@@ -3737,7 +3737,7 @@ function applyFast(match) {
 
     const shown = match.score ? match.score.join('-') : '';
 
-    /* Skor değişince (gol ya da iptal) o maçta 2 dk "k" uyarısı gösterilmez; gol bekleniyor ("2-2") gösterilir */
+    /* Skor değişince (gol ya da iptal) o maçta 1 dk "k" uyarısı gösterilmez; gol bekleniyor ("2-2") gösterilir */
     if (shownScores.has(match.id) && shownScores.get(match.id) !== shown) {
         quietUntil.set(match.id, Date.now() + QUIET_TIME);
         setTimeout(refreshViews, QUIET_TIME + 100);
