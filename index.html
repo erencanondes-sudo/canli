@@ -3587,9 +3587,21 @@ function bildirimHazirla() {
             const user = auth.currentUser || (await authLib.signInAnonymously(auth)).user;
 
             const worker = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-            const token = await msgLib.getToken(msgLib.getMessaging(fbApp), {
+            const messaging = msgLib.getMessaging(fbApp);
+            const token = await msgLib.getToken(messaging, {
                 vapidKey: BILDIRIM_ANAHTARI,
                 serviceWorkerRegistration: worker
+            });
+
+            /* Uygulama açıkken gelen bildirim de telefonun bildirimi olarak gösterilir */
+            msgLib.onMessage(messaging, payload => {
+                const note = payload.notification || {};
+                const link = (payload.fcmOptions || {}).link || '';
+                worker.showNotification(note.title || '', {
+                    body: note.body || '',
+                    icon: note.icon,
+                    data: { link: link, mac: link.split(LINK_PREFIX)[1] || null }
+                });
             });
 
             return { uid: user.uid, token: token };
@@ -3840,6 +3852,7 @@ const goalQueue = [];
 function findGoals() {
 
     const seen = new Set();
+    let scored = false;
 
     MATCHES.forEach(match => {
 
@@ -3854,7 +3867,10 @@ function findGoals() {
             ['home', 'away'].forEach((side, i) => {
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
-                    goalQueue.push({ match: match, side: side });
+                    scored = true;
+                    /* Şerit ve ses yalnızca kayıtlı (zili açık) maçlarda */
+                    if (isSaved(id))
+                        goalQueue.push({ match: match, side: side });
                 }
             });
         }
@@ -3868,10 +3884,12 @@ function findGoals() {
         if (!seen.has(id)) lastScores.delete(id);
     });
 
-    if (goalQueue.length) {
+    if (goalQueue.length)
         showNextGoal();
+
+    /* Top 10 sn sonra kalksın */
+    if (scored)
         setTimeout(refreshViews, 10100);
-    }
 }
 
 function hasBall(id, side) {
@@ -7195,6 +7213,16 @@ document.addEventListener('keydown', event => {
     /* Maç verisi gelince açılır */
     pendingLink = id;
 })();
+
+/* Uygulama açıkken gösterilen bildirime basılınca maç açılır (firebase-messaging-sw.js gönderir) */
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.mac) {
+            pendingLink = String(event.data.mac);
+            refreshViews();
+        }
+    });
+}
 
 /* Reklamı ana sayfanın üst resminin üzerine koy */
 document.getElementById('homeBanner').appendChild(
