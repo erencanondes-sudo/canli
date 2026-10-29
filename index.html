@@ -791,7 +791,7 @@ button {
     border-bottom: 0;
 }
 
-/* Hızlı kaynakta uyarı (gol bekleniyor ya da oranlar kilitli): satır hafif kırmızı */
+/* Hızlı kaynakta uyarı: satır hafif kırmızı */
 .score-row.warn {
     background: #fdecec;
 }
@@ -3698,7 +3698,7 @@ function unwatchNames() {
 /*
  * HIZLI KAYNAK (başka bir bilgisayardaki skor sunucusu)
  *   hizli/{no}   : onaylı skor "2-1"
- *   hizli_u/{no} : uyarı ("2-2" gol bekleniyor, "k" oranlar kilitli)
+ *   hizli_u/{no} : uyarı ("2-2" gol bekleniyor, "k" genel uyarı)
  *   hizli_t      : kaynağın son çalıştığı an; 2 dakikadan eskiyse kaynak yok sayılır
  * İki kaynaktan (API, hızlı) en son değişen skor gösterilir; ilk açılışta farklıysa hızlı.
  * Uyarı geldikten sonra skor değişirse uyarı gizlenir.

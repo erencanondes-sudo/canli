@@ -15,7 +15,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | RTDB `takim_surum` | Takım listesinin sürümü | Sunucu | Site | Yeni takım görülünce | birkaç bayt |
 | RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
 | RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
-| RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` oranlar kilitli | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
+| RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
 | RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms) | Hızlı kaynak | Site (canlı) | Dakikada bir | ~20 bayt |
 | Firestore `ozet/{gün}` | Günün oynanan ve biten maçlarının olayları | Sunucu | Canlı Skor, maç sayfası (Özet) | Olay olunca, en fazla 15 sn'de bir | 150 maç ~60–80 KB |
 | Firestore `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
