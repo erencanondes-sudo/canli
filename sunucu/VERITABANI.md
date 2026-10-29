@@ -41,7 +41,8 @@ Eski günler silinmez (takvimden açılabilsin diye).
 ## Hızlı kaynak (`hizli`, `hizli_u`, `hizli_t`)
 
 - Canlı maçta iki kaynaktan (API, hızlı) en son değişen skor gösterilir. Açılışta farklıysa hızlı kaynağınki.
-- `hizli_t` 2 dakikadan eskiyse hızlı kaynak yok sayılır (yalnızca API).
+- Hızlı kaynak 2 dakikadır sessizse (`hizli_t` eski ve yeni veri yok) yalnızca uyarılar gizlenir; skor ve gol her zaman kullanılır.
+- Telefon bildirimi (sunucu) golü ve iptali hangi kaynak önce görürse ondan gönderir, aynı skor için bir kez.
 - `hizli_u` varken satır hafif kırmızı olur. Uyarı geldikten sonra skor değişirse (hangi kaynaktan olursa) kırmızı kalkar.
 - Kurallar: yalnızca hızlı kaynağın kullanıcısı yazabilir; değer `2-1` ya da (uyarıda) `k` biçiminde olmalı.
 

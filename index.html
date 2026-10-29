@@ -3699,9 +3699,11 @@ function unwatchNames() {
  * HIZLI KAYNAK (başka bir bilgisayardaki skor sunucusu)
  *   hizli/{no}   : onaylı skor "2-1"
  *   hizli_u/{no} : uyarı ("2-2" gol bekleniyor, "k" genel uyarı)
- *   hizli_t      : kaynağın son çalıştığı an; 2 dakikadan eskiyse kaynak yok sayılır
+ *   hizli_t      : kaynağın son çalıştığı an
  * İki kaynaktan (API, hızlı) en son değişen skor gösterilir; ilk açılışta farklıysa hızlı.
  * Uyarı geldikten sonra skor değişirse uyarı gizlenir.
+ * Kaynak 2 dakikadır sessizse (hizli_t eski ve yeni veri yok) yalnızca uyarılar gizlenir
+ * (kaynak kapanınca uyarı ekranda kalmasın); skor ve gol her zaman kullanılır.
  */
 const FAST_LIMIT = 120000;
 const PLAYING_CODES = new Set(['CANLI', '1H', '2H', 'ET']);
@@ -3713,13 +3715,22 @@ const warnScores = new Map();   /* maç no → uyarı geldiğinde gösterilen sk
 const shownScores = new Map();  /* maç no → son gösterilen skor */
 const quietUntil = new Map();   /* maç no → skor değiştikten sonra uyarının gösterilmeyeceği an (2 dk) */
 const QUIET_TIME = 120000;
-let fastTime = 0;
+let fastTime = 0;          /* hizli_t (sunucu saati) */
+let fastChanged = 0;       /* hızlı kaynaktan son yeni veri (telefon saati) */
 let serverOffset = 0;
 let fastTimer = null;
 let fastUnsubs = [];
 
 function fastAlive() {
-    return fastTime > 0 && Date.now() + serverOffset - fastTime < FAST_LIMIT;
+    return Date.now() + serverOffset - fastTime < FAST_LIMIT || Date.now() - fastChanged < FAST_LIMIT;
+}
+
+/* Kaynağın sessiz sayılacağı an gelince ekran yenilenir (uyarı kalksın) */
+function scheduleFastCheck() {
+    clearTimeout(fastTimer);
+    const left = Math.max(fastTime - serverOffset, fastChanged) + FAST_LIMIT - Date.now();
+    if (left > 0)
+        fastTimer = setTimeout(refreshViews, left + 100);
 }
 
 function sourceOf(id) {
@@ -3739,9 +3750,6 @@ function applyFast(match) {
         source.api = api;
     }
 
-    if (!fastAlive())
-        return;
-
     const fast = fastScores.get(match.id);
 
     if (fast && source.fastAt >= source.apiAt)
@@ -3756,7 +3764,7 @@ function applyFast(match) {
     }
     shownScores.set(match.id, shown);
 
-    if ((quietUntil.get(match.id) || 0) > Date.now())
+    if ((quietUntil.get(match.id) || 0) > Date.now() || !fastAlive())
         return;
 
     /* Uyarı yalnızca top oyundayken (devre arası, penaltılar, duran maçta yok) */
@@ -3773,24 +3781,34 @@ function applyFast(match) {
     }
 }
 
-/* Dalın yalnızca değişen kayıtları işlenir */
-function takeFast(target, onChange, done) {
+/*
+ * Dalın yalnızca değişen kayıtları işlenir. İlk gelen kayıtlar "yeni" sayılmaz
+ * (initial: true); sonradan gelen her değişiklik kaynağın çalıştığını gösterir.
+ */
+function takeFast(target, onChange) {
+    let initial = true;
     return snap => {
         const next = snap.val() || {};
+        const changed = id => {
+            if (!initial) {
+                fastChanged = Date.now();
+                scheduleFastCheck();
+            }
+            onChange(id, target.has(id) ? target.get(id) : null, initial);
+        };
         Array.from(target.keys()).forEach(id => {
             if (!(id in next)) {
                 target.delete(id);
-                onChange(id, null);
+                changed(id);
             }
         });
         Object.entries(next).forEach(([id, value]) => {
             if (target.get(id) !== value) {
                 target.set(id, value);
-                onChange(id, value);
+                changed(id);
             }
         });
-        if (done)
-            done();
+        initial = false;
         refreshViews();
     };
 }
@@ -3800,27 +3818,22 @@ function watchFast() {
     if (fastUnsubs.length || !rd)
         return;
 
-    /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
-    let first = true;
-
     fastUnsubs = [
         rt.onValue(rt.ref(rd, '.info/serverTimeOffset'), snap => {
             serverOffset = snap.val() || 0;
         }),
-        rt.onValue(rt.ref(rd, 'hizli'), takeFast(fastScores, (id, value) => {
+        /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
+        rt.onValue(rt.ref(rd, 'hizli'), takeFast(fastScores, (id, value, initial) => {
             const source = sourceOf(id);
-            source.fastAt = first ? 0 : Date.now();
+            source.fastAt = initial ? 0 : Date.now();
             source.fast = value;
-        }, () => { first = false; }), () => {}),
+        }), () => {}),
         rt.onValue(rt.ref(rd, 'hizli_u'), takeFast(fastWarns, id => {
             warnScores.delete(id);
         }), () => {}),
         rt.onValue(rt.ref(rd, 'hizli_t'), snap => {
             fastTime = Number(snap.val()) || 0;
-            clearTimeout(fastTimer);
-            const left = fastTime + FAST_LIMIT - (Date.now() + serverOffset);
-            if (left > 0)
-                fastTimer = setTimeout(refreshViews, left + 100);
+            scheduleFastCheck();
             refreshViews();
         }, () => {})
     ];
@@ -3837,6 +3850,7 @@ function unwatchFast() {
     shownScores.clear();
     quietUntil.clear();
     fastTime = 0;
+    fastChanged = 0;
 }
 
 /* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */

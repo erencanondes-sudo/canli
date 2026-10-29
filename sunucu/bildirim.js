@@ -97,10 +97,7 @@ function kontrol(f, olaylar, gonder) {
         gonderMesaj(no, 'Maç sonu', sonuc);
 }
 
-/* ---------- Hızlı kaynak (RTDB hizli, hizli_t) ---------- */
-
-const HIZLI_SURE = 120000;   /* hizli_t bundan eskiyse hızlı kaynak yok sayılır */
-let hizliZaman = 0;
+/* ---------- Hızlı kaynak (RTDB hizli) ---------- */
 
 /*
  * Hızlı kaynakta skor değişince: API'nin bildirdiğinden ilerideyse gol, gerideyse iptal bildirimi.
@@ -111,8 +108,6 @@ function hizliSkor(no, deger, gonder) {
     const d = durumlar.get(no);
     const m = /^(\d+)-(\d+)$/.exec(deger || '');
     if (!d || !m || !CANLI.has(d.durum)) return;
-
-    if (Date.now() - hizliZaman > HIZLI_SURE) return;
 
     const skor = [Number(m[1]), Number(m[2])];
     const duyurulan = bildirilen.get(no) || d.skor;
@@ -132,15 +127,10 @@ function hizliSkor(no, deger, gonder) {
 /* canliSaatte: bildirim gönderilecek saatlerde miyiz (index.js verir). İlk gelen kayıtlar yalnızca not edilir. */
 function hizliDinle(canliSaatte) {
 
-    const rtdb = getDatabase();
     let ilk = true;
 
-    rtdb.ref('hizli_t').on('value', snap => {
-        hizliZaman = Number(snap.val()) || 0;
-    }, e => console.error('hizli_t dinlenemedi: ' + e.message));
-
     const degisti = snap => hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
-    const ref = rtdb.ref('hizli');
+    const ref = getDatabase().ref('hizli');
     ref.on('child_added', degisti, e => console.error('hizli dinlenemedi: ' + e.message));
     ref.on('child_changed', degisti);
     ref.once('value', () => { ilk = false; });
