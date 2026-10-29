@@ -2588,6 +2588,21 @@ body.ball-left .ac-kapa svg {
     font-weight: 800;
 }
 
+/* Gol bekleniyor: beklenen takımın yanında büyüyüp küçülen, ışık saçan kırmızı nokta */
+.score-team .warn-dot {
+    flex: none;
+    width: .5em;
+    height: .5em;
+    border-radius: 50%;
+    background: #e53935;
+    animation: warnPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes warnPulse {
+    0%, 100% { transform: scale(.8); box-shadow: 0 0 0 0 rgba(229, 57, 53, .55); }
+    50%      { transform: scale(1.15); box-shadow: 0 0 .45em .2em rgba(229, 57, 53, .35); }
+}
+
 /* Gol atan takımın yanındaki top (10 saniye) */
 .score-team .goal-ball {
     flex: none;
@@ -3684,6 +3699,7 @@ function unwatchNames() {
  * Uyarı geldikten sonra skor değişirse uyarı gizlenir.
  */
 const FAST_LIMIT = 120000;
+const PLAYING_CODES = new Set(['CANLI', '1H', '2H', 'ET']);
 
 const fastScores = new Map();   /* maç no → "2-1" */
 const fastWarns = new Map();    /* maç no → "2-2" | "k" */
@@ -3725,10 +3741,17 @@ function applyFast(match) {
 
     const shown = match.score ? match.score.join('-') : '';
 
-    if (fastWarns.has(match.id)) {
+    /* Uyarı yalnızca top oyundayken (devre arası, penaltılar, duran maçta yok) */
+    if (fastWarns.has(match.id) && PLAYING_CODES.has(match.code)) {
         if (!warnScores.has(match.id))
             warnScores.set(match.id, shown);
         match.warn = warnScores.get(match.id) === shown;
+
+        /* Gol bekleniyor ("2-2"): beklenen skoru önde olan takımın yanında kırmızı nokta */
+        const expected = fastWarns.get(match.id).split('-').map(Number);
+        const now = shown ? shown.split('-').map(Number) : [0, 0];
+        if (match.warn && expected.length === 2)
+            match.warnSide = expected[0] > now[0] ? 'home' : expected[1] > now[1] ? 'away' : null;
     }
 }
 
@@ -4549,6 +4572,16 @@ function scoreRow(match, showDate, showLeague) {
         const name = document.createElement('span');
         name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
+
+        /* Gol bekleniyor: beklenen takımın dış tarafında yanıp sönen kırmızı nokta */
+        if (match.warnSide === side) {
+            const dot = document.createElement('i');
+            dot.className = 'warn-dot';
+            if (side === 'home')
+                el.insertBefore(dot, name);
+            else
+                el.appendChild(dot);
+        }
 
         /* Gol atan takımın yanında top (10 saniye): soldaki takımda solda, sağdakinde sağda */
         if (match.status === 'live' && hasBall(match.id, side)) {
