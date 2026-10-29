@@ -2603,9 +2603,10 @@ body.ball-left .ac-kapa svg {
     50%      { transform: scale(1.15); box-shadow: 0 0 .45em .2em rgba(229, 57, 53, .35); }
 }
 
-/* Gol atan takımın yanındaki top (10 saniye) */
+/* Gol atan takımın yanındaki top (10 saniye). Eğik yazılmasın (emoji yamuk görünüyordu) */
 .score-team .goal-ball {
     flex: none;
+    font-style: normal;
     font-size: .9em;
 }
 
@@ -3709,6 +3710,9 @@ const fastScores = new Map();   /* maç no → "2-1" */
 const fastWarns = new Map();    /* maç no → "2-2" | "k" */
 const scoreSources = new Map(); /* maç no → { api, apiAt, fast, fastAt } (değişme anları) */
 const warnScores = new Map();   /* maç no → uyarı geldiğinde gösterilen skor */
+const shownScores = new Map();  /* maç no → son gösterilen skor */
+const quietUntil = new Map();   /* maç no → skor değiştikten sonra uyarının gösterilmeyeceği an (2 dk) */
+const QUIET_TIME = 120000;
 let fastTime = 0;
 let serverOffset = 0;
 let fastTimer = null;
@@ -3744,6 +3748,16 @@ function applyFast(match) {
         match.score = fast.split('-').map(Number);
 
     const shown = match.score ? match.score.join('-') : '';
+
+    /* Skor değişince (gol ya da iptal) o maçta 2 dk uyarı gösterilmez */
+    if (shownScores.has(match.id) && shownScores.get(match.id) !== shown) {
+        quietUntil.set(match.id, Date.now() + QUIET_TIME);
+        setTimeout(refreshViews, QUIET_TIME + 100);
+    }
+    shownScores.set(match.id, shown);
+
+    if ((quietUntil.get(match.id) || 0) > Date.now())
+        return;
 
     /* Uyarı yalnızca top oyundayken (devre arası, penaltılar, duran maçta yok) */
     if (fastWarns.has(match.id) && PLAYING_CODES.has(match.code)) {
@@ -3820,6 +3834,8 @@ function unwatchFast() {
     fastWarns.clear();
     scoreSources.clear();
     warnScores.clear();
+    shownScores.clear();
+    quietUntil.clear();
     fastTime = 0;
 }
 
