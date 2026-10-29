@@ -9,10 +9,31 @@ module.exports = {
 
     /* Ligler (sitedeki sırayla aynı) */
     LIGLER: [
-        { no: 135, ad: 'Serie A' },
+        { no: 140, ad: 'La Liga' },
         { no: 203, ad: 'Süper Lig' },
+        { no: 39, ad: 'Premier League' },
+        { no: 61, ad: 'Ligue 1' },
+        { no: 135, ad: 'Serie A' },
+        { no: 78, ad: 'Bundesliga' },
+        { no: 141, ad: 'Segunda División' },
         { no: 204, ad: '1. Lig' },
-        { no: 206, ad: 'Türkiye Kupası' }
+        { no: 40, ad: 'Championship' },
+        { no: 62, ad: 'Ligue 2' },
+        { no: 136, ad: 'Serie B' },
+        { no: 79, ad: '2. Bundesliga' },
+        { no: 143, ad: 'Kral Kupası' },
+        { no: 556, ad: 'İspanya Süper Kupası' },
+        { no: 206, ad: 'Türkiye Kupası' },
+        { no: 551, ad: 'Türkiye Süper Kupası' },
+        { no: 45, ad: 'FA Cup' },
+        { no: 48, ad: 'EFL Cup' },
+        { no: 528, ad: 'Community Shield' },
+        { no: 66, ad: 'Fransa Kupası' },
+        { no: 526, ad: 'Fransa Süper Kupası' },
+        { no: 137, ad: 'İtalya Kupası' },
+        { no: 547, ad: 'İtalya Süper Kupası' },
+        { no: 81, ad: 'DFB Pokal' },
+        { no: 529, ad: 'Almanya Süper Kupası' }
     ],
 
     /* Canlı skor yalnızca bu saatler arasında çekilir (Türkiye saati, gece yarısını geçebilir) */

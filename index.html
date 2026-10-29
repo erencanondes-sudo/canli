@@ -3253,10 +3253,31 @@ const FLAGS = (() => {
 
 /* Ligler: sunucudaki sırayla (sunucu/ayarlar.js). Ligler menüsü bu listeden çizilir. */
 const LEAGUES = [
-    { id: 135, name: 'Serie A', country: 'İtalya', flag: FLAGS.it },
+    { id: 140, name: 'La Liga', country: 'İspanya', flag: FLAGS.es },
     { id: 203, name: 'Süper Lig', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 39, name: 'Premier League', country: 'İngiltere', flag: FLAGS.en },
+    { id: 61, name: 'Ligue 1', country: 'Fransa', flag: FLAGS.fr },
+    { id: 135, name: 'Serie A', country: 'İtalya', flag: FLAGS.it },
+    { id: 78, name: 'Bundesliga', country: 'Almanya', flag: FLAGS.de },
+    { id: 141, name: 'Segunda División', country: 'İspanya', flag: FLAGS.es },
     { id: 204, name: '1. Lig', country: 'Türkiye', flag: FLAGS.tr },
-    { id: 206, name: 'Türkiye Kupası', country: 'Türkiye', flag: FLAGS.tr }
+    { id: 40, name: 'Championship', country: 'İngiltere', flag: FLAGS.en },
+    { id: 62, name: 'Ligue 2', country: 'Fransa', flag: FLAGS.fr },
+    { id: 136, name: 'Serie B', country: 'İtalya', flag: FLAGS.it },
+    { id: 79, name: '2. Bundesliga', country: 'Almanya', flag: FLAGS.de },
+    { id: 143, name: 'Kral Kupası', country: 'İspanya', flag: FLAGS.es },
+    { id: 556, name: 'İspanya Süper Kupası', country: 'İspanya', flag: FLAGS.es },
+    { id: 206, name: 'Türkiye Kupası', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 551, name: 'Türkiye Süper Kupası', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 45, name: 'FA Cup', country: 'İngiltere', flag: FLAGS.en },
+    { id: 48, name: 'EFL Cup', country: 'İngiltere', flag: FLAGS.en },
+    { id: 528, name: 'Community Shield', country: 'İngiltere', flag: FLAGS.en },
+    { id: 66, name: 'Fransa Kupası', country: 'Fransa', flag: FLAGS.fr },
+    { id: 526, name: 'Fransa Süper Kupası', country: 'Fransa', flag: FLAGS.fr },
+    { id: 137, name: 'İtalya Kupası', country: 'İtalya', flag: FLAGS.it },
+    { id: 547, name: 'İtalya Süper Kupası', country: 'İtalya', flag: FLAGS.it },
+    { id: 81, name: 'DFB Pokal', country: 'Almanya', flag: FLAGS.de },
+    { id: 529, name: 'Almanya Süper Kupası', country: 'Almanya', flag: FLAGS.de }
 ];
 
 const LEAGUE_BY_ID = new Map(LEAGUES.map(league => [league.id, league]));
