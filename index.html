@@ -791,6 +791,11 @@ button {
     border-bottom: 0;
 }
 
+/* Hızlı kaynakta uyarı (gol bekleniyor ya da oranlar kilitli): satır hafif kırmızı */
+.score-row.warn {
+    background: #fdecec;
+}
+
 .score-row:active {
     background: #f4f6fa;
 }
@@ -3205,6 +3210,7 @@ body.ball-left .ac-kapa svg {
    yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
      RTDB gun/{gün}       : günün canlı skor satırları
      RTDB takim           : takım adları (telefonda saklanır)
+     RTDB hizli, hizli_u  : hızlı kaynağın skoru ve uyarısı (canlı maçlar)
      Firestore ozet/{gün} : günün olayları (Özet sekmesi)
      Firestore maclar/{no}: istatistik ve kadro (maç açılınca)
 ================================================= */
@@ -3427,6 +3433,8 @@ function rebuildMatches() {
             const match = rowToMatch(day, no, text, events[no]);
             const detail = matchDetails.get(match.id);
             if (detail) Object.assign(match, detail);
+            if (match.status === 'live')
+                applyFast(match);
             MATCHES.push(match);
             MATCH_BY_ID.set(match.id, match);
         });
@@ -3471,6 +3479,7 @@ async function startData() {
 
     readLeagues();
     watchNames();
+    watchFast();
     openDay(TODAY);
     watchDay(selectedDay);
 
@@ -3589,6 +3598,7 @@ function refreshViews() {
     requestAnimationFrame(() => {
         refreshQueued = false;
         rebuildMatches();
+        findGoals();
         renderLive();
         renderSaved();
         renderOdds();
@@ -3644,6 +3654,127 @@ function unwatchNames() {
     namesUnsub = null;
 }
 
+/*
+ * HIZLI KAYNAK (başka bir bilgisayardaki skor sunucusu)
+ *   hizli/{no}   : onaylı skor "2-1"
+ *   hizli_u/{no} : uyarı ("2-2" gol bekleniyor, "k" oranlar kilitli)
+ *   hizli_t      : kaynağın son çalıştığı an; 2 dakikadan eskiyse kaynak yok sayılır
+ * İki kaynaktan (API, hızlı) en son değişen skor gösterilir; ilk açılışta farklıysa hızlı.
+ * Uyarı geldikten sonra skor değişirse uyarı gizlenir.
+ */
+const FAST_LIMIT = 120000;
+
+const fastScores = new Map();   /* maç no → "2-1" */
+const fastWarns = new Map();    /* maç no → "2-2" | "k" */
+const scoreSources = new Map(); /* maç no → { api, apiAt, fast, fastAt } (değişme anları) */
+const warnScores = new Map();   /* maç no → uyarı geldiğinde gösterilen skor */
+let fastTime = 0;
+let serverOffset = 0;
+let fastTimer = null;
+let fastUnsubs = [];
+
+function fastAlive() {
+    return fastTime > 0 && Date.now() + serverOffset - fastTime < FAST_LIMIT;
+}
+
+function sourceOf(id) {
+    if (!scoreSources.has(id))
+        scoreSources.set(id, { api: null, apiAt: 0, fast: null, fastAt: 0 });
+    return scoreSources.get(id);
+}
+
+/* Canlı maçın skoru ve uyarısı hızlı kaynakla birleştirilir */
+function applyFast(match) {
+
+    const source = sourceOf(match.id);
+    const api = match.score ? match.score.join('-') : null;
+
+    if (source.api !== api) {
+        source.apiAt = source.api === null ? 0 : Date.now();
+        source.api = api;
+    }
+
+    if (!fastAlive())
+        return;
+
+    const fast = fastScores.get(match.id);
+
+    if (fast && source.fastAt >= source.apiAt)
+        match.score = fast.split('-').map(Number);
+
+    const shown = match.score ? match.score.join('-') : '';
+
+    if (fastWarns.has(match.id)) {
+        if (!warnScores.has(match.id))
+            warnScores.set(match.id, shown);
+        match.warn = warnScores.get(match.id) === shown;
+    }
+}
+
+/* Dalın yalnızca değişen kayıtları işlenir */
+function takeFast(target, onChange, done) {
+    return snap => {
+        const next = snap.val() || {};
+        Array.from(target.keys()).forEach(id => {
+            if (!(id in next)) {
+                target.delete(id);
+                onChange(id, null);
+            }
+        });
+        Object.entries(next).forEach(([id, value]) => {
+            if (target.get(id) !== value) {
+                target.set(id, value);
+                onChange(id, value);
+            }
+        });
+        if (done)
+            done();
+        refreshViews();
+    };
+}
+
+function watchFast() {
+
+    if (fastUnsubs.length || !rd)
+        return;
+
+    /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
+    let first = true;
+
+    fastUnsubs = [
+        rt.onValue(rt.ref(rd, '.info/serverTimeOffset'), snap => {
+            serverOffset = snap.val() || 0;
+        }),
+        rt.onValue(rt.ref(rd, 'hizli'), takeFast(fastScores, (id, value) => {
+            const source = sourceOf(id);
+            source.fastAt = first ? 0 : Date.now();
+            source.fast = value;
+        }, () => { first = false; }), () => {}),
+        rt.onValue(rt.ref(rd, 'hizli_u'), takeFast(fastWarns, id => {
+            warnScores.delete(id);
+        }), () => {}),
+        rt.onValue(rt.ref(rd, 'hizli_t'), snap => {
+            fastTime = Number(snap.val()) || 0;
+            clearTimeout(fastTimer);
+            const left = fastTime + FAST_LIMIT - (Date.now() + serverOffset);
+            if (left > 0)
+                fastTimer = setTimeout(refreshViews, left + 100);
+            refreshViews();
+        }, () => {})
+    ];
+}
+
+function unwatchFast() {
+    fastUnsubs.forEach(off => off());
+    fastUnsubs = [];
+    clearTimeout(fastTimer);
+    fastScores.clear();
+    fastWarns.clear();
+    scoreSources.clear();
+    warnScores.clear();
+    fastTime = 0;
+}
+
 /* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */
 function readLeagues() {
     rt.get(rt.ref(rd, 'lig')).then(snap => {
@@ -3666,33 +3797,26 @@ function findGoals() {
 
     const seen = new Set();
 
-    days.forEach((state, day) => {
+    MATCHES.forEach(match => {
 
-        if (!state.live)
+        if (match.status !== 'live')
             return;
 
-        (dayRows.get(day) || new Map()).forEach((text, id) => {
+        const id = match.id;
+        const score = match.score || [0, 0];
+        const before = lastScores.get(id);
 
-            const match = rowToMatch(day, id, text, null);
+        if (before) {
+            ['home', 'away'].forEach((side, i) => {
+                if (score[i] > before[i]) {
+                    goalUntil.set(id + '-' + side, Date.now() + 10000);
+                    goalQueue.push({ match: match, side: side });
+                }
+            });
+        }
 
-            if (match.status !== 'live')
-                return;
-
-            const score = match.score || [0, 0];
-            const before = lastScores.get(id);
-
-            if (before) {
-                ['home', 'away'].forEach((side, i) => {
-                    if (score[i] > before[i]) {
-                        goalUntil.set(id + '-' + side, Date.now() + 10000);
-                        goalQueue.push({ match: match, side: side });
-                    }
-                });
-            }
-
-            lastScores.set(id, score);
-            seen.add(id);
-        });
+        lastScores.set(id, score);
+        seen.add(id);
     });
 
     /* Biten maçlar listeden çıkar */
@@ -3831,8 +3955,6 @@ function openDay(day) {
     const takeRows = snap => {
         dayRows.set(day, new Map(Object.entries(snap.val() || {})));
         state.loaded = true;
-        if (state.live)
-            findGoals();
         refreshViews();
     };
 
@@ -3926,6 +4048,7 @@ document.addEventListener('visibilitychange', () => {
         lastScores.clear();
         Array.from(days.keys()).forEach(closeDay);
         unwatchNames();
+        unwatchFast();
         unwatchDetail();
         rt.goOffline(rd);
         return;
@@ -3933,6 +4056,7 @@ document.addEventListener('visibilitychange', () => {
 
     rt.goOnline(rd);
     watchNames();
+    watchFast();
     openDay(TODAY);
     openDay(watchedDay);
 
@@ -4358,7 +4482,7 @@ function scoreRow(match, showDate, showLeague) {
 
     /* Satırın içinde zil düğmesi olduğu için satır <button> değil */
     const row = document.createElement('div');
-    row.className = 'score-row';
+    row.className = 'score-row' + (match.warn ? ' warn' : '');
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
 

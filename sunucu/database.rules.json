@@ -15,6 +15,25 @@
     },
     "lig": {
       ".read": true
+    },
+    "hizli": {
+      ".read": true,
+      "$no": {
+        ".write": "auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)",
+        ".validate": "newData.isString() && newData.val().matches(/^[0-9]{1,2}-[0-9]{1,2}$/)"
+      }
+    },
+    "hizli_u": {
+      ".read": true,
+      "$no": {
+        ".write": "auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)",
+        ".validate": "newData.isString() && newData.val().matches(/^(k|[0-9]{1,2}-[0-9]{1,2})$/)"
+      }
+    },
+    "hizli_t": {
+      ".read": true,
+      ".write": "auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1'",
+      ".validate": "newData.isNumber()"
     }
   }
 }

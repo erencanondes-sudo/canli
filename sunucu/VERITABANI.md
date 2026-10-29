@@ -5,7 +5,7 @@
 - **Realtime Database (RTDB):** canlı skor listesi ve takım adları. Küçük ve sık değişen veri. Yalnızca değişen satır gönderilir.
 - **Firestore:** Özet (olaylar), maç detayı, bildirim kayıtları, sunucu durumu.
 
-Dokümanları sunucu yazar; yalnızca `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı) yazar. Bir şey değişmediyse yeniden yazılmaz.
+Dokümanları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), `hizli` dallarını hızlı kaynak (başka bir bilgisayardaki skor sunucusu, ayrı bir kullanıcıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
 Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
@@ -14,6 +14,9 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | RTDB `takim/{takım no}` | Takım adı | Sunucu | Site (telefonda saklanır) | Yeni takım görülünce | 300 takım ~6 KB |
 | RTDB `takim_surum` | Takım listesinin sürümü | Sunucu | Site | Yeni takım görülünce | birkaç bayt |
 | RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
+| RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
+| RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` oranlar kilitli | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
+| RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms) | Hızlı kaynak | Site (canlı) | Dakikada bir | ~20 bayt |
 | Firestore `ozet/{gün}` | Günün oynanan ve biten maçlarının olayları | Sunucu | Canlı Skor, maç sayfası (Özet) | Olay olunca, en fazla 15 sn'de bir | 150 maç ~60–80 KB |
 | Firestore `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
@@ -32,6 +35,15 @@ Eski günler silinmez (takvimden açılabilsin diye).
 - Takım adları telefonda saklanır; yalnızca `takim_surum` dinlenir, değişince `takim` yeniden indirilir.
 - Maç açılınca `maclar/{no}` dinlenir, maç kapanınca bırakılır.
 - Uygulama arka plana geçince bütün dinlemeler durur, RTDB bağlantısı kapanır.
+
+- `hizli`, `hizli_u`, `hizli_t` canlı dinlenir (dallarda yalnızca oynanan maçlar durur).
+
+## Hızlı kaynak (`hizli`, `hizli_u`, `hizli_t`)
+
+- Canlı maçta iki kaynaktan (API, hızlı) en son değişen skor gösterilir. Açılışta farklıysa hızlı kaynağınki.
+- `hizli_t` 2 dakikadan eskiyse hızlı kaynak yok sayılır (yalnızca API).
+- `hizli_u` varken satır hafif kırmızı olur. Uyarı geldikten sonra skor değişirse (hangi kaynaktan olursa) kırmızı kalkar.
+- Kurallar: yalnızca hızlı kaynağın kullanıcısı yazabilir; değer `2-1` ya da (uyarıda) `k` biçiminde olmalı.
 
 ---
 
