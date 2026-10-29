@@ -2,12 +2,15 @@
  * BİLDİRİMLER (Firebase Cloud Messaging)
  * - zil/{cihaz} dokümanlarını dinler; cihazı kayıtlı maçların konusuna (mac-{no}) abone eder.
  * - Maçta gol, VAR iptali, kırmızı kart, başlama, devre ve maç sonunda konuya tek mesaj gönderir.
+ * - Gol ve gol iptali hızlı kaynaktan (RTDB hizli) da gelir: hangi kaynak önce görürse o gönderir,
+ *   diğeri aynı skor için tekrar göndermez (bildirilen skor ortak tutulur).
  * Her olay yalnızca bir kez gönderilir; ilk görülen maç yalnızca not edilir.
  */
 
 require('./veritabani');   /* Firebase bağlantısı orada kurulur */
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getDatabase } = require('firebase-admin/database');
 const A = require('./ayarlar');
 const B = require('./bicim');
 
@@ -18,7 +21,9 @@ const konu = no => 'mac-' + no;
 
 /* ---------- Maç olayları ---------- */
 
-const durumlar = new Map();   /* maç no → { skor, durum, kirmizi } */
+const durumlar = new Map();   /* maç no → { skor, durum, kirmizi, takim, dakika } (API'den) */
+const bildirilen = new Map(); /* maç no → bildirimi gönderilmiş skor [ev, dep] (API ve hızlı kaynak ortak) */
+const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 
 /* Taraf başına kırmızı kart sayısı (ikinci sarıdan kırmızı dahil) */
 function kirmizilar(olaylar) {
@@ -48,26 +53,36 @@ function kontrol(f, olaylar, gonder) {
     const once = durumlar.get(no);
     const kirmizi = olaylar ? kirmizilar(olaylar) : (once ? once.kirmizi : [0, 0]);
 
-    durumlar.set(no, { skor, durum, kirmizi });
-
-    if (!once || !gonder) return;
-
     const ev = B.ad(f.teams.home.name);
     const dep = B.ad(f.teams.away.name);
     const takim = [ev, dep];
     const dakika = f.fixture.status.elapsed ? f.fixture.status.elapsed + (f.fixture.status.extra ? '+' + f.fixture.status.extra : '') + "' " : '';
     const sonuc = ev + ' ' + skor[0] + ' - ' + skor[1] + ' ' + dep;
 
+    durumlar.set(no, { skor, durum, kirmizi, takim, dakika });
+
+    /* Bildirilen skor: API'de değişen taraf ilerler (hızlı kaynak öndeyse geri gitmez); iptalde iner */
+    const duyurulan = bildirilen.get(no);
+    const yeni = duyurulan ? duyurulan.slice() : skor.slice();
+    if (once) [0, 1].forEach(t => {
+        if (skor[t] > once.skor[t]) yeni[t] = Math.max(yeni[t], skor[t]);
+        if (skor[t] < once.skor[t]) yeni[t] = skor[t];
+    });
+    bildirilen.set(no, yeni);
+
+    if (!once || !gonder) return;
+
     if (BASLAMADI.has(once.durum) && durum === '1H')
         gonderMesaj(no, 'Maç başladı', ev + ' - ' + dep);
 
     [0, 1].forEach(t => {
         const goller = oyuncular(olaylar, t, 'g');
-        for (let i = once.skor[t]; i < skor[t]; i++) {
+        /* Hızlı kaynak bu golü zaten bildirdiyse tekrar gönderilmez */
+        for (let i = Math.max(once.skor[t], duyurulan ? duyurulan[t] : 0); i < skor[t]; i++) {
             const oyuncu = goller[i] !== undefined ? goller[i] : goller[goller.length - 1] || '';
             gonderMesaj(no, '⚽ GOL! ' + takim[t], dakika + sonuc + (oyuncu ? ' · ' + oyuncu : ''));
         }
-        if (skor[t] < once.skor[t])
+        if (skor[t] < once.skor[t] && (!duyurulan || skor[t] < duyurulan[t]))
             gonderMesaj(no, 'VAR: ' + takim[t] + ' golü iptal', sonuc);
         if (kirmizi[t] > once.kirmizi[t]) {
             const oyuncu = oyuncular(olaylar, t, 'k').pop() || '';
@@ -80,6 +95,55 @@ function kontrol(f, olaylar, gonder) {
 
     if (!BITTI.has(once.durum) && BITTI.has(durum))
         gonderMesaj(no, 'Maç sonu', sonuc);
+}
+
+/* ---------- Hızlı kaynak (RTDB hizli, hizli_t) ---------- */
+
+const HIZLI_SURE = 120000;   /* hizli_t bundan eskiyse hızlı kaynak yok sayılır */
+let hizliZaman = 0;
+
+/*
+ * Hızlı kaynakta skor değişince: API'nin bildirdiğinden ilerideyse gol, gerideyse iptal bildirimi.
+ * Yalnızca API'de canlı görünen maçlarda ve canlı saatlerde.
+ */
+function hizliSkor(no, deger, gonder) {
+
+    const d = durumlar.get(no);
+    const m = /^(\d+)-(\d+)$/.exec(deger || '');
+    if (!d || !m || !CANLI.has(d.durum)) return;
+
+    if (Date.now() - hizliZaman > HIZLI_SURE) return;
+
+    const skor = [Number(m[1]), Number(m[2])];
+    const duyurulan = bildirilen.get(no) || d.skor;
+    bildirilen.set(no, skor.slice());
+
+    if (!gonder) return;
+
+    const sonuc = d.takim[0] + ' ' + skor[0] + ' - ' + skor[1] + ' ' + d.takim[1];
+    [0, 1].forEach(t => {
+        for (let i = duyurulan[t]; i < skor[t]; i++)
+            gonderMesaj(no, '⚽ GOL! ' + d.takim[t], d.dakika + sonuc);
+        if (skor[t] < duyurulan[t])
+            gonderMesaj(no, 'VAR: ' + d.takim[t] + ' golü iptal', sonuc);
+    });
+}
+
+/* canliSaatte: bildirim gönderilecek saatlerde miyiz (index.js verir). İlk gelen kayıtlar yalnızca not edilir. */
+function hizliDinle(canliSaatte) {
+
+    const rtdb = getDatabase();
+    let ilk = true;
+
+    rtdb.ref('hizli_t').on('value', snap => {
+        hizliZaman = Number(snap.val()) || 0;
+    }, e => console.error('hizli_t dinlenemedi: ' + e.message));
+
+    const degisti = snap => hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
+    const ref = rtdb.ref('hizli');
+    ref.on('child_added', degisti, e => console.error('hizli dinlenemedi: ' + e.message));
+    ref.on('child_changed', degisti);
+    ref.once('value', () => { ilk = false; });
 }
 
 function gonderMesaj(no, baslik, metin) {
@@ -173,4 +237,4 @@ function zilDinle() {
     }, e => console.error('Zil kayıtları dinlenemedi: ' + e.message));
 }
 
-module.exports = { kontrol, zilDinle };
+module.exports = { kontrol, zilDinle, hizliDinle };

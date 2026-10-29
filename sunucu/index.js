@@ -5,7 +5,7 @@
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
  *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), Özet (Firestore, en fazla 15 sn'de bir)
- *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js)
+ *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
  */
 
 const A = require('./ayarlar');
@@ -303,6 +303,7 @@ async function tur() {
 if (require.main === module) {
     console.log('Sunucu başladı: ' + A.LIGLER.map(l => l.ad).join(', '));
     bildirim.zilDinle();
+    bildirim.hizliDinle(canliSaatte);
     tur();
 }
 
