@@ -4,7 +4,7 @@
  *   1. Gerekirse fikstür (dün, bugün, yarın) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
- *   4. Değişen dokümanları yaz (önce ana sayfa grupları, sonra canlı doküman)
+ *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), Özet (Firestore, en fazla 15 sn'de bir)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js)
  */
 
@@ -26,7 +26,6 @@ const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / ista
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
-const grupSayisi = new Map();   /* gün → en son yazılan grup sayısı */
 let sonCanli = null;
 let sonHata = null;
 
@@ -174,66 +173,54 @@ async function detayCek(nolar) {
     }
 }
 
-/* ---------- Dokümanlar ---------- */
+/* ---------- Yazma ---------- */
 
-function sirala(a, b) {
-    return (LIG_SIRA.get(a.f.league.id) - LIG_SIRA.get(b.f.league.id)) ||
-           (a.f.fixture.timestamp - b.f.fixture.timestamp) ||
-           (a.f.fixture.id - b.f.fixture.id);
-}
-
-/* Takım adları ve ligler (uygulamadaki takım tablosu hazır olana kadar) */
-function ekler(liste) {
-    const takimlar = {};
-    const ligler = {};
-    for (const k of liste) {
-        takimlar[k.f.teams.home.id] = B.ad(k.f.teams.home.name);
-        takimlar[k.f.teams.away.id] = B.ad(k.f.teams.away.name);
-        ligler[k.f.league.id] = { ad: k.f.league.name, detay: detayli.get(k.f.league.id) };
+/* RTDB: takım adları (silinmez). Yeni ya da değişen ad varsa sürüm değişir, site sözlüğü yeniden indirir */
+async function takimYaz() {
+    const icerik = new Map();
+    for (const k of maclar.values()) {
+        icerik.set(String(k.f.teams.home.id), B.ad(k.f.teams.home.name));
+        icerik.set(String(k.f.teams.away.id), B.ad(k.f.teams.away.name));
     }
-    return { takimlar, ligler };
+    if (await db.dalYaz('takim', icerik, false)) await db.degerYaz('takim_surum', simdi());
 }
 
+/* RTDB: liglerin kadro / istatistik verip vermediği (1 / 0) */
+async function ligYaz() {
+    await db.dalYaz('lig', new Map(LIG_NO.map(no => [String(no), detayli.get(no) ? 1 : 0])));
+}
+
+/* RTDB: günün canlı skor satırları (her maç ayrı satır, yalnızca değişen yazılır) */
 async function gunYaz(gun) {
-    const liste = [...maclar.values()].filter(k => k.gun === gun).sort(sirala);
-    const gruplar = [];
-    for (let i = 0; i < liste.length; i += A.GRUP_BOYU) gruplar.push(liste.slice(i, i + A.GRUP_BOYU));
-    if (!gruplar.length) gruplar.push([]);
-
-    /* 1. gruptaki içindekiler: diğer grupların maç numaraları */
-    const diger = {};
-    gruplar.slice(1).forEach((g, i) => { diger[i + 2] = g.map(k => k.f.fixture.id); });
-
-    for (let i = 0; i < gruplar.length; i++) {
-        const g = gruplar[i];
-        const veri = {
-            gun,
-            grup: i + 1,
-            grup_sayisi: liste.length ? gruplar.length : 0,
-            maclar: g.map(k => {
-                const d = durumu(k);
-                const satir = CANLI.has(d) ? B.yerTutucu(k.f) : B.satir(k.f, BITTI.has(d) ? (k.olaylar || []) : []);
-                return JSON.stringify(satir);
-            }),
-            ...ekler(g)
-        };
-        if (i === 0) veri.diger_gruplar = diger;
-        await db.yaz('gunler/' + gun + '-' + (i + 1), veri);
-    }
-
-    /* Grup sayısı azaldıysa fazla grupları boşalt */
-    for (let i = gruplar.length + 1; i <= (grupSayisi.get(gun) || 0); i++) {
-        await db.yaz('gunler/' + gun + '-' + i, { gun, grup: i, grup_sayisi: gruplar.length, maclar: [], takimlar: {}, ligler: {} });
-    }
-    grupSayisi.set(gun, gruplar.length);
+    const icerik = new Map();
+    for (const [no, k] of maclar) if (k.gun === gun) icerik.set(String(no), B.satir(k.f));
+    await db.dalYaz('gun/' + gun, icerik);
 }
 
-async function canliYaz() {
-    const liste = [...maclar.values()].filter(k => CANLI.has(durumu(k))).sort(sirala);
-    await db.yaz('canli/simdi', {
-        maclar: liste.map(k => JSON.stringify(B.satir(k.f, k.olaylar || []))),
-        ...ekler(liste)
-    });
+/*
+ * Firestore: günün Özet dokümanı (oynanan ve biten maçların bütün olayları), en fazla 15 sn'de bir.
+ * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı korunur.
+ */
+const ozetHali = new Map();   /* gün → sunucu açıldığında dokümanda olan Özet */
+
+async function ozetYaz(gun) {
+    if (!ozetHali.has(gun)) {
+        const eski = await db.oku('ozet/' + gun);
+        ozetHali.set(gun, eski && eski.m ? JSON.parse(eski.m) : {});
+    }
+
+    const ozet = {};
+    for (const [no, olay] of Object.entries(ozetHali.get(gun))) {
+        const k = maclar.get(Number(no));
+        if (k && k.gun === gun && k.olaylar === null) ozet[no] = olay;
+    }
+    for (const [no, k] of maclar) {
+        if (k.gun !== gun || !k.olaylar) continue;
+        const d = durumu(k);
+        if (CANLI.has(d) || BITTI.has(d)) ozet[no] = k.olaylar.map(B.kisaOlay);
+    }
+
+    await db.yaz('ozet/' + gun, { m: JSON.stringify(ozet) }, A.OZET_ARALIK);
 }
 
 async function durumYaz() {
@@ -251,7 +238,7 @@ async function durumYaz() {
     });
 }
 
-/* Dünden eski maçları hafızadan sil (Firestore'da kalırlar) */
+/* Dünden eski maçları hafızadan sil (veritabanında kalırlar) */
 function temizle(dun) {
     for (const [no, k] of maclar) if (k.gun < dun) maclar.delete(no);
 }
@@ -265,6 +252,7 @@ async function tur() {
     try {
         if (basla - zaman.kapsam >= A.KAPSAM_ARALIK) {
             await kapsamCek();
+            await ligYaz();
             zaman.kapsam = basla;
         }
 
@@ -287,8 +275,11 @@ async function tur() {
             await detayCek(detaySec());
         }
 
-        for (const gun of [dun, bugun, yarin]) await gunYaz(gun);
-        await canliYaz();
+        /* Fikstürü bu açılışta çekilmemiş gün yazılmaz (yarım liste eski satırları silmesin) */
+        const hazir = [dun, bugun, yarin].filter(gun => zaman.fikstur[gun]);
+        await takimYaz();
+        for (const gun of hazir) await gunYaz(gun);
+        for (const gun of hazir) if (gun !== yarin) await ozetYaz(gun);
 
         temizle(dun);
         sonHata = null;

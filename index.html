@@ -2583,14 +2583,6 @@ body.ball-left .ac-kapa svg {
     font-weight: 800;
 }
 
-.gt-player {
-    font-size: .85em;
-    opacity: .9;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
 /* Gol atan takımın yanındaki top (10 saniye) */
 .score-team .goal-ball {
     flex: none;
@@ -3102,7 +3094,6 @@ body.ball-left .ac-kapa svg {
 <div id="goalToast" aria-live="polite">
     <div class="gt-title">⚽ GOL!</div>
     <div class="gt-match"></div>
-    <div class="gt-player"></div>
 </div>
 
 <template id="adTemplate">
@@ -3208,13 +3199,14 @@ body.ball-left .ac-kapa svg {
 <script>
 
 /* =================================================
-   VERİ (Firestore)
+   VERİ (Realtime Database + Firestore)
    -------------------------------------------------
    Veriyi sunucu API-Football'dan çekip yazar; uygulama
    yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
-     gunler/{gün}-{grup} : günün maçları (50'şer maçlık gruplar)
-     canli/simdi         : şu an oynanan maçlar
-     maclar/{maç no}     : istatistik ve kadro (maç açılınca)
+     RTDB gun/{gün}       : günün canlı skor satırları
+     RTDB takim           : takım adları (telefonda saklanır)
+     Firestore ozet/{gün} : günün olayları (Özet sekmesi)
+     Firestore maclar/{no}: istatistik ve kadro (maç açılınca)
 ================================================= */
 
 const FIREBASE_SURUM = '12.19.0';
@@ -3225,6 +3217,7 @@ const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAt
 const FIREBASE_AYAR = {
     apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',
     authDomain: 'canli-b4406.firebaseapp.com',
+    databaseURL: 'https://canli-b4406-default-rtdb.firebaseio.com',
     projectId: 'canli-b4406',
     storageBucket: 'canli-b4406.firebasestorage.app',
     messagingSenderId: '940094284577',
@@ -3274,7 +3267,7 @@ function leagueInfo(id) {
 
 /*
  * Takım rozetleri: tanınan takımlar kendi renkleriyle,
- * diğerleri adından üretilen renkle. Ad, dokümanın "takimlar" listesinden.
+ * diğerleri adından üretilen renkle. Ad, takım sözlüğünden (RTDB takim).
  */
 const TEAM_STYLES = [
     ['galatasaray', 'GS', '#a90432', '#fdb912'],
@@ -3357,42 +3350,50 @@ function rowEvents(list) {
         }));
 }
 
-/* Satır biçimi: sunucu/VERITABANI.md → "Maç satırı" */
-function rowToMatch(row) {
+/*
+ * Satır biçimi: sunucu/VERITABANI.md → "Canlı skor satırı"
+ * "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Saat Türkiye saatidir (UTC+3).
+ * Olaylar günün Özet dokümanından gelir.
+ */
+function rowToMatch(day, no, text, events) {
 
-    const [no, league, time, code, minute, extra, home, away, hg, ag, , , events, week] = row;
+    const [league, week, home, away, time, state, hg, ag] = text.split(',');
+
+    /* Durum: boş = başlamadı, sayı = oynanıyor (dakika), diğerleri API kodu */
+    const playing = /^(\d+)(?:\+(\d+))?$/.exec(state || '');
+    const code = !state ? 'NS' : playing ? 'CANLI' : state;
 
     const status = LIVE_CODES.has(code) ? 'live' : DONE_CODES.has(code) ? 'done' : 'upcoming';
 
     return {
-        id: String(no),
-        league: leagueInfo(league),
-        week: week,
-        date: new Date(time * 1000),
-        home: teamInfo(home),
-        away: teamInfo(away),
+        id: no,
+        league: leagueInfo(Number(league)),
+        week: week || '',
+        date: new Date(day + 'T' + time.slice(0, 2) + ':' + time.slice(2, 4) + ':00+03:00'),
+        home: teamInfo(Number(home)),
+        away: teamInfo(Number(away)),
         code: code,
         status: status,
-        minute: minute,
-        extra: extra,
-        score: hg === null || hg === undefined ? null : [hg, ag],
+        minute: playing ? Number(playing[1]) : null,
+        extra: playing && playing[2] ? Number(playing[2]) : null,
+        score: hg === undefined || hg === '' ? null : [Number(hg), Number(ag)],
         events: status === 'upcoming' ? null : rowEvents(events || [])
     };
 }
 
-/* "9. Hafta" ya da kupa turu */
+/* "9. Hafta", "3. Tur" ya da kupa turu (sunucunun kısa kodu) */
 const ROUND_NAMES = {
-    'Final': 'Final', 'Semi-finals': 'Yarı final', 'Quarter-finals': 'Çeyrek final',
-    'Round of 16': 'Son 16', 'Round of 32': 'Son 32', 'Round of 64': 'Son 64',
-    'Group Stage': 'Grup aşaması', 'Play-offs': 'Play-off'
+    F: 'Final', YF: 'Yarı final', CF: 'Çeyrek final',
+    S16: 'Son 16', S32: 'Son 32', S64: 'Son 64',
+    G: 'Grup aşaması', PO: 'Play-off'
 };
 
 function roundText(match) {
-    if (typeof match.week === 'number') return match.week + '. Hafta';
-    if (!match.week) return '';
-    const tour = /^(\d+)(st|nd|rd|th) Round$/.exec(match.week);
-    if (tour) return tour[1] + '. Tur';
-    return ROUND_NAMES[match.week] || match.week;
+    const week = match.week;
+    if (!week) return '';
+    if (/^\d+$/.test(week)) return week + '. Hafta';
+    if (/^\d+T$/.test(week)) return week.slice(0, -1) + '. Tur';
+    return ROUND_NAMES[week] || week;
 }
 
 /* Lig · hafta · tarih (hafta yoksa yazılmaz) */
@@ -3411,33 +3412,25 @@ function minuteText(match) {
 const MATCHES = [];
 const MATCH_BY_ID = new Map();
 
-const groupRows = new Map();     /* "gün-grup" → satırlar */
-const liveRows = new Map();      /* maç no → satır */
+const dayRows = new Map();       /* gün → Map(maç no → satır) */
+const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet dokümanı) */
 const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
 function rebuildMatches() {
 
-    const rows = new Map();
-
-    groupRows.forEach(list => list.forEach(row => rows.set(String(row[0]), row)));
-    liveRows.forEach((row, id) => rows.set(id, row));
-
     MATCHES.length = 0;
     MATCH_BY_ID.clear();
 
-    rows.forEach(row => {
-        const match = rowToMatch(row);
-        const detail = matchDetails.get(match.id);
-        if (detail) Object.assign(match, detail);
-        MATCHES.push(match);
-        MATCH_BY_ID.set(match.id, match);
+    dayRows.forEach((rows, day) => {
+        const events = dayEvents.get(day) || {};
+        rows.forEach((text, no) => {
+            const match = rowToMatch(day, no, text, events[no]);
+            const detail = matchDetails.get(match.id);
+            if (detail) Object.assign(match, detail);
+            MATCHES.push(match);
+            MATCH_BY_ID.set(match.id, match);
+        });
     });
-}
-
-/* Dokümandaki takım ve lig adları */
-function readNames(data) {
-    Object.entries(data.takimlar || {}).forEach(([id, name]) => teamNames.set(Number(id), name));
-    Object.entries(data.ligler || {}).forEach(([id, info]) => leagueNames.set(Number(id), info));
 }
 
 /* Lig kadro / istatistik veriyor mu? (bilinmiyorsa evet) */
@@ -3446,15 +3439,16 @@ function leagueHasDetail(id) {
     return !info || info.detay !== false;
 }
 
-/* ---------- Firestore bağlantısı ---------- */
+/* ---------- Veritabanı bağlantısı ---------- */
 
-let fs = null;
-let db = null;
+let fs = null;       /* Firestore kütüphanesi */
+let db = null;       /* Firestore */
+let rt = null;       /* Realtime Database kütüphanesi */
+let rd = null;       /* Realtime Database */
 let dataError = false;
 
-/* Gün: { day, count, groups: Map(grup → kapatma fonksiyonu), loaded: Set } */
-let watchedDay = null;
-let liveUnsub = null;
+let watchedDay = null;   /* seçili gün */
+let namesUnsub = null;
 let detailUnsub = null;
 let pendingLink = null;
 
@@ -3462,16 +3456,22 @@ async function startData() {
     try {
         const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
         const app = await import(base + 'firebase-app.js');
-        fs = await import(base + 'firebase-firestore.js');
+        [fs, rt] = await Promise.all([
+            import(base + 'firebase-firestore.js'),
+            import(base + 'firebase-database.js')
+        ]);
         fbApp = app.initializeApp(FIREBASE_AYAR);
         db = fs.getFirestore(fbApp);
+        rd = rt.getDatabase(fbApp);
     } catch (error) {
         dataError = true;
         refreshViews();
         return;
     }
 
-    watchLive();
+    readLeagues();
+    watchNames();
+    openDay(TODAY);
     watchDay(selectedDay);
 
     /* İzin daha önce verildiyse: cihaz kimliği değişmiş olabilir, gerekirse zil kaydı yenilenir */
@@ -3604,22 +3604,52 @@ function refreshViews() {
     });
 }
 
-function watchLive() {
+/*
+ * TAKIM ADLARI: sözlük telefonda saklanır. Yalnızca sürüm numarası dinlenir;
+ * sürüm değişince (yeni takım) sözlük yeniden indirilir.
+ */
+const NAMES_KEY = 'canliSkorTakim';
+let namesVersion = null;
 
-    if (liveUnsub || !db)
+(() => {
+    const saved = readJSON(NAMES_KEY, null);
+    if (!saved || !saved.t)
+        return;
+    namesVersion = saved.s;
+    Object.entries(saved.t).forEach(([id, name]) => teamNames.set(Number(id), name));
+})();
+
+function watchNames() {
+
+    if (namesUnsub || !rd)
         return;
 
-    liveUnsub = fs.onSnapshot(fs.doc(db, 'canli', 'simdi'), snap => {
-        liveRows.clear();
-        if (snap.exists()) {
-            const data = snap.data();
-            readNames(data);
-            (data.maclar || []).forEach(text => {
-                const row = JSON.parse(text);
-                liveRows.set(String(row[0]), row);
-            });
-        }
-        findGoals();
+    namesUnsub = rt.onValue(rt.ref(rd, 'takim_surum'), snap => {
+        const version = snap.val();
+        if (version === null || version === namesVersion)
+            return;
+        rt.get(rt.ref(rd, 'takim')).then(list => {
+            const names = list.val() || {};
+            Object.entries(names).forEach(([id, name]) => teamNames.set(Number(id), name));
+            namesVersion = version;
+            writeJSON(NAMES_KEY, { s: version, t: names });
+            refreshViews();
+        }, () => {});
+    }, () => {});
+}
+
+function unwatchNames() {
+    if (namesUnsub)
+        namesUnsub();
+    namesUnsub = null;
+}
+
+/* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */
+function readLeagues() {
+    rt.get(rt.ref(rd, 'lig')).then(snap => {
+        Object.entries(snap.val() || {}).forEach(([id, detail]) => {
+            leagueNames.set(Number(id), { detay: detail === 1 });
+        });
         refreshViews();
     }, () => {});
 }
@@ -3636,22 +3666,33 @@ function findGoals() {
 
     const seen = new Set();
 
-    liveRows.forEach((row, id) => {
+    days.forEach((state, day) => {
 
-        const score = [row[8] || 0, row[9] || 0];
-        const before = lastScores.get(id);
+        if (!state.live)
+            return;
 
-        if (before) {
-            ['home', 'away'].forEach((side, i) => {
-                if (score[i] > before[i]) {
-                    goalUntil.set(id + '-' + side, Date.now() + 10000);
-                    goalQueue.push({ row: row, side: side });
-                }
-            });
-        }
+        (dayRows.get(day) || new Map()).forEach((text, id) => {
 
-        lastScores.set(id, score);
-        seen.add(id);
+            const match = rowToMatch(day, id, text, null);
+
+            if (match.status !== 'live')
+                return;
+
+            const score = match.score || [0, 0];
+            const before = lastScores.get(id);
+
+            if (before) {
+                ['home', 'away'].forEach((side, i) => {
+                    if (score[i] > before[i]) {
+                        goalUntil.set(id + '-' + side, Date.now() + 10000);
+                        goalQueue.push({ match: match, side: side });
+                    }
+                });
+            }
+
+            lastScores.set(id, score);
+            seen.add(id);
+        });
     });
 
     /* Biten maçlar listeden çıkar */
@@ -3684,9 +3725,8 @@ function showNextGoal() {
     showGoal(goalQueue.shift());
 }
 
-function showGoal({ row, side }) {
+function showGoal({ match, side }) {
 
-    const match = rowToMatch(row);
     const toast = document.getElementById('goalToast');
     const box = toast.querySelector('.gt-match');
 
@@ -3701,10 +3741,6 @@ function showGoal({ row, side }) {
             box.appendChild(document.createTextNode(' ' + match.score[0] + ' - ' + match.score[1] + ' '));
         box.appendChild(el);
     });
-
-    /* Golü atan: o takımın son golü */
-    const goal = (match.events || []).filter(e => e.type === 'goal' && e.side === side).pop();
-    toast.querySelector('.gt-player').textContent = goal && goal.player ? goal.player : '';
 
     toast.classList.add('show');
     goalSound();
@@ -3766,67 +3802,88 @@ function goalSound() {
     });
 }
 
-/* Seçili günün 1. grubu hemen, diğer grupları liste sonuna gelince */
+/*
+ * GÜNLER
+ * Bugün ve dün canlı dinlenir (dün: gece yarısını geçen maçlar, maç sonu düzeltmeleri);
+ * diğer günler bir kez okunur. Liste RTDB'den, olaylar (Özet) Firestore'dan.
+ * Yarın ve sonrası için Özet okunmaz (maç oynanmadı).
+ */
+const days = new Map();   /* gün → { live, loaded, off: [kapatma fonksiyonları] } */
+
+function isLiveDay(day) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return day === TODAY || day === dayKey(yesterday);
+}
+
+function openDay(day) {
+
+    if (!rd || days.has(day))
+        return;
+
+    const state = { live: isLiveDay(day), loaded: false, off: [] };
+    days.set(day, state);
+
+    const listRef = rt.ref(rd, 'gun/' + day);
+    const summaryRef = fs.doc(db, 'ozet', day);
+    const needSummary = day <= TODAY;
+
+    const takeRows = snap => {
+        dayRows.set(day, new Map(Object.entries(snap.val() || {})));
+        state.loaded = true;
+        if (state.live)
+            findGoals();
+        refreshViews();
+    };
+
+    const failed = () => {
+        state.loaded = true;
+        refreshViews();
+    };
+
+    const takeEvents = snap => {
+        const data = snap.exists() ? snap.data() : null;
+        dayEvents.set(day, data && data.m ? JSON.parse(data.m) : {});
+        refreshViews();
+    };
+
+    if (state.live) {
+        state.off.push(rt.onValue(listRef, takeRows, failed));
+        if (needSummary)
+            state.off.push(fs.onSnapshot(summaryRef, takeEvents, () => {}));
+    } else {
+        rt.get(listRef).then(takeRows, failed);
+        if (needSummary)
+            fs.getDoc(summaryRef).then(takeEvents, () => {});
+    }
+}
+
+/* Dinlenen günü bırakır (bir kez okunan günler hafızada kalır) */
+function closeDay(day) {
+    const state = days.get(day);
+    if (!state || !state.live)
+        return;
+    state.off.forEach(off => off());
+    days.delete(day);
+}
+
+/* Seçili gün değişince: önceki seçili gün bugün değilse bırakılır */
 function watchDay(day) {
 
-    if (!db)
+    if (!rd)
         return;
 
-    if (watchedDay && watchedDay.day === day)
-        return;
+    if (watchedDay && watchedDay !== day && watchedDay !== TODAY)
+        closeDay(watchedDay);
 
-    unwatchDay();
-    watchedDay = { day: day, count: null, groups: new Map(), loaded: new Set() };
-    watchGroup(1);
-}
-
-function watchGroup(group) {
-
-    const state = watchedDay;
-
-    if (!state || state.groups.has(group))
-        return;
-
-    const key = state.day + '-' + group;
-
-    state.groups.set(group, fs.onSnapshot(fs.doc(db, 'gunler', key), snap => {
-
-        const data = snap.exists() ? snap.data() : null;
-
-        if (data) readNames(data);
-        groupRows.set(key, data ? (data.maclar || []).map(text => JSON.parse(text)) : []);
-
-        if (group === 1)
-            state.count = data ? data.grup_sayisi : 0;
-
-        state.loaded.add(group);
-        refreshViews();
-    }, () => {
-        state.loaded.add(group);
-        refreshViews();
-    }));
-}
-
-function unwatchDay() {
-    if (watchedDay)
-        watchedDay.groups.forEach(unsub => unsub());
-    watchedDay = null;
+    watchedDay = day;
+    openDay(day);
 }
 
 /* Seçili gün yükleniyor mu? */
 function dayLoading() {
-    return !dataError && (!watchedDay || watchedDay.day !== selectedDay || !watchedDay.loaded.has(1));
-}
-
-/* Yüklenmemiş bir sonraki grup (yoksa 0) */
-function nextGroup() {
-    const state = watchedDay;
-    if (!state || !state.count)
-        return 0;
-    for (let group = 2; group <= state.count; group++)
-        if (!state.groups.has(group))
-            return group;
-    return 0;
+    const state = days.get(selectedDay);
+    return !dataError && (!state || !state.loaded);
 }
 
 /* Maç sayfası açıkken istatistik ve kadro */
@@ -3864,32 +3921,24 @@ document.addEventListener('visibilitychange', () => {
     if (!db)
         return;
 
+    /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
     if (document.hidden) {
-        if (liveUnsub) liveUnsub();
-        liveUnsub = null;
         lastScores.clear();
-        const day = watchedDay && watchedDay.day;
-        const groups = watchedDay ? Array.from(watchedDay.groups.keys()) : [];
-        unwatchDay();
+        Array.from(days.keys()).forEach(closeDay);
+        unwatchNames();
         unwatchDetail();
-        hiddenState = { day: day, groups: groups };
+        rt.goOffline(rd);
         return;
     }
 
-    watchLive();
-
-    if (hiddenState && hiddenState.day) {
-        watchDay(hiddenState.day);
-        hiddenState.groups.forEach(group => watchGroup(group));
-    }
+    rt.goOnline(rd);
+    watchNames();
+    openDay(TODAY);
+    openDay(watchedDay);
 
     if (detailId && MATCH_BY_ID.has(detailId))
         watchDetail(MATCH_BY_ID.get(detailId));
-
-    hiddenState = null;
 });
-
-let hiddenState = null;
 
 
 /* =================================================
@@ -4703,23 +4752,7 @@ function renderLive() {
             liveOnly ? 'Şu an oynanan maç yok.' : 'Bu gün maç yok.';
         box.appendChild(empty);
     }
-
-    /* Günün diğer maçları (2. ve 3. grup) liste sonuna gelince iner */
-    if (!liveOnly && !searching && !waiting && nextGroup()) {
-        const more = document.createElement('p');
-        more.className = 'home-empty';
-        more.textContent = 'Diğer maçlar yükleniyor…';
-        box.appendChild(more);
-        moreObserver.observe(more);
-    }
 }
-
-const moreObserver = new IntersectionObserver(entries => {
-    if (entries.some(entry => entry.isIntersecting)) {
-        moreObserver.disconnect();
-        watchGroup(nextGroup());
-    }
-});
 
 /* Menünün dışına dokununca menü kapanır (dokunulan yer çalışmaz). */
 let leagueSwallow = false;

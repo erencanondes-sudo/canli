@@ -3,10 +3,11 @@
 module.exports = {
 
     PROJE: 'canli-b4406',
+    RTDB_ADRES: 'https://canli-b4406-default-rtdb.firebaseio.com',   /* Realtime Database adresi */
     SITE_ADRES: 'https://erencanondes-sudo.github.io/canli/',   /* bildirime basınca açılan adres */
     SAAT_DILIMI: 'Europe/Istanbul',
 
-    /* Ligler. Sıra önemli: ana sayfa grupları bu sıraya göre dolar. */
+    /* Ligler (sitedeki sırayla aynı) */
     LIGLER: [
         { no: 135, ad: 'Serie A' },
         { no: 203, ad: 'Süper Lig' },
@@ -14,11 +15,10 @@ module.exports = {
         { no: 206, ad: 'Türkiye Kupası' }
     ],
 
-    GRUP_BOYU: 50,                  /* ana sayfa dokümanı başına maç */
-
     /* Canlı skor yalnızca bu saatler arasında çekilir (Türkiye saati, gece yarısını geçebilir) */
     CANLI_SAAT: ['12:30', '01:00'],
     TUR_ARALIK: 8000,               /* canlı saatlerde: canlı skor ve yazma 8 sn */
+    OZET_ARALIK: 15000,             /* Özet dokümanı en fazla 15 sn'de bir yazılır */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 60000,            /* canlı maç detayı: 1 dk */
     FIKSTUR_BUGUN: 15 * 60000,      /* bugünün fikstürü: 15 dk */

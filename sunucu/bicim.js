@@ -1,7 +1,9 @@
 /*
- * API'den gelen veriyi Firestore'a yazılacak kısa biçime çevirir.
+ * API'den gelen veriyi veritabanına yazılacak kısa biçime çevirir.
  * Biçimin açıklaması: VERITABANI.md
  */
+
+const A = require('./ayarlar');
 
 /* Adlardaki HTML kodlarını çevirir (O&apos;Nien → O'Nien) */
 const KOD = { '&apos;': "'", '&#39;': "'", '&quot;': '"', '&amp;': '&', '&lt;': '<', '&gt;': '>' };
@@ -49,39 +51,63 @@ function olaylar(f) {
     ]);
 }
 
-/* Hafta: "Regular Season - 9" → 9; kupa turları olduğu gibi ("Round of 16") */
-function hafta(r) {
-    if (!r) return null;
-    const m = /^Regular Season - (\d+)$/.exec(r);
-    return m ? Number(m[1]) : r;
+/* Olayın sonundaki boş alanlar yazılmaz: [3, null, 0, "g", "n", "A. Antunes", null] → [3, null, 0, "g", "n", "A. Antunes"] */
+function kisaOlay(e) {
+    const o = e.slice();
+    while (o.length && o[o.length - 1] === null) o.pop();
+    return o;
 }
 
-/* Maç satırı: [no, lig, saat, durum, dakika, uzatma, ev, dep, ev gol, dep gol, ev İY, dep İY, olaylar, hafta] */
-function satir(f, olay) {
-    return [
-        f.fixture.id,
+/* Kupa turlarının kısa kodu (sitede adı yazılır) */
+const TUR_KODU = {
+    'Final': 'F', 'Semi-finals': 'YF', 'Quarter-finals': 'CF',
+    'Round of 16': 'S16', 'Round of 32': 'S32', 'Round of 64': 'S64',
+    'Group Stage': 'G', 'Play-offs': 'PO'
+};
+
+/* Hafta: "Regular Season - 9" → 9; "3rd Round" → 3T; kupa turu → kısa kod; bilinmeyen olduğu gibi (virgülsüz) */
+function hafta(r) {
+    if (!r) return '';
+    let m = /^Regular Season - (\d+)$/.exec(r);
+    if (m) return m[1];
+    m = /^(\d+)(st|nd|rd|th) Round$/.exec(r);
+    if (m) return m[1] + 'T';
+    return TUR_KODU[r] || String(r).replace(/,/g, ' ');
+}
+
+/* Türkiye saatiyle başlama saati: "2030" */
+function saat(ts) {
+    return new Date(ts * 1000)
+        .toLocaleTimeString('en-GB', { timeZone: A.SAAT_DILIMI, hour: '2-digit', minute: '2-digit' })
+        .replace(':', '');
+}
+
+/*
+ * Durum: başlamadıysa boş; oynanıyorsa dakika ("67", "45+2"); diğerlerinde API'nin kodu (HT, FT, PST…)
+ */
+const DAKIKALI = new Set(['1H', '2H', 'ET']);
+
+function durum(f) {
+    const s = f.fixture.status;
+    if (s.short === 'NS') return '';
+    if (DAKIKALI.has(s.short) && s.elapsed) return s.elapsed + (s.extra ? '+' + s.extra : '');
+    return s.short;
+}
+
+/* Canlı skor satırı (RTDB): "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Sondaki boşlar yazılmaz */
+function satir(f) {
+    const alan = [
         f.league.id,
-        f.fixture.timestamp,
-        f.fixture.status.short,
-        f.fixture.status.elapsed,
-        f.fixture.status.extra,
+        hafta(f.league.round),
         f.teams.home.id,
         f.teams.away.id,
-        f.goals.home,
-        f.goals.away,
-        f.score.halftime.home,
-        f.score.halftime.away,
-        olay,
-        hafta(f.league.round)
-    ];
-}
-
-/* Canlı maçın ana sayfa grubundaki yer tutucusu: güncel hali canli/simdi'de */
-function yerTutucu(f) {
-    return [
-        f.fixture.id, f.league.id, f.fixture.timestamp, 'CANLI', null, null,
-        f.teams.home.id, f.teams.away.id, null, null, null, null, [], hafta(f.league.round)
-    ];
+        saat(f.fixture.timestamp),
+        durum(f),
+        f.goals.home === null ? '' : f.goals.home,
+        f.goals.away === null ? '' : f.goals.away
+    ].map(String);
+    while (alan.length && alan[alan.length - 1] === '') alan.pop();
+    return alan.join(',');
 }
 
 /* Maç dokümanı: istatistik ve kadro (metin olarak, iç içe dizi Firestore'da yazılamıyor) */
@@ -116,4 +142,4 @@ function macDokumani(f) {
     };
 }
 
-module.exports = { olaylar, satir, yerTutucu, macDokumani, ad };
+module.exports = { olaylar, kisaOlay, satir, macDokumani, ad };

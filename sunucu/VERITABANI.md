@@ -1,91 +1,93 @@
-# Veritabanı (Firestore)
+# Veritabanı
 
-Dokümanları sunucu yazar; yalnızca `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı) yazar. Her dokümanda `guncellendi` alanı son yazma zamanıdır.
-Bir doküman değişmediyse yeniden yazılmaz.
+İki veritabanı var:
 
-| Koleksiyon / doküman | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
+- **Realtime Database (RTDB):** canlı skor listesi ve takım adları. Küçük ve sık değişen veri. Yalnızca değişen satır gönderilir.
+- **Firestore:** Özet (olaylar), maç detayı, bildirim kayıtları, sunucu durumu.
+
+Dokümanları sunucu yazar; yalnızca `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı) yazar. Bir şey değişmediyse yeniden yazılmaz.
+Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
+
+| Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
-| `gunler/{gün}-{grup}` | O günün maçları, 50'şer maçlık gruplar | Sunucu | Ana sayfa | Maç başlayınca, bitince, fikstür değişince | grup başına ~2–30 KB |
-| `canli/simdi` | Şu an oynanan maçlar (skor, dakika, olaylar) | Sunucu | Ana sayfa, maç sayfası | Canlı maç varken 8 sn'de bir, yalnızca 12:30–01:00 arası | ~1–5 KB |
-| `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
-| `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
-| `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
+| RTDB `gun/{gün}/{maç no}` | Günün maçları, her maç bir satır | Sunucu | Canlı Skor | Skor, dakika, durum değişince | satır ~40 bayt, 150 maç ~6 KB |
+| RTDB `takim/{takım no}` | Takım adı | Sunucu | Site (telefonda saklanır) | Yeni takım görülünce | 300 takım ~6 KB |
+| RTDB `takim_surum` | Takım listesinin sürümü | Sunucu | Site | Yeni takım görülünce | birkaç bayt |
+| RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
+| Firestore `ozet/{gün}` | Günün oynanan ve biten maçlarının olayları | Sunucu | Canlı Skor, maç sayfası (Özet) | Olay olunca, en fazla 15 sn'de bir | 150 maç ~60–80 KB |
+| Firestore `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
+| Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
+| Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
+
+Eski günler silinmez (takvimden açılabilsin diye).
+
+## Site ne zaman ne okur
+
+| Ne | Bugün ve dün | Diğer geçmiş günler | Yarın ve sonrası |
+|---|---|---|---|
+| Liste (RTDB `gun`) | Açılışta bir kez, sonra canlı dinlenir | Bir kez | Bir kez |
+| Özet (Firestore `ozet`) | Listeden sonra arkada, sonra canlı dinlenir | Bir kez | Okunmaz |
+
+- Bugün her zaman dinlenir. Dün yalnızca seçiliyken dinlenir (gece yarısını geçen maçlar ve maç sonu düzeltmeleri için).
+- Takım adları telefonda saklanır; yalnızca `takim_surum` dinlenir, değişince `takim` yeniden indirilir.
+- Maç açılınca `maclar/{no}` dinlenir, maç kapanınca bırakılır.
+- Uygulama arka plana geçince bütün dinlemeler durur, RTDB bağlantısı kapanır.
 
 ---
 
-## `gunler/{gün}-{grup}`
+## RTDB `gun/{gün}`
 
-Örnek: `gunler/2026-10-25-1` → 25 Ekim'in 1. grubu (ilk 50 maç).
-Gün, Türkiye saatine göredir. Maçlar lig sırasına (ayarlar.js), sonra başlama saatine göre dizilir.
+Örnek: `gun/2026-10-25/1584444` → `"203,9,994,6343,2030,67,2,1"`
+Gün Türkiye saatine göredir. Anahtar API-Football'un maç numarasıdır.
 
-| Alan | Açıklama |
-|---|---|
-| `gun` | `2026-10-25` |
-| `grup` | Kaçıncı grup (1, 2, 3…) |
-| `grup_sayisi` | O gün kaç grup var (maç yoksa 0) |
-| `maclar` | Maç satırları listesi. Her satır bir metin (aşağıda) |
-| `takimlar` | Bu gruptaki takımların adları: `{ "994": "Göztepe" }` |
-| `ligler` | Bu gruptaki ligler: `{ "203": { ad: "Süper Lig", detay: true } }`. `detay: false` olan ligde kadro ve istatistik yok |
-| `diger_gruplar` | Yalnızca 1. grupta: diğer grupların maç numaraları `{ "2": [...], "3": [...] }`. Lig filtresi ve kayıtlı maçlar için |
+### Canlı skor satırı
 
-**Canlı maçlar** grupta `CANLI` durumuyla, skorsuz durur. Güncel halleri `canli/simdi` dokümanındadır.
-Maç bitince olaylarıyla birlikte gruba yazılır ve `canli/simdi`'den çıkar.
-
-## `canli/simdi`
-
-| Alan | Açıklama |
-|---|---|
-| `maclar` | Canlı maçların satırları (aşağıdaki biçimde, olaylarıyla) |
-| `takimlar`, `ligler` | Yukarıdaki gibi |
-
-## Maç satırı
-
-Her satır sırası sabit bir listedir:
-
-```
-[1584444, 203, 1792944000, "FT", 90, 5, 994, 6343, 2, 0, 2, 0, [olaylar], 9]
-```
+Virgülle ayrılmış metin. Sondaki boş alanlar yazılmaz (başlamamış maçta skor yok).
 
 | Sıra | Ne | Örnek |
 |---|---|---|
-| 0 | Maç no | 1584444 |
 | 1 | Lig no | 203 |
-| 2 | Başlama zamanı (saniye) | 1792944000 |
-| 3 | Durum (aşağıda) | "FT" |
-| 4 | Dakika | 90 |
-| 5 | Uzatma dakikası | 5 (90+5) |
-| 6 | Ev sahibi takım no | 994 |
-| 7 | Deplasman takım no | 6343 |
-| 8 | Ev sahibi gol | 2 |
-| 9 | Deplasman gol | 0 |
-| 10 | İlk yarı ev sahibi | 2 |
-| 11 | İlk yarı deplasman | 0 |
-| 12 | Olaylar (yalnızca biten ve canlı maçlarda) | `[[3, null, 0, "g", "n", "A. Antunes", null], …]` |
-| 13 | Hafta. Ligde sayı (9), kupada tur adı API'nin yazdığı gibi ("Round of 16") | 9 |
+| 2 | Hafta (aşağıda) | 9 |
+| 3 | Ev sahibi takım no | 994 |
+| 4 | Deplasman takım no | 6343 |
+| 5 | Başlama saati (Türkiye saati) | 2030 (20:30) |
+| 6 | Durum (aşağıda) | 67 |
+| 7 | Ev sahibi gol | 2 |
+| 8 | Deplasman gol | 1 |
 
-Boş olan yerlerde `null` yazar.
+**Hafta:** ligde sayı (`9`). Kupada: `3T` 3. tur, `S16` son 16, `S32`, `S64`, `CF` çeyrek final, `YF` yarı final, `F` final, `G` grup aşaması, `PO` play-off. Bilinmeyen tur API'nin yazdığı gibi.
+
+**Durum:** boş = başlamadı; sayı = oynanıyor, dakika (`67`, uzatmada `45+2`); diğerlerinde aşağıdaki kodlar.
 
 ### Durumlar
 
 | Kod | Anlamı |
 |---|---|
-| NS | Başlamadı |
 | TBD | Saati belli değil |
-| 1H, 2H | 1. yarı, 2. yarı |
+| 1H, 2H, ET | 1. yarı, 2. yarı, uzatma (dakika bilinmiyorsa; biliniyorsa dakika yazar) |
 | HT | Devre arası |
-| ET, BT, P | Uzatma, uzatma arası, penaltılar |
+| BT, P | Uzatma arası, penaltılar |
 | SUSP, INT | Askıya alındı, durduruldu |
 | FT | Bitti |
 | AET, PEN | Uzatmada bitti, penaltılarla bitti |
 | PST, CANC, ABD | Ertelendi, iptal, yarıda kaldı |
 | AWD, WO | Hükmen |
-| CANLI | (Yalnızca grup dokümanında) güncel hali `canli/simdi`'de |
+
+## Firestore `ozet/{gün}`
+
+| Alan | Açıklama |
+|---|---|
+| `m` | Metin: `{ "maç no": [olaylar], … }`. Yalnızca oynanan ve biten maçlar. Olayı olmayan maçta `[]` |
+
+Sitedeki Özet sekmesi şimdilik yalnızca gol ve kartları gösterir; değişiklik, VAR, asist ve kaçan penaltı da yazılır.
 
 ### Olay
 
 ```
 [dakika, uzatma, taraf, tür, ayrıntı, oyuncu, ikinci oyuncu]
 ```
+
+Sondaki boş (`null`) alanlar yazılmaz.
 
 | Sıra | Ne |
 |---|---|
@@ -112,7 +114,7 @@ Boş olan yerlerde `null` yazar.
 
 ## `maclar/{maç no}`
 
-Yalnızca kadro ve istatistik veren liglerde yazılır. Olaylar burada yok, ana sayfa satırında.
+Yalnızca kadro ve istatistik veren liglerde yazılır. Olaylar burada yok, `ozet/{gün}` dokümanında.
 
 | Alan | Açıklama |
 |---|---|
