@@ -3263,7 +3263,25 @@ const FLAGS = (() => {
         de: svg('<rect width="30" height="20" fill="#ffce00"/><rect width="30" height="13.34" fill="#dd0000"/>' +
             '<rect width="30" height="6.67" fill="#000"/>'),
         fr: svg('<rect width="10" height="20" fill="#002395"/><rect x="10" width="10" height="20" fill="#fff"/>' +
-            '<rect x="20" width="10" height="20" fill="#ed2939"/>')
+            '<rect x="20" width="10" height="20" fill="#ed2939"/>'),
+        nl: svg('<rect width="30" height="20" fill="#21468b"/><rect width="30" height="13.34" fill="#fff"/>' +
+            '<rect width="30" height="6.67" fill="#ae1c28"/>'),
+        be: svg('<rect width="10" height="20" fill="#000"/><rect x="10" width="10" height="20" fill="#fdda24"/>' +
+            '<rect x="20" width="10" height="20" fill="#ef3340"/>'),
+        gr: svg('<rect width="30" height="20" fill="#0d5eaf"/>' +
+            [1, 3, 5, 7].map(i => '<rect y="' + (i * 2.222) + '" width="30" height="2.222" fill="#fff"/>').join('') +
+            '<rect width="11.11" height="11.11" fill="#0d5eaf"/>' +
+            '<rect y="4.444" width="11.11" height="2.222" fill="#fff"/><rect x="4.444" width="2.222" height="11.11" fill="#fff"/>'),
+        sco: svg('<rect width="30" height="20" fill="#0065bd"/><path d="M0,0L30,20M30,0L0,20" stroke="#fff" stroke-width="3"/>'),
+        ch: svg('<rect width="30" height="20" fill="#da291c"/>' +
+            '<rect x="13.25" y="4" width="3.5" height="12" fill="#fff"/><rect x="9" y="8.25" width="12" height="3.5" fill="#fff"/>'),
+        dk: svg('<rect width="30" height="20" fill="#c8102e"/>' +
+            '<rect x="9" width="3" height="20" fill="#fff"/><rect y="8.5" width="30" height="3" fill="#fff"/>'),
+        no: svg('<rect width="30" height="20" fill="#ba0c2f"/>' +
+            '<rect x="8" width="5" height="20" fill="#fff"/><rect y="7.5" width="30" height="5" fill="#fff"/>' +
+            '<rect x="9.25" width="2.5" height="20" fill="#00205b"/><rect y="8.75" width="30" height="2.5" fill="#00205b"/>'),
+        se: svg('<rect width="30" height="20" fill="#006aa7"/>' +
+            '<rect x="9" width="3.5" height="20" fill="#fecc02"/><rect y="8.25" width="30" height="3.5" fill="#fecc02"/>')
     };
 })();
 
@@ -3275,12 +3293,36 @@ const LEAGUES = [
     { id: 61, name: 'Ligue 1', country: 'Fransa', flag: FLAGS.fr },
     { id: 135, name: 'Serie A', country: 'İtalya', flag: FLAGS.it },
     { id: 78, name: 'Bundesliga', country: 'Almanya', flag: FLAGS.de },
+    { id: 88, name: 'Eredivisie', country: 'Hollanda', flag: FLAGS.nl },
+    { id: 144, name: 'Pro League', country: 'Belçika', flag: FLAGS.be },
+    { id: 197, name: 'Super League 1', country: 'Yunanistan', flag: FLAGS.gr },
+    { id: 179, name: 'Scottish Premiership', country: 'İskoçya', flag: FLAGS.sco },
+    { id: 207, name: 'Super League', country: 'İsviçre', flag: FLAGS.ch },
+    { id: 119, name: 'Superliga', country: 'Danimarka', flag: FLAGS.dk },
+    { id: 103, name: 'Eliteserien', country: 'Norveç', flag: FLAGS.no },
+    { id: 113, name: 'Allsvenskan', country: 'İsveç', flag: FLAGS.se },
     { id: 141, name: 'Segunda División', country: 'İspanya', flag: FLAGS.es },
     { id: 204, name: '1. Lig', country: 'Türkiye', flag: FLAGS.tr },
     { id: 40, name: 'Championship', country: 'İngiltere', flag: FLAGS.en },
     { id: 62, name: 'Ligue 2', country: 'Fransa', flag: FLAGS.fr },
     { id: 136, name: 'Serie B', country: 'İtalya', flag: FLAGS.it },
     { id: 79, name: '2. Bundesliga', country: 'Almanya', flag: FLAGS.de },
+    { id: 89, name: 'Eerste Divisie', country: 'Hollanda', flag: FLAGS.nl },
+    { id: 145, name: 'Challenger Pro League', country: 'Belçika', flag: FLAGS.be },
+    { id: 494, name: 'Super League 2', country: 'Yunanistan', flag: FLAGS.gr },
+    { id: 180, name: 'Scottish Championship', country: 'İskoçya', flag: FLAGS.sco },
+    { id: 208, name: 'Challenge League', country: 'İsviçre', flag: FLAGS.ch },
+    { id: 120, name: '1. Division', country: 'Danimarka', flag: FLAGS.dk },
+    { id: 104, name: 'OBOS-ligaen', country: 'Norveç', flag: FLAGS.no },
+    { id: 114, name: 'Superettan', country: 'İsveç', flag: FLAGS.se },
+    { id: 435, name: 'Primera RFEF 1', country: 'İspanya', flag: FLAGS.es },
+    { id: 436, name: 'Primera RFEF 2', country: 'İspanya', flag: FLAGS.es },
+    { id: 205, name: '2. Lig', country: 'Türkiye', flag: FLAGS.tr },
+    { id: 41, name: 'League One', country: 'İngiltere', flag: FLAGS.en },
+    { id: 42, name: 'League Two', country: 'İngiltere', flag: FLAGS.en },
+    { id: 63, name: 'National', country: 'Fransa', flag: FLAGS.fr },
+    { id: 138, name: 'Serie C', country: 'İtalya', flag: FLAGS.it },
+    { id: 80, name: '3. Liga', country: 'Almanya', flag: FLAGS.de },
     { id: 143, name: 'Kral Kupası', country: 'İspanya', flag: FLAGS.es },
     { id: 556, name: 'İspanya Süper Kupası', country: 'İspanya', flag: FLAGS.es },
     { id: 206, name: 'Türkiye Kupası', country: 'Türkiye', flag: FLAGS.tr },
@@ -3293,7 +3335,18 @@ const LEAGUES = [
     { id: 137, name: 'İtalya Kupası', country: 'İtalya', flag: FLAGS.it },
     { id: 547, name: 'İtalya Süper Kupası', country: 'İtalya', flag: FLAGS.it },
     { id: 81, name: 'DFB Pokal', country: 'Almanya', flag: FLAGS.de },
-    { id: 529, name: 'Almanya Süper Kupası', country: 'Almanya', flag: FLAGS.de }
+    { id: 529, name: 'Almanya Süper Kupası', country: 'Almanya', flag: FLAGS.de },
+    { id: 90, name: 'Hollanda Kupası', country: 'Hollanda', flag: FLAGS.nl },
+    { id: 543, name: 'Hollanda Süper Kupası', country: 'Hollanda', flag: FLAGS.nl },
+    { id: 147, name: 'Belçika Kupası', country: 'Belçika', flag: FLAGS.be },
+    { id: 519, name: 'Belçika Süper Kupası', country: 'Belçika', flag: FLAGS.be },
+    { id: 199, name: 'Yunanistan Kupası', country: 'Yunanistan', flag: FLAGS.gr },
+    { id: 181, name: 'İskoçya Kupası', country: 'İskoçya', flag: FLAGS.sco },
+    { id: 185, name: 'İskoçya Lig Kupası', country: 'İskoçya', flag: FLAGS.sco },
+    { id: 209, name: 'İsviçre Kupası', country: 'İsviçre', flag: FLAGS.ch },
+    { id: 121, name: 'Danimarka Kupası', country: 'Danimarka', flag: FLAGS.dk },
+    { id: 105, name: 'Norveç Kupası', country: 'Norveç', flag: FLAGS.no },
+    { id: 115, name: 'İsveç Kupası', country: 'İsveç', flag: FLAGS.se }
 ];
 
 const LEAGUE_BY_ID = new Map(LEAGUES.map(league => [league.id, league]));
@@ -3656,19 +3709,33 @@ function refreshViews() {
 }
 
 /*
- * TAKIM ADLARI: sözlük telefonda saklanır. Yalnızca sürüm numarası dinlenir;
- * sürüm değişince (yeni takım) sözlük yeniden indirilir.
+ * TAKIM ADLARI: sözlük telefonda saklanır. Yalnızca sürüm numarası (takim_surum) dinlenir.
+ * Sürüm değişince yalnızca son bakılandan sonra eklenenler (takim_ek) indirilir;
+ * sözlük telefonda yoksa ya da 25 günden eskiyse tamamı (takim) indirilir.
  */
-const NAMES_KEY = 'canliSkorTakim';
+const NAMES_KEY = 'canliSkorTakim2';
+const NAMES_FULL_AGE = 25 * 86400;
 let namesVersion = null;
+let namesSaved = {};
 
 (() => {
     const saved = readJSON(NAMES_KEY, null);
     if (!saved || !saved.t)
         return;
     namesVersion = saved.s;
+    namesSaved = saved.t;
     Object.entries(saved.t).forEach(([id, name]) => teamNames.set(Number(id), name));
 })();
+
+function takeNames(names, version) {
+    Object.entries(names).forEach(([id, name]) => {
+        teamNames.set(Number(id), name);
+        namesSaved[id] = name;
+    });
+    namesVersion = version;
+    writeJSON(NAMES_KEY, { s: version, t: namesSaved });
+    refreshViews();
+}
 
 function watchNames() {
 
@@ -3679,12 +3746,20 @@ function watchNames() {
         const version = snap.val();
         if (version === null || version === namesVersion)
             return;
+
+        if (namesVersion && version - namesVersion < NAMES_FULL_AGE) {
+            const added = rt.query(rt.ref(rd, 'takim_ek'), rt.orderByKey(), rt.startAfter(String(namesVersion)));
+            rt.get(added).then(list => {
+                const names = {};
+                list.forEach(part => { Object.assign(names, part.val()); });
+                takeNames(names, version);
+            }, () => {});
+            return;
+        }
+
         rt.get(rt.ref(rd, 'takim')).then(list => {
-            const names = list.val() || {};
-            Object.entries(names).forEach(([id, name]) => teamNames.set(Number(id), name));
-            namesVersion = version;
-            writeJSON(NAMES_KEY, { s: version, t: names });
-            refreshViews();
+            namesSaved = {};
+            takeNames(list.val() || {}, version);
         }, () => {});
     }, () => {});
 }

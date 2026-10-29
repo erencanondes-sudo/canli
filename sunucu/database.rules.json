@@ -13,6 +13,9 @@
     "takim_surum": {
       ".read": true
     },
+    "takim_ek": {
+      ".read": true
+    },
     "lig": {
       ".read": true
     },

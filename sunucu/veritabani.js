@@ -56,7 +56,7 @@ async function dalHali(yol) {
 
 /*
  * Dalı verilen içeriğe getirir: yalnızca değişen anahtarlar yazılır.
- * silinsin: true ise içerikte olmayan anahtarlar silinir. Değişen anahtar sayısını döner.
+ * silinsin: true ise içerikte olmayan anahtarlar silinir. Değişenleri { anahtar: değer } döner (yoksa null).
  */
 async function dalYaz(yol, icerik, silinsin = true) {
     const once = await dalHali(yol);
@@ -69,8 +69,7 @@ async function dalYaz(yol, icerik, silinsin = true) {
         if (!icerik.has(anahtar)) degisen[anahtar] = null;
     });
 
-    const sayi = Object.keys(degisen).length;
-    if (!sayi) return 0;
+    if (!Object.keys(degisen).length) return null;
 
     await rtdb.ref(yol).update(degisen);
     Object.entries(degisen).forEach(([anahtar, deger]) => {
@@ -78,13 +77,24 @@ async function dalYaz(yol, icerik, silinsin = true) {
         else once.set(anahtar, deger);
     });
     yazmaSayisi++;
-    return sayi;
+    return degisen;
 }
 
-/* Tek değer yazar (takım sözlüğünün sürümü gibi) */
-async function degerYaz(yol, deger) {
-    await rtdb.ref(yol).set(deger);
+/* Birden çok yola tek seferde yazar: { "takim_surum": 5, "takim_ek/5": {...} } */
+async function cokluYaz(veri) {
+    await rtdb.ref().update(veri);
     yazmaSayisi++;
 }
 
-module.exports = { yaz, oku, dalYaz, degerYaz, yazmaSayisi: () => yazmaSayisi };
+/* Dalda anahtarı sinir'e kadar (dahil) olan kayıtları siler (anahtarlar aynı uzunlukta sayı) */
+async function eskiSil(yol, sinir) {
+    const snap = await rtdb.ref(yol).orderByKey().endAt(String(sinir)).get();
+    const sil = {};
+    snap.forEach(c => { sil[c.key] = null; });
+    if (Object.keys(sil).length) {
+        await rtdb.ref(yol).update(sil);
+        yazmaSayisi++;
+    }
+}
+
+module.exports = { yaz, oku, dalYaz, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };

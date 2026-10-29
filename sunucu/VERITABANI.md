@@ -11,8 +11,9 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
 | RTDB `gun/{gün}/{maç no}` | Günün maçları, her maç bir satır | Sunucu | Canlı Skor | Skor, dakika, durum değişince | satır ~40 bayt, 150 maç ~6 KB |
-| RTDB `takim/{takım no}` | Takım adı | Sunucu | Site (telefonda saklanır) | Yeni takım görülünce | 300 takım ~6 KB |
-| RTDB `takim_surum` | Takım listesinin sürümü | Sunucu | Site | Yeni takım görülünce | birkaç bayt |
+| RTDB `takim/{takım no}` | Takım adı (bütün takımlar) | Sunucu | Site (yalnızca telefonda sözlük yoksa) | Yeni takım görülünce | takım başına ~20 bayt |
+| RTDB `takim_ek/{sürüm}` | O sürümde eklenen ya da değişen takımlar `{ no: ad }`. 30 gün saklanır | Sunucu | Site | Yeni takım görülünce | birkaç yüz bayt |
+| RTDB `takim_surum` | Takım listesinin sürümü (zaman, saniye) | Sunucu | Site (canlı) | Yeni takım görülünce | birkaç bayt |
 | RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
 | RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
 | RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
@@ -22,7 +23,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
-Eski günler silinmez (takvimden açılabilsin diye).
+Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (bugün 15 dk, dün ve yarın saatte bir, sonraki günler 6 saatte bir yenilenir). Eski günler silinmez (takvimden açılabilsin diye).
 
 ## Site ne zaman ne okur
 
@@ -32,7 +33,7 @@ Eski günler silinmez (takvimden açılabilsin diye).
 | Özet (Firestore `ozet`) | Listeden sonra arkada, sonra canlı dinlenir | Bir kez | Okunmaz |
 
 - Bugün her zaman dinlenir. Dün yalnızca seçiliyken dinlenir (gece yarısını geçen maçlar ve maç sonu düzeltmeleri için).
-- Takım adları telefonda saklanır; yalnızca `takim_surum` dinlenir, değişince `takim` yeniden indirilir.
+- Takım adları telefonda saklanır; yalnızca `takim_surum` dinlenir. Değişince yalnızca son bakılandan sonraki `takim_ek` kayıtları iner; telefonda sözlük yoksa ya da 25 günden eskiyse `takim`'ın tamamı iner.
 - Maç açılınca `maclar/{no}` dinlenir, maç kapanınca bırakılır.
 - Uygulama arka plana geçince bütün dinlemeler durur, RTDB bağlantısı kapanır.
 
@@ -170,7 +171,7 @@ Yalnızca kadro ve istatistik veren liglerde yazılır. Olaylar burada yok, `oze
 | `son_tur` | Sunucunun son çalıştığı zaman. **Birkaç dakikadan eskiyse sunucu durmuş demektir** |
 | `son_canli_istek` | Son canlı skor isteği |
 | `canli_mac` | Şu an canlı maç sayısı |
-| `takip_edilen_mac` | Dün, bugün ve yarın takip edilen maç sayısı |
+| `takip_edilen_mac` | Dün, bugün ve 7 gün ileri takip edilen maç sayısı |
 | `kalan_istek` / `gunluk_hak` | API-Football'da bugün kalan istek / günlük hak |
 | `acilistan_beri_istek` / `acilistan_beri_yazma` | Sunucu son açıldığından beri API isteği / Firestore yazması |
 | `son_hata` | Son turdaki hata (yoksa `null`) |
