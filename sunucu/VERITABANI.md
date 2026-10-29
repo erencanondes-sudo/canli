@@ -16,7 +16,6 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
 | RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
 | RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
-| RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms) | Hızlı kaynak | Site (canlı) | Dakikada bir | ~20 bayt |
 | Firestore `ozet/{gün}` | Günün oynanan ve biten maçlarının olayları | Sunucu | Canlı Skor, maç sayfası (Özet) | Olay olunca, en fazla 15 sn'de bir | 150 maç ~60–80 KB |
 | Firestore `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
@@ -36,14 +35,14 @@ Eski günler silinmez (takvimden açılabilsin diye).
 - Maç açılınca `maclar/{no}` dinlenir, maç kapanınca bırakılır.
 - Uygulama arka plana geçince bütün dinlemeler durur, RTDB bağlantısı kapanır.
 
-- `hizli`, `hizli_u`, `hizli_t` canlı dinlenir (dallarda yalnızca oynanan maçlar durur).
+- `hizli`, `hizli_u` canlı dinlenir (dallarda yalnızca oynanan maçlar durur).
 
-## Hızlı kaynak (`hizli`, `hizli_u`, `hizli_t`)
+## Hızlı kaynak (`hizli`, `hizli_u`)
 
 - Canlı maçta iki kaynaktan (API, hızlı) en son değişen skor gösterilir. Açılışta farklıysa hızlı kaynağınki.
-- Hızlı kaynak 2 dakikadır sessizse (`hizli_t` eski ve yeni veri yok) yalnızca uyarılar gizlenir; skor ve gol her zaman kullanılır.
 - Telefon bildirimi (sunucu) golü ve iptali hangi kaynak önce görürse ondan gönderir, aynı skor için bir kez.
-- `hizli_u` varken satır hafif kırmızı olur. Uyarı geldikten sonra skor değişirse (hangi kaynaktan olursa) kırmızı kalkar.
+- `hizli_u` varken (yalnızca top oyundayken) satır hafif kırmızı olur; `"2-2"`de beklenen takımın yanında kırmızı nokta. Uyarı geldikten sonra skor değişirse (hangi kaynaktan olursa) kırmızı kalkar.
+- Skor değişince o maçta 2 dk `"k"` uyarısı gösterilmez; `"2-2"` (nokta) gösterilir.
 - Kurallar: yalnızca hızlı kaynağın kullanıcısı yazabilir; değer `2-1` ya da (uyarıda) `k` biçiminde olmalı.
 
 ---
