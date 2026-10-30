@@ -4,7 +4,8 @@
  *   1. Gerekirse fikstür (dün, bugün ve 7 gün ileri) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
- *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), Özet (Firestore, en fazla 15 sn'de bir)
+ *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), gün dokümanı (Firestore, en fazla 10 dk'da bir),
+ *      Özet (Firestore, en fazla 15 sn'de bir)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
  */
 
@@ -22,7 +23,7 @@ const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
 
-/* Takip edilen maçlar: no → { f, gun, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol } */
+/* Takip edilen maçlar: no → { f, gun, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
@@ -60,7 +61,7 @@ function kaydet(f, canliIstek) {
     const no = f.fixture.id;
     let k = maclar.get(no);
     if (!k) {
-        k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false };
+        k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false, cBitis: null };
         maclar.set(no, k);
     }
     if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
@@ -202,11 +203,34 @@ async function ligYaz() {
     await db.dalYaz('lig', new Map(LIG_NO.map(no => [String(no), detayli.get(no) ? 1 : 0])));
 }
 
-/* RTDB: günün canlı skor satırları (her maç ayrı satır, yalnızca değişen yazılır) */
+/*
+ * Günün canlı skor satırları.
+ * RTDB gun/{gün}: her maç ayrı satır, yalnızca değişen yazılır. Canlı maçlar ve bittikten sonra
+ * 21 dk (b1) "c" ile başlar; site yalnızca bunları dinler. Sonra "c" kalkar (b2).
+ * Firestore gun/{gün}: aynı satırlar ("c" olmadan) tek dokümanda, en fazla 10 dk'da bir.
+ */
 async function gunYaz(gun) {
+    const rtdb = await db.dalHali('gun/' + gun);
     const icerik = new Map();
-    for (const [no, k] of maclar) if (k.gun === gun) icerik.set(String(no), B.satir(k.f));
+    const duz = {};
+
+    for (const [no, k] of maclar) {
+        if (k.gun !== gun) continue;
+        const satir = B.satir(k.f);
+        duz[no] = satir;
+
+        let c = CANLI.has(durumu(k));
+        if (c) k.cBitis = null;
+        else {
+            /* "c" ile yazılmış maç artık canlı değilse 21 dk sayılır (sunucu yeniden açıldıysa da) */
+            if (!k.cBitis && (rtdb.get(String(no)) || '').startsWith('c')) k.cBitis = simdi();
+            c = !!k.cBitis && simdi() - k.cBitis < A.B1_SURE;
+        }
+        icerik.set(String(no), (c ? 'c' : '') + satir);
+    }
+
     await db.dalYaz('gun/' + gun, icerik);
+    await db.yaz('gun/' + gun, { m: JSON.stringify(duz) }, A.GUN_ARALIK);
 }
 
 /*
@@ -267,6 +291,7 @@ async function tur() {
             await kapsamCek();
             await ligYaz();
             await db.eskiSil('takim_ek', simdi() - A.TAKIM_EK_SURE);
+            await db.eskiSil('gun', gunAdi(basla - A.RTDB_GUN_SAKLA * 864e5));
             zaman.kapsam = basla;
         }
 

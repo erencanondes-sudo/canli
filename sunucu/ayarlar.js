@@ -79,6 +79,9 @@ module.exports = {
     CANLI_SAAT: ['12:30', '01:00'],
     TUR_ARALIK: 15000,              /* canlı saatlerde: canlı skor ve yazma 15 sn */
     OZET_ARALIK: 15000,             /* Özet dokümanı en fazla 15 sn'de bir yazılır */
+    GUN_ARALIK: 10 * 60000,         /* Firestore gün dokümanı en fazla 10 dk'da bir yazılır */
+    B1_SURE: 21 * 60,               /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */
+    RTDB_GUN_SAKLA: 2,              /* RTDB'deki günler bu kadar gün sonra silinir (Firestore'da kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 60000,            /* canlı maç detayı: 1 dk */
     FIKSTUR_BUGUN: 15 * 60000,      /* bugünün fikstürü: 15 dk */

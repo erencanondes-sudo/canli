@@ -4,7 +4,8 @@
     ".write": false,
     "gun": {
       "$gun": {
-        ".read": true
+        ".read": true,
+        ".indexOn": ".value"
       }
     },
     "takim": {

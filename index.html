@@ -3223,7 +3223,8 @@ body.ball-left .ac-kapa svg {
    -------------------------------------------------
    Veriyi sunucu API-Football'dan çekip yazar; uygulama
    yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
-     RTDB gun/{gün}       : günün canlı skor satırları
+     Firestore gun/{gün}  : günün bütün maçları (canlı skor satırları)
+     RTDB gun/{gün}       : aynısı; yalnızca canlı ve yeni biten ("c" ile başlayan) satırlar dinlenir
      RTDB takim           : takım adları (telefonda saklanır)
      RTDB hizli, hizli_u  : hızlı kaynağın skoru ve uyarısı (canlı maçlar)
      Firestore ozet/{gün} : günün olayları (Özet sekmesi)
@@ -3452,7 +3453,8 @@ function rowEvents(list) {
  */
 function rowToMatch(day, no, text, events) {
 
-    const [league, week, home, away, time, state, hg, ag] = text.split(',');
+    /* RTDB'de canlı ve yeni biten maçların satırı "c" ile başlar */
+    const [league, week, home, away, time, state, hg, ag] = text.replace(/^c/, '').split(',');
 
     /* Durum: boş = başlamadı, sayı = oynanıyor (dakika), diğerleri API kodu */
     const playing = /^(\d+)(?:\+(\d+))?$/.exec(state || '');
@@ -3507,7 +3509,8 @@ function minuteText(match) {
 const MATCHES = [];
 const MATCH_BY_ID = new Map();
 
-const dayRows = new Map();       /* gün → Map(maç no → satır) */
+const dayRows = new Map();       /* gün → Map(maç no → satır) (Firestore) */
+const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
 const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet dokümanı) */
 const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
@@ -3516,8 +3519,10 @@ function rebuildMatches() {
     MATCHES.length = 0;
     MATCH_BY_ID.clear();
 
-    dayRows.forEach((rows, day) => {
+    dayRows.forEach((stored, day) => {
         const events = dayEvents.get(day) || {};
+        const rows = new Map(stored);
+        (liveRows.get(day) || new Map()).forEach((text, no) => rows.set(no, text));
         rows.forEach((text, no) => {
             const match = rowToMatch(day, no, text, events[no]);
             const detail = matchDetails.get(match.id);
@@ -4048,9 +4053,10 @@ function goalSound() {
 
 /*
  * GÜNLER
- * Bugün ve dün canlı dinlenir (dün: gece yarısını geçen maçlar, maç sonu düzeltmeleri);
- * diğer günler bir kez okunur. Liste RTDB'den, olaylar (Özet) Firestore'dan.
- * Yarın ve sonrası için Özet okunmaz (maç oynanmadı).
+ * Liste Firestore gun/{gün} dokümanından gelir (sunucu en fazla 10 dk'da bir yazar).
+ * Bugün ve dün: doküman canlı dinlenir, ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan
+ * satırlar (canlı ve 21 dk içinde biten maçlar) dinlenir; bunlar Firestore'dakinden önceliklidir.
+ * Diğer günler bir kez okunur. Olaylar (Özet) Firestore ozet/{gün}'den; yarın ve sonrası için okunmaz.
  */
 const days = new Map();   /* gün → { live, loaded, off: [kapatma fonksiyonları] } */
 
@@ -4068,18 +4074,25 @@ function openDay(day) {
     const state = { live: isLiveDay(day), loaded: false, off: [] };
     days.set(day, state);
 
-    const listRef = rt.ref(rd, 'gun/' + day);
+    const listRef = fs.doc(db, 'gun', day);
+    const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
     const summaryRef = fs.doc(db, 'ozet', day);
     const needSummary = day <= TODAY;
 
     const takeRows = snap => {
-        dayRows.set(day, new Map(Object.entries(snap.val() || {})));
+        const data = snap.exists() ? snap.data() : null;
+        dayRows.set(day, new Map(Object.entries(data && data.m ? JSON.parse(data.m) : {})));
         state.loaded = true;
         refreshViews();
     };
 
     const failed = () => {
         state.loaded = true;
+        refreshViews();
+    };
+
+    const takeLive = snap => {
+        liveRows.set(day, new Map(Object.entries(snap.val() || {})));
         refreshViews();
     };
 
@@ -4090,11 +4103,12 @@ function openDay(day) {
     };
 
     if (state.live) {
-        state.off.push(rt.onValue(listRef, takeRows, failed));
+        state.off.push(fs.onSnapshot(listRef, takeRows, failed));
+        state.off.push(rt.onValue(liveQuery, takeLive, () => {}));
         if (needSummary)
             state.off.push(fs.onSnapshot(summaryRef, takeEvents, () => {}));
     } else {
-        rt.get(listRef).then(takeRows, failed);
+        fs.getDoc(listRef).then(takeRows, failed);
         if (needSummary)
             fs.getDoc(summaryRef).then(takeEvents, () => {});
     }
@@ -4107,6 +4121,7 @@ function closeDay(day) {
         return;
     state.off.forEach(off => off());
     days.delete(day);
+    liveRows.delete(day);
 }
 
 /* Seçili gün değişince: önceki seçili gün bugün değilse bırakılır */
