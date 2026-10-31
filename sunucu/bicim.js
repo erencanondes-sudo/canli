@@ -41,13 +41,13 @@ function sayi(v) {
 function olaylar(f) {
     const ev = f.teams.home.id;
     return (f.events || []).map(e => [
-        e.time.elapsed,
-        e.time.extra,
-        e.team.id === ev ? 0 : e.team.id ? 1 : null,
+        (e.time || {}).elapsed,
+        (e.time || {}).extra,
+        (e.team || {}).id === ev ? 0 : (e.team || {}).id ? 1 : null,
         TUR[e.type] || e.type,
         e.type === 'subst' ? null : (AYRINTI[e.detail] || e.detail || null),
-        ad(e.player.name),
-        ad(e.assist.name)
+        ad((e.player || {}).name),
+        ad((e.assist || {}).name)
     ]);
 }
 
@@ -123,7 +123,7 @@ function macDokumani(f, olay) {
         const t = taraf(f.statistics, id);
         if (!t) return null;
         const d = {};
-        t.statistics.forEach(s => { d[s.type] = s.value; });
+        (t.statistics || []).forEach(s => { d[s.type] = s.value; });
         return ISTATISTIK.map(k => sayi(d[k]));
     });
 
@@ -133,8 +133,9 @@ function macDokumani(f, olay) {
         return [
             t.formation || null,
             ad(t.coach && t.coach.name),
-            t.startXI.map(p => [p.player.number, ad(p.player.name), p.player.pos, p.player.grid]),
-            t.substitutes.map(p => [p.player.number, ad(p.player.name), p.player.pos])
+            /* Alt liglerde API ilk 11 ya da yedekleri hiç göndermeyebiliyor */
+            (t.startXI || []).filter(p => p && p.player).map(p => [p.player.number, ad(p.player.name), p.player.pos, p.player.grid]),
+            (t.substitutes || []).filter(p => p && p.player).map(p => [p.player.number, ad(p.player.name), p.player.pos])
         ];
     });
 

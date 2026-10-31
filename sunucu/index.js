@@ -172,10 +172,15 @@ async function detayCek(nolar) {
             if (OYNANMAYACAK.has(d)) k.sonHal = true;
             if (f.lineups && f.lineups.length) k.kadro = true;
 
-            /* Maç bitince doküman olaylarla birlikte tam yazılır (istatistik vermeyen liglerde de) */
+            /* Maç bitince doküman olaylarla birlikte tam yazılır (istatistik vermeyen liglerde de).
+               Bir maçın verisindeki sorun turu durdurmaz: o maç atlanır, günlüğe yazılır. */
             const bitti = BITTI.has(d);
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
-                await db.yazSikistir('maclar/' + f.fixture.id, JSON.stringify(B.macDokumani(f, bitti ? (k.olaylar || []) : null)));
+                try {
+                    await db.yazSikistir('maclar/' + f.fixture.id, JSON.stringify(B.macDokumani(f, bitti ? (k.olaylar || []) : null)));
+                } catch (e) {
+                    console.error('Maç ' + f.fixture.id + ' yazılamadı: ' + e.message);
+                }
             }
         }
     }
