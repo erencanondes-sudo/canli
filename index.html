@@ -34,8 +34,8 @@
  * Ana sayfadaki kartlar ve maç sayfası aynı genişliği kullanır.
  */
 :root {
-    --content-width: 640px;
-    --side-gap: max(16px, calc((100% - var(--content-width)) / 2));
+    --content-width: 40rem;
+    --side-gap: max(1rem, calc((100% - var(--content-width)) / 2));
 }
 
 html, body {
@@ -50,10 +50,10 @@ html, body {
 
 button {
     border: 0;
-    border-radius: 10px;
-    padding: 12px;
+    border-radius: .625rem;
+    padding: .75rem;
     font-family: inherit;
-    font-size: 15px;
+    font-size: .9375rem;
     font-weight: bold;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -87,7 +87,7 @@ button {
     touch-action: pan-y;
 
     /* Alttaki boşluk: son kart alttaki düğmenin arkasında kalmasın. */
-    padding: 12px var(--side-gap) 180px;
+    padding: .75rem var(--side-gap) 11.25rem;
 }
 
 /*
@@ -98,8 +98,8 @@ button {
 #homeBanner {
     position: relative;
     aspect-ratio: 3.4 / 1;
-    margin-bottom: 12px;
-    border-radius: 12px;
+    margin-bottom: .75rem;
+    border-radius: .75rem;
     overflow: hidden;
     color: white;
     background:
@@ -156,7 +156,7 @@ button {
  */
 #homeAdGap {
     flex: none;
-    height: 16px;
+    height: 1rem;
     pointer-events: none;
 }
 
@@ -169,7 +169,7 @@ button {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: .5rem;
 }
 
 /*
@@ -185,7 +185,7 @@ button {
     /* Menü düğmesine göre ortalanmaz: reklamla arası her ekranda sabit 16px */
     align-self: flex-start;
     margin-right: .35em;
-    font-size: min(16px, 3.4vw);
+    font-size: min(1rem, 3.4vw);
 }
 
 #homeModeBox button {
@@ -193,7 +193,7 @@ button {
     min-width: 0;
     padding: .55em .3em;
     border: 1px solid #d5d8de;
-    border-radius: 10px;
+    border-radius: .625rem;
     background: white;
     font-size: inherit;
     font-weight: 800;
@@ -215,7 +215,7 @@ button {
     display: flex;
     align-items: center;
     gap: .35em;
-    margin: 0 0 8px;
+    margin: 0 0 .5rem;
 }
 
 /* Spor seçimi: seçili top koyu çerçeveli, diğeri biraz açık */
@@ -223,7 +223,7 @@ button {
     flex: none;
     display: flex;
     gap: .3em;
-    font-size: 13px;
+    font-size: .8125rem;
 }
 
 .sport-btn {
@@ -270,7 +270,7 @@ button {
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     container-type: inline-size;
-    font-size: 11px;
+    font-size: .6875rem;
 }
 
 #dayBox::-webkit-scrollbar {
@@ -293,7 +293,7 @@ button {
     background: white;
 
     /* Yazı kutuya göre küçülür (dar telefonda da 4 gün sığsın) */
-    font-size: clamp(7px, 6.4cqw, 11px);
+    font-size: clamp(.4375rem, 6.4cqw, .6875rem);
     font-weight: 700;
     color: #555a66;
     white-space: nowrap;
@@ -320,7 +320,7 @@ button {
     padding: 0;
     background: none;
     color: #1d2340;
-    font-size: 22px;
+    font-size: 1.375rem;
     line-height: 1;
 }
 
@@ -350,7 +350,7 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: .8125rem;
 }
 
 #calendarBtn svg {
@@ -376,9 +376,9 @@ button {
     width: 17.5em;
     padding: .7em .6em .6em;
     background: white;
-    border-radius: 14px;
-    box-shadow: 0 6px 28px rgba(0,0,0,.22);
-    font-size: 13px;
+    border-radius: .875rem;
+    box-shadow: 0 .375rem 1.75rem rgba(0,0,0,.22);
+    font-size: .8125rem;
 }
 
 #calendarPop.open {
@@ -451,10 +451,10 @@ button {
     display: flex;
     align-items: center;
     gap: .3em;
-    margin: 0 0 10px;
+    margin: 0 0 .625rem;
 
     /* Dar ekranda yazılar biraz küçülür, dört öğe tek satıra sığar */
-    font-size: min(12.5px, 3.3vw);
+    font-size: min(.7812rem, 3.3vw);
 }
 
 .tb-live,
@@ -468,7 +468,7 @@ button {
     height: 2.5em;
     padding: 0 .75em;
     border: 1px solid #d5d8de;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: white;
     font-size: inherit;
     font-weight: 700;
@@ -540,8 +540,8 @@ button {
     min-width: 13em;
     padding: .3em 0;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 5px 25px rgba(0,0,0,.22);
+    border-radius: .75rem;
+    box-shadow: 0 .3125rem 1.5625rem rgba(0,0,0,.22);
 }
 
 .league-menu.open {
@@ -553,7 +553,7 @@ button {
     align-items: center;
     gap: .6em;
     padding: .65em .9em;
-    font-size: 14px;
+    font-size: .875rem;
     font-weight: 600;
     color: #1d2340;
     white-space: nowrap;
@@ -579,7 +579,7 @@ button {
 
 /* Oranlar araması: araç satırının altında, tam genişlik */
 #oddsSearchBox {
-    margin: 0 0 10px;
+    margin: 0 0 .625rem;
 }
 
 /* Oranlar'da "Popüler" düğmesi (Zaman gibi) */
@@ -602,7 +602,7 @@ button {
 }
 
 /* Dar ekranda büyüteç gizlenir; "Arama yap" yazısı sığsın */
-@media (max-width: 380px) {
+@media (max-width: 23.75rem) {
     .search-box.tool-search svg {
         display: none;
     }
@@ -644,7 +644,7 @@ button {
     height: 2.5em;
     padding: 0 .7em;
     border: 1px solid #d5d8de;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: white;
     color: #8a8f9c;
 }
@@ -666,7 +666,7 @@ button {
     outline: 0;
     background: none;
     font-family: inherit;
-    font-size: 13px;
+    font-size: .8125rem;
     color: #1d2340;
 }
 
@@ -711,7 +711,7 @@ button {
     align-items: center;
     gap: .2em;
     margin-bottom: -.3em;
-    font-size: 11px;
+    font-size: .6875rem;
     font-weight: 700;
     color: #8a8f9c;
     white-space: pre;
@@ -735,8 +735,8 @@ button {
     /* Gün ve araç satırlarından biraz daha geniş: iki yana taşar */
     margin: 0 max(-1.25vw, -.375em) .9em;
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,.10);
+    border-radius: 1rem;
+    box-shadow: 0 1px .375rem rgba(0,0,0,.10);
     overflow: hidden;
 }
 
@@ -746,7 +746,7 @@ button {
     gap: .5em;
     padding: .6em .9em;
     background: #1d2340;
-    font-size: 13px;
+    font-size: .8125rem;
     font-weight: 800;
     color: white;
 }
@@ -781,7 +781,7 @@ button {
     background: white;
     border-bottom: 1px solid #f1f2f5;
     text-align: left;
-    font-size: 14px;
+    font-size: .875rem;
     font-weight: 400;
     color: #1d2340;
 }
@@ -868,7 +868,7 @@ button {
     height: 2.5em;
     padding: 0 1em;
     border: 1px solid #f3c4c0;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: white;
     font-size: inherit;
     font-weight: 700;
@@ -880,7 +880,7 @@ button {
     color: #b8bcc6;
 }
 
-/* Uyarı penceresi: ekranın ortasında, arkası karartılmış */
+/* Uyarı penceresi: ekranın ortasında, arkası karartılmaz */
 #confirmBox {
     position: fixed;
     inset: 0;
@@ -889,7 +889,6 @@ button {
     align-items: center;
     justify-content: center;
     padding: 0 8vw;
-    background: rgba(10, 15, 30, .45);
     opacity: 0;
     visibility: hidden;
     transition: opacity .18s ease, visibility 0s linear .18s;
@@ -905,10 +904,10 @@ button {
     width: 100%;
     max-width: 22em;
     padding: 1.2em 1.2em 1em;
-    border-radius: 16px;
+    border-radius: 1rem;
     background: white;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .25);
-    font-size: 15px;
+    box-shadow: 0 .625rem 2.5rem rgba(0, 0, 0, .25);
+    font-size: .9375rem;
 }
 
 #confirmText {
@@ -926,7 +925,7 @@ button {
 #confirmActions button {
     flex: 1;
     padding: .7em;
-    border-radius: 12px;
+    border-radius: .75rem;
     font-size: 1em;
     font-weight: 800;
 }
@@ -973,7 +972,7 @@ button {
 }
 
 .score-status {
-    font-size: 12px;
+    font-size: .75rem;
     font-weight: 800;
     color: #6b7080;
 }
@@ -1022,12 +1021,12 @@ button {
 #menuBtn {
     flex: none;
     align-self: stretch;
-    width: 32px;
+    width: 2rem;
     padding: 0;
     line-height: 1;
     background: none;
     color: #333;
-    font-size: 24px;
+    font-size: 1.5rem;
     text-align: right;
 }
 
@@ -1038,10 +1037,10 @@ button {
     z-index: 5;
     display: none;
     flex-direction: column;
-    min-width: 210px;
+    min-width: 13.125rem;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 5px 25px rgba(0,0,0,.25);
+    border-radius: .75rem;
+    box-shadow: 0 .3125rem 1.5625rem rgba(0,0,0,.25);
     overflow: hidden;
 }
 
@@ -1053,9 +1052,9 @@ button {
     flex: none;
     background: none;
     border-radius: 0;
-    padding: 14px 16px;
+    padding: .875rem 1rem;
     text-align: left;
-    font-size: 15px;
+    font-size: .9375rem;
     font-weight: normal;
     color: #222;
     border-bottom: 1px solid #eee;
@@ -1120,21 +1119,21 @@ button {
 
 /* Hafta başlığı ("7. Hafta") */
 .week-title {
-    margin: 14px 4px 8px;
-    font-size: 13px;
+    margin: .875rem .25rem .5rem;
+    font-size: .8125rem;
     font-weight: 800;
     color: #6b7080;
     letter-spacing: .02em;
 }
 
 .week-title:first-child {
-    margin-top: 4px;
+    margin-top: .25rem;
 }
 
 .home-empty {
-    margin: 30px 10px;
+    margin: 1.875rem .625rem;
     text-align: center;
-    font-size: 15px;
+    font-size: .9375rem;
     color: #777;
 }
 
@@ -1161,10 +1160,10 @@ button {
     padding: .75em .9em .7em;
     margin-bottom: .75em;
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,.10);
+    border-radius: 1rem;
+    box-shadow: 0 1px .375rem rgba(0,0,0,.10);
     text-align: left;
-    font-size: 14px;
+    font-size: .875rem;
     font-weight: normal;
     color: #222;
 }
@@ -1244,7 +1243,7 @@ button {
 
 .odd {
     padding: .45em 0;
-    border-radius: 10px;
+    border-radius: .625rem;
     background: #f1f3f7;
     text-align: center;
 }
@@ -1398,7 +1397,7 @@ button {
 /* Tam sayfa değil: üstteki reklam (100px) yerinde kalır, 16px boşluk bırakılır */
 #emptyLayer {
     position: fixed;
-    top: calc(100px + 16px);
+    top: calc(100px + 1rem);
     left: 0;
     right: 0;
     bottom: 0;
@@ -1416,22 +1415,22 @@ button {
     flex: 1;
     overflow-y: auto;
     scrollbar-gutter: stable;
-    padding: 0 var(--side-gap) 180px;
+    padding: 0 var(--side-gap) 11.25rem;
 }
 
 /* Kayıtlı Maçlarım / Kuponlarım düğmeleri (ana sayfadaki sekmeler gibi) */
 #myTabs {
     display: flex;
     gap: .35em;
-    margin-bottom: 10px;
-    font-size: min(16px, 3.4vw);
+    margin-bottom: .625rem;
+    font-size: min(1rem, 3.4vw);
 }
 
 #myTabs button {
     flex: 1;
     padding: .55em .3em;
     border: 1px solid #d5d8de;
-    border-radius: 10px;
+    border-radius: .625rem;
     background: white;
     font-size: inherit;
     font-weight: 800;
@@ -1494,9 +1493,6 @@ body[data-tab="empty"] #emptyLayer {
 /* Maç sayfası açıkken sarı topla açılan Kuponlarım, maç sayfasının üstüne gelir */
 #emptyLayer.raised {
     z-index: 31;
-
-    /* Maç sayfasındaki ince reklam (50px) yerinde kalır, 16px boşluk bırakılır */
-    top: calc(50px + 16px);
 }
 
 /* -----------------------------
@@ -1509,10 +1505,24 @@ body[data-tab="empty"] #emptyLayer {
 
     /* Biraz aşağıda: topun ortası alttan 44px yukarıda */
     bottom: calc(2px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
 
     /* Maç sayfası ve açılan her şeyin üstünde görünür */
     z-index: 33;
+
+    /* Ana sayfada gizli; sarı top gibi büyüyerek belirir */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) scale(.6);
+    transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s;
+}
+
+/* Yalnızca maç sayfası ya da Kayıtlı Maçlarım / Kuponlarım açıkken görünür (kapatmak için) */
+body[data-tab="empty"] .alt-menu,
+body:has(#detailSheet.open) .alt-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
+    transition: opacity .2s ease, transform .2s ease, visibility 0s;
 }
 
 /*
@@ -1522,8 +1532,8 @@ body[data-tab="empty"] #emptyLayer {
 .ac-kapa {
     position: relative;
     flex: none;
-    width: 84px;
-    height: 84px;
+    width: 5.25rem;
+    height: 5.25rem;
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -1537,11 +1547,11 @@ body[data-tab="empty"] #emptyLayer {
 .ac-kapa::before {
     content: '';
     position: absolute;
-    inset: 11px;
-    border: 4px solid #fff;
+    inset: .6875rem;
+    border: .25rem solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #3d8dff 0%, #1f6ff2 100%);
-    box-shadow: 0 9px 20px rgba(37, 117, 252, .45);
+    box-shadow: 0 .5625rem 1.25rem rgba(37, 117, 252, .45);
 }
 
 .ac-kapa:active { transform: scale(.94); }
@@ -1549,19 +1559,14 @@ body[data-tab="empty"] #emptyLayer {
 .ac-kapa svg {
     position: relative;
     top: 1px;
-    width: 23px;
-    height: 23px;
+    width: 1.4375rem;
+    height: 1.4375rem;
     transition: transform .3s ease;
 }
 
 body[data-tab="empty"] .ac-kapa svg,
 body.has-layer .ac-kapa svg {
     transform: rotate(180deg);
-}
-
-/* AI Kuponu / Analiz / Oranlar başındayken: ok sola (Canlı Skor'a döner) */
-body.ball-left .ac-kapa svg {
-    transform: rotate(-90deg);
 }
 
 /*
@@ -1573,19 +1578,19 @@ body.ball-left .ac-kapa svg {
 #couponBall {
     position: fixed;
     right: var(--side-gap);
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(.875rem + env(safe-area-inset-bottom, 0px));
 
     /* Maç sayfasının da üstünde durur (oranlar orada da seçilebilir) */
     z-index: 32;
-    width: 72px;
-    height: 72px;
+    width: 4.5rem;
+    height: 4.5rem;
     padding: 0;
-    border: 5px solid #fff;
+    border: .3125rem solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #f7c428 0%, #e8aa10 100%);
 
     /* Renksiz hafif gölge: beyaz çember beyaz kartların üstünde de görünsün */
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+    box-shadow: 0 .375rem 1.125rem rgba(0, 0, 0, .18);
     color: white;
     display: flex;
     flex-direction: column;
@@ -1611,12 +1616,12 @@ body.ball-left .ac-kapa svg {
 }
 
 #couponBall .cb-count {
-    font-size: 12px;
+    font-size: .75rem;
     font-weight: 700;
 }
 
 #couponBall .cb-total {
-    font-size: 14px;
+    font-size: .875rem;
     font-weight: 800;
 }
 
@@ -1639,9 +1644,9 @@ body.ball-left .ac-kapa svg {
     margin-bottom: .9em;
     padding: .8em .9em;
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,.10);
-    font-size: 14px;
+    border-radius: 1rem;
+    box-shadow: 0 1px .375rem rgba(0,0,0,.10);
+    font-size: .875rem;
 }
 
 .coupon-card.new {
@@ -1724,7 +1729,7 @@ body.ball-left .ac-kapa svg {
     flex: none;
     padding: .7em 1.1em;
     border: 1px solid #d5d8de;
-    border-radius: 12px;
+    border-radius: .75rem;
     background: white;
     color: #555a66;
     font-size: 1em;
@@ -1736,7 +1741,7 @@ body.ball-left .ac-kapa svg {
     width: 100%;
     padding: .7em;
     border: none;
-    border-radius: 12px;
+    border-radius: .75rem;
     background: #ebb21c;
     color: white;
     font-size: 1em;
@@ -1746,7 +1751,7 @@ body.ball-left .ac-kapa svg {
 .coupon-delete {
     padding: .2em .6em;
     border: 1px solid #d5d8de;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: white;
     font-size: .95em;
     font-weight: 600;
@@ -1755,7 +1760,7 @@ body.ball-left .ac-kapa svg {
 
 .coupon-section {
     margin: 1.1em .2em .55em;
-    font-size: 12px;
+    font-size: .75rem;
     font-weight: 800;
     letter-spacing: .03em;
     color: #8a8f9c;
@@ -1763,14 +1768,20 @@ body.ball-left .ac-kapa svg {
 
 /* -----------------------------
    MAÇ SAYFASI
-   Tüm ekranı kaplar. Üstte skor alanı, altta yukarı
-   çekilebilen bölüm ve parmakla kayan dört sekme.
+   Üstteki reklam (100px) yerinde kalır, sayfa hemen altından (boşluksuz) başlar.
+   Üstte skor alanı, altta parmakla kayan sekmeler.
 ----------------------------- */
 
 #detailSheet {
     position: fixed;
-    inset: 0;
+    top: 100px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 30;
+
+    /* İçteki gölge reklamın üstüne taşmasın */
+    overflow: hidden;
     background: #f4f5f7;
     transform: translateY(100%);
     visibility: hidden;
@@ -1792,7 +1803,7 @@ body.ball-left .ac-kapa svg {
     display: flex;
     flex-direction: column;
     background: white;
-    box-shadow: 0 0 20px rgba(0,0,0,.12);
+    box-shadow: 0 0 1.25rem rgba(0,0,0,.12);
 }
 
 /* Skor alanı */
@@ -1801,33 +1812,16 @@ body.ball-left .ac-kapa svg {
     flex: none;
     height: 38%;
     min-height: 15em;
-    padding: 4.2em .5em 1em;
+    padding: .75rem .5em 1em;
     color: white;
     background:
         linear-gradient(180deg, rgba(8, 20, 40, .2), rgba(8, 20, 40, .65)),
         repeating-linear-gradient(90deg, #2f7d43 0 10%, #2a7340 10% 20%);
 }
 
-#detailCloseBtn {
-    position: absolute;
-    top: 68px;
-    z-index: 2;
-    height: 30px;
-    background: rgba(0,0,0,.4);
-    color: white;
-}
-
-#detailCloseBtn {
-    right: 12px;
-    width: 30px;
-    padding: 0;
-    border-radius: 50%;
-    font-size: 14px;
-}
-
 .sb-league {
     text-align: center;
-    font-size: 13px;
+    font-size: .8125rem;
     font-weight: 600;
     opacity: .85;
 }
@@ -1847,7 +1841,7 @@ body.ball-left .ac-kapa svg {
     gap: .45em;
     min-width: 0;
     text-align: center;
-    font-size: 15px;
+    font-size: .9375rem;
     font-weight: 700;
 }
 
@@ -1855,7 +1849,7 @@ body.ball-left .ac-kapa svg {
     font-size: .9em;
     width: 3.6em;
     height: 3.6em;
-    box-shadow: 0 0 0 3px rgba(255,255,255,.85);
+    box-shadow: 0 0 0 .1875rem rgba(255,255,255,.85);
 }
 
 .sb-team span {
@@ -1878,7 +1872,7 @@ body.ball-left .ac-kapa svg {
 
 #sbStatus {
     margin-top: .35em;
-    font-size: 13px;
+    font-size: .8125rem;
     font-weight: 800;
 }
 
@@ -1910,7 +1904,7 @@ body.ball-left .ac-kapa svg {
 
 #detailTabs {
     display: flex;
-    padding: 0 10px;
+    padding: 0 .625rem;
     border-bottom: 1px solid #e5e5e5;
 }
 
@@ -1920,9 +1914,9 @@ body.ball-left .ac-kapa svg {
     background: none;
     border-radius: 0;
     color: #666;
-    font-size: min(14px, 3.7vw);
-    padding: 12px 2px;
-    border-bottom: 3px solid transparent;
+    font-size: min(.875rem, 3.7vw);
+    padding: .75rem 2px;
+    border-bottom: .1875rem solid transparent;
 }
 
 #detailTabs button.active {
@@ -1952,7 +1946,7 @@ body.ball-left .ac-kapa svg {
     width: 20%;
     height: 100%;
     overflow-y: auto;
-    padding: 16px 18px 40px;
+    padding: 1rem 1.125rem 2.5rem;
     touch-action: pan-y;
 }
 
@@ -1961,7 +1955,7 @@ body.ball-left .ac-kapa svg {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: .9em;
-    font-size: 14px;
+    font-size: .875rem;
 }
 
 .lineup-head {
@@ -2019,7 +2013,7 @@ body.ball-left .ac-kapa svg {
 
 .tab-empty {
     margin: 0;
-    font-size: 14px;
+    font-size: .875rem;
     color: #777;
 }
 
@@ -2030,7 +2024,7 @@ body.ball-left .ac-kapa svg {
     align-items: center;
     padding: .55em 0;
     border-bottom: 1px solid #f0f1f4;
-    font-size: 14px;
+    font-size: .875rem;
 }
 
 .event .minute {
@@ -2066,7 +2060,7 @@ body.ball-left .ac-kapa svg {
 .half-line {
     margin: .7em 0 .2em;
     text-align: center;
-    font-size: 12px;
+    font-size: .75rem;
     font-weight: 800;
     color: #9aa0ab;
 }
@@ -2080,7 +2074,7 @@ body.ball-left .ac-kapa svg {
     display: flex;
     justify-content: space-between;
     margin-bottom: .35em;
-    font-size: 14px;
+    font-size: .875rem;
     font-weight: 700;
     color: #1d2340;
 }
@@ -2092,12 +2086,12 @@ body.ball-left .ac-kapa svg {
 
 .stat-bars {
     display: flex;
-    gap: 4px;
-    height: 7px;
+    gap: .25rem;
+    height: .4375rem;
 }
 
 .stat-bars div {
-    border-radius: 4px;
+    border-radius: .25rem;
     background: #e3e6ec;
 }
 
@@ -2107,7 +2101,7 @@ body.ball-left .ac-kapa svg {
 /* Oranlar sekmesi */
 .odds-title {
     margin: 0 0 .5em;
-    font-size: 13px;
+    font-size: .8125rem;
     font-weight: 800;
     color: #6b7080;
 }
@@ -2117,12 +2111,12 @@ body.ball-left .ac-kapa svg {
 }
 
 .odds-block .odds-row {
-    font-size: 15px;
+    font-size: .9375rem;
 }
 
 .odds-note {
     margin-top: 1.5em;
-    font-size: 12px;
+    font-size: .75rem;
     color: #9aa0ab;
 }
 
@@ -2139,8 +2133,8 @@ body.ball-left .ac-kapa svg {
 #anDayRow {
     display: flex;
     gap: .3em;
-    margin: 0 0 8px;
-    font-size: min(12px, 2.7vw);
+    margin: 0 0 .5rem;
+    font-size: min(.75rem, 2.7vw);
 }
 
 #anDayBox {
@@ -2178,7 +2172,7 @@ body.ball-left .ac-kapa svg {
 
 #anSearchBox {
     height: 2.1em;
-    margin: 0 0 10px;
+    margin: 0 0 .625rem;
 }
 
 /* Analiz: Ligler düğmesi (Canlı Skor'daki gibi); menü sağa yaslı açılır, uzunsa kayar */
@@ -2201,8 +2195,8 @@ body.ball-left .ac-kapa svg {
     padding: .75em .9em .7em;
     background: white;
     border: 1px solid transparent;
-    border-radius: 16px;
-    font-size: 14px;
+    border-radius: 1rem;
+    font-size: .875rem;
     color: #222;
     cursor: pointer;
 }
@@ -2438,7 +2432,7 @@ body.ball-left .ac-kapa svg {
  */
 #detailSheet .an-pane {
     display: none;
-    font-size: 13px;
+    font-size: .8125rem;
 }
 
 #detailSheet.an-mode .tab-page > * {
@@ -2772,67 +2766,6 @@ body.ball-left .ac-kapa svg {
     animation: adBar 30s ease var(--off) infinite both;
 }
 
-/*
- * İçerik sayfasının en üstündeki ince reklam: ekran genişliğinde, 50px boyunda
- * siyah zemin; sabit 320x50 reklam onun üstüne biner (köşeler düz).
- * Skor alanının yeşil zemini bu şeridin arkasından en üste kadar çıkar.
- */
-#detailAd {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 4;
-    height: 50px;
-}
-
-.ad-thin {
-    height: 50px;
-    font-size: 14px;
-}
-
-.ad-thin .ad-scene {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: .5em;
-    padding: 0 .9em;
-}
-
-.ad-3 { background: linear-gradient(120deg, #7f1d1d, #dc2626); }
-.ad-4 { --off: -15s; background: linear-gradient(120deg, #2e1065, #7c3aed); }
-
-.ad-thin .ad-btn {
-    align-self: center;
-    margin: 0 0 0 auto;
-}
-
-.ad-3 .ad-btn { color: #b91c1c; }
-.ad-4 .ad-btn { color: #6d28d9; }
-
-.ad-ring {
-    display: inline-block;
-    font-size: 1.2em;
-    animation: adRing 1.2s ease-in-out infinite;
-}
-
-.ad-live {
-    display: inline-flex;
-    align-items: center;
-    gap: .3em;
-    font-size: .72em;
-    font-weight: 800;
-}
-
-.ad-live::before {
-    content: '';
-    width: .55em;
-    height: .55em;
-    border-radius: 50%;
-    background: white;
-    animation: adPulse 1s ease-in-out infinite;
-}
-
 @keyframes adShow {
     0%      { opacity: 0; visibility: visible; }
     1%      { opacity: 1; }
@@ -2875,13 +2808,6 @@ body.ball-left .ac-kapa svg {
     to { transform: rotate(360deg); }
 }
 
-@keyframes adRing {
-    0%, 60%, 100% { transform: rotate(0); }
-    70% { transform: rotate(-18deg); }
-    80% { transform: rotate(18deg); }
-    90% { transform: rotate(-10deg); }
-}
-
 @keyframes adPulse {
     50% { transform: scale(1.06); }
 }
@@ -2897,6 +2823,7 @@ body.ball-left .ac-kapa svg {
         <button data-go="ai">Ai Kuponu</button>
         <button data-go="analysis">Analiz</button>
         <button data-go="odds">Oranlar</button>
+        <button id="menuSaved">Kayıtlı Maçlarım</button>
         <button id="menuClose">Kapat</button>
     </nav>
 
@@ -3075,12 +3002,7 @@ body.ball-left .ac-kapa svg {
 <div id="detailSheet">
 <div id="detailInner">
 
-    <!-- İnce reklam (en üstte) -->
-    <div id="detailAd"></div>
-
     <div id="scoreBoard">
-        <button id="detailCloseBtn" aria-label="Kapat">✕</button>
-
         <div class="sb-league" id="sbLeague"></div>
 
         <div class="sb-teams">
@@ -3176,50 +3098,6 @@ body.ball-left .ac-kapa svg {
                         <span class="ad-pop ad-chip" style="--d:10.9s">Ofsayt</span>
                     </div>
                     <div class="ad-btn">Analize git ›</div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</template>
-
-<!-- İNCE REKLAM ŞABLONU: içerik sayfasının en üstüne konur -->
-<template id="adThinTemplate">
-    <div class="ad-strip">
-        <div class="ad-box ad-thin">
-
-            <!-- 1. reklam: Gol bildirimi -->
-            <div class="ad ad-3">
-                <div class="ad-scene ad-s1">
-                    <span class="ad-ring">🔔</span>
-                    <span class="ad-mid">Gol anında bildirim</span>
-                </div>
-                <div class="ad-scene ad-s2">
-                    <span class="ad-live">CANLI 67'</span>
-                    <span class="ad-pop ad-mid" style="--d:5.4s">⚽ GOL!</span>
-                    <span class="ad-pop ad-chip" style="--d:6s">Arsenal <b>1 - 0</b></span>
-                </div>
-                <div class="ad-scene ad-s3">
-                    <span class="ad-small" style="margin:0">Hiçbir golü kaçırma</span>
-                    <span class="ad-btn">Maçı kaydet ›</span>
-                </div>
-            </div>
-
-            <!-- 2. reklam: Kuponlarım -->
-            <div class="ad ad-4">
-                <div class="ad-scene ad-s1">
-                    <span class="ad-ring">🎫</span>
-                    <span class="ad-mid">Kuponlarım</span>
-                    <span class="ad-tag">YENİ</span>
-                </div>
-                <div class="ad-scene ad-s2">
-                    <span class="ad-pop ad-chip" style="--d:5.4s">✓ MS 1</span>
-                    <span class="ad-pop ad-chip" style="--d:5.9s">✓ 2.5 Üst</span>
-                    <span class="ad-pop ad-chip" style="--d:6.4s">⏳ KG Var</span>
-                </div>
-                <div class="ad-scene ad-s3">
-                    <span class="ad-small" style="margin:0">Kuponunu kaydet, canlı takip et</span>
-                    <span class="ad-btn">Dene ›</span>
                 </div>
             </div>
 
@@ -3896,33 +3774,43 @@ function takeFast(target, onChange) {
     };
 }
 
+/* Hızlı kaynağın skorları (hizli) bu bağlantıda en az bir kez geldi mi? Gelmeden gol sayılmaz */
+let fastReady = false;
+
 function watchFast() {
 
     if (fastUnsubs.length || !rd)
         return;
 
+    /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
+    const takeScores = takeFast(fastScores, (id, value, initial) => {
+        const source = sourceOf(id);
+        source.fastAt = initial ? 0 : Date.now();
+        source.fast = value;
+    });
+
     fastUnsubs = [
-        /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
-        rt.onValue(rt.ref(rd, 'hizli'), takeFast(fastScores, (id, value, initial) => {
-            const source = sourceOf(id);
-            source.fastAt = initial ? 0 : Date.now();
-            source.fast = value;
-        }), () => {}),
+        rt.onValue(rt.ref(rd, 'hizli'), snap => {
+            takeScores(snap);
+            fastReady = true;
+        }, () => {
+            fastReady = true;
+            refreshViews();
+        }),
         rt.onValue(rt.ref(rd, 'hizli_u'), takeFast(fastWarns, id => {
             warnScores.delete(id);
         }), () => {})
     ];
 }
 
+/*
+ * Dinleme durur ama son bilinen skorlar ve uyarılar hafızada kalır: uygulama öne
+ * gelince yenisi gelene kadar eski (daha geride) skor gösterilmez.
+ */
 function unwatchFast() {
     fastUnsubs.forEach(off => off());
     fastUnsubs = [];
-    fastScores.clear();
-    fastWarns.clear();
-    scoreSources.clear();
-    warnScores.clear();
-    shownScores.clear();
-    quietUntil.clear();
+    fastReady = false;
 }
 
 /* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */
@@ -3937,16 +3825,27 @@ function readLeagues() {
 
 /*
  * GOL: canlı maçın skoru bir öncekinden büyükse gol olmuştur.
- * İlk açılışta ve uygulama öne geldiğinde skorlar yalnızca not edilir.
+ * İlk açılışta ve uygulama öne geldiğinde skorlar yalnızca not edilir: canlı günlerin
+ * RTDB satırları ve hızlı kaynak bu bağlantıda ilk kez gelene kadar, ve geldikleri
+ * ilk çizimde de gol sayılmaz (Firestore'daki eski skor ile yenisi arasındaki fark gol değildir).
  */
 const lastScores = new Map();   /* maç no → [ev, dep] */
 const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
 const goalQueue = [];
+let goalsReady = false;         /* bir önceki çizimde canlı veri tazeydi */
+
+function liveDataReady() {
+    return fastReady && Array.from(days.values()).every(state => !state.live || state.fresh);
+}
 
 function findGoals() {
 
     const seen = new Set();
     let scored = false;
+
+    const ready = liveDataReady();
+    const counting = ready && goalsReady;
+    goalsReady = ready;
 
     MATCHES.forEach(match => {
 
@@ -3957,7 +3856,7 @@ function findGoals() {
         const score = match.score || [0, 0];
         const before = lastScores.get(id);
 
-        if (before) {
+        if (before && counting) {
             ['home', 'away'].forEach((side, i) => {
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
@@ -4156,7 +4055,8 @@ function openDay(day) {
     if (!rd || days.has(day))
         return;
 
-    const state = { live: isLiveDay(day), loaded: false, off: [] };
+    /* fresh: canlı satırlar (RTDB) bu bağlantıda en az bir kez geldi */
+    const state = { live: isLiveDay(day), loaded: false, fresh: false, off: [] };
     days.set(day, state);
 
     const listRef = fs.doc(db, 'gun', day);
@@ -4184,6 +4084,12 @@ function openDay(day) {
 
     const takeLive = snap => {
         liveRows.set(day, new Map(Object.entries(snap.val() || {})));
+        state.fresh = true;
+        refreshViews();
+    };
+
+    const liveFailed = () => {
+        state.fresh = true;
         refreshViews();
     };
 
@@ -4203,7 +4109,7 @@ function openDay(day) {
 
     if (state.live) {
         state.off.push(fs.onSnapshot(listRef, takeRows, failed));
-        state.off.push(rt.onValue(liveQuery, takeLive, () => {}));
+        state.off.push(rt.onValue(liveQuery, takeLive, liveFailed));
     } else {
         fs.getDoc(listRef).then(takeRows, failed);
     }
@@ -4224,14 +4130,19 @@ function openDay(day) {
     }
 }
 
-/* Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır) */
-function closeDay(day) {
+/*
+ * Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır).
+ * keepLive: son canlı satırlar (RTDB) da kalır; uygulama arka plana geçerken kullanılır,
+ * öne gelince yenisi gelene kadar eski Firestore skoru gösterilmesin diye.
+ */
+function closeDay(day, keepLive) {
     const state = days.get(day);
     if (!state || !(state.live || state.off.length))
         return;
     state.off.forEach(off => off());
     days.delete(day);
-    liveRows.delete(day);
+    if (!keepLive)
+        liveRows.delete(day);
 }
 
 /* Seçili gün değişince: önceki seçili gün bugün değilse bırakılır */
@@ -4302,7 +4213,7 @@ document.addEventListener('visibilitychange', () => {
     /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
     if (document.hidden) {
         lastScores.clear();
-        Array.from(days.keys()).forEach(closeDay);
+        Array.from(days.keys()).forEach(day => closeDay(day, true));
         unwatchNames();
         unwatchFast();
         unwatchDetail();
@@ -4789,6 +4700,7 @@ function scoreRow(match, showDate, showLeague) {
         if (match.warnSide === side) {
             const dot = document.createElement('i');
             dot.className = 'warn-dot';
+            dot.style.animationDelay = pulsePhase();
             if (side === 'home')
                 el.insertBefore(dot, name);
             else
@@ -5149,7 +5061,17 @@ function renderLive() {
 function loadDot() {
     const dot = document.createElement('i');
     dot.className = 'load-dot';
+    dot.style.animationDelay = pulsePhase();
     return dot;
+}
+
+/*
+ * Kırmızı noktalar liste her yenilendiğinde yeniden çizilir. Animasyon her seferinde
+ * baştan başlamasın diye ortak saate göre geriye alınır: nokta yeniden çizilse de
+ * yanıp sönme kaldığı yerden sürer (1,2 sn döngü).
+ */
+function pulsePhase() {
+    return -(performance.now() % 1200) + 'ms';
 }
 
 /* Menünün dışına dokununca menü kapanır (dokunulan yer çalışmaz). */
@@ -6566,19 +6488,10 @@ function showTab(name) {
 }
 
 /*
- * Mavi top: açık bir şey varsa onu kapatır (geri). Yoksa ana sayfa aşağı
- * kaydırılmışsa önce yukarı çıkar; sayfa zaten yukarıdaysa Kayıtlı Maçlarım açılır.
+ * Mavi top yalnızca maç sayfası ya da Kayıtlı Maçlarım / Kuponlarım açıkken
+ * görünür ve en üstte açık olanı kapatır (geri), ok aşağı bakar.
+ * Durum, geçmiş (history) beklenmeden o anki ekrandan okunur.
  */
-/*
- * Mavi topun durumu, geçmiş (history) beklenmeden o anki ekrandan okunur;
- * böylece sekme kayarken ya da sayfa yukarı kayarken de hemen çalışır.
- *   'close' : üstte açık bir şey var (maç sayfası, pencere, takvim...) → kapatır, ok aşağı
- *   'up'    : sayfa aşağıda → başa çıkar, ok yukarı
- *   'home'  : AI Kuponu / Analiz / Oranlar başında → Canlı Skor'a döner, ok sola
- *   'saved' : Canlı Skor başında → Kayıtlı Maçlarım'ı açar, ok yukarı
- */
-let ballScrolling = false;   /* top az önce yukarı kaydırdı (kayma bitmese de başta sayılır) */
-
 function ballAction() {
 
     if (confirmBox.classList.contains('open') ||
@@ -6589,16 +6502,7 @@ function ballAction() {
         document.body.dataset.tab === 'empty')
         return 'close';
 
-    /*
-     * Sekme değişince sayfa sekme düğmelerinin hizasına gelir; orası da
-     * "sekmenin başı" sayılır, ilk basışta doğrudan Canlı Skor'a dönülür.
-     */
-    const top = homeMode !== 'live' ? Math.max(0, homeTrack.offsetTop - homeMain.offsetTop - 12) : 0;
-
-    if (homeMain.scrollTop > top + 4 && !ballScrolling)
-        return 'up';
-
-    return homeMode !== 'live' ? 'home' : 'saved';
+    return null;
 }
 
 function syncBall() {
@@ -6606,7 +6510,6 @@ function syncBall() {
     try {
         const action = ballAction();
         document.body.classList.toggle('has-layer', action === 'close');
-        document.body.classList.toggle('ball-left', action === 'home');
     } catch (error) {}
 }
 
@@ -6625,23 +6528,6 @@ acKapa.addEventListener('click', () => {
                  (emptyLayer.classList.contains('raised') || !detailSheet.classList.contains('open')))
             showTab('home');
         else closeDetail();
-
-    } else if (action === 'up') {
-
-        ballScrolling = true;
-        homeMain.scrollTo({ top: 0, behavior: 'smooth' });
-
-    } else if (action === 'home') {
-
-        ballScrolling = false;
-        homeMain.scrollTop = 0;
-        setHomeMode('live');
-
-    } else {
-
-        ballScrolling = false;
-        setMyPageInstant('saved');
-        showTab('empty');
     }
 
     syncBall();
@@ -6695,16 +6581,6 @@ document.getElementById('couponBall').addEventListener('click', () => {
 const HOME_ORDER = ['live', 'ai', 'analysis', 'odds'];
 
 const homeMain = document.getElementById('homeMain');
-/* Kullanıcı kendisi kaydırırsa "yukarı kayıyor" bilgisi silinir */
-['touchstart', 'wheel'].forEach(type => {
-    homeMain.addEventListener(type, () => { ballScrolling = false; }, { passive: true });
-});
-
-homeMain.addEventListener('scroll', () => {
-    if (homeMain.scrollTop <= 4)
-        ballScrolling = false;
-    syncBall();
-}, { passive: true });
 const homeTrack = document.getElementById('homeTrack');
 const homeModeBox = document.getElementById('homeModeBox');
 
@@ -6735,8 +6611,6 @@ function setHomeModeView(mode) {
         if (!homeSwipe)
             homeTrack.classList.remove('both');
     }, 320);
-
-    syncBall();
 }
 
 /*
@@ -6897,6 +6771,13 @@ homeMenu.querySelectorAll('button[data-go]').forEach(button => {
         closeHomeMenu();
         setHomeMode(button.dataset.go);
     });
+});
+
+/* Kayıtlı Maçlarım (mavi top ana sayfada gizli olduğu için buradan açılır) */
+document.getElementById('menuSaved').addEventListener('click', () => {
+    closeHomeMenu();
+    setMyPageInstant('saved');
+    showTab('empty');
 });
 
 document.getElementById('menuClose').addEventListener('click', closeHomeMenu);
@@ -7303,7 +7184,6 @@ function closeDetail() {
     layerClosed('detail');
 }
 
-document.getElementById('detailCloseBtn').addEventListener('click', closeDetail);
 
 /* Sekmeler */
 function setDetailTab(name, keepScroll) {
@@ -7466,10 +7346,6 @@ if ('serviceWorker' in navigator) {
 /* Reklamı ana sayfanın üst resminin üzerine koy */
 document.getElementById('homeBanner').appendChild(
     document.getElementById('adTemplate').content.cloneNode(true));
-
-/* İçerik sayfasının (ve analiz içeriğinin) en üstündeki ince reklam */
-document.getElementById('detailAd').appendChild(
-    document.getElementById('adThinTemplate').content.cloneNode(true));
 
 </script>
 </body>
