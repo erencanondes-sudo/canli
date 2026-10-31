@@ -4057,6 +4057,20 @@ function goalSound() {
 }
 
 /*
+ * Büyük dokümanlar (gün listesi, Özet) gzip ile sıkıştırılmış gelir (z, ikili); tarayıcının
+ * kendi açıcısıyla açılır. Eski dokümanlarda açık metin (m) olabilir.
+ */
+async function docJSON(data) {
+    if (!data)
+        return {};
+    if (data.z) {
+        const stream = new Blob([data.z.toUint8Array()]).stream().pipeThrough(new DecompressionStream('gzip'));
+        return JSON.parse(await new Response(stream).text());
+    }
+    return data.m ? JSON.parse(data.m) : {};
+}
+
+/*
  * GÜNLER
  * Liste Firestore gun/{gün} dokümanından gelir (sunucu en fazla 10 dk'da bir yazar).
  * Bugün ve dün: doküman canlı dinlenir, ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan
@@ -4123,11 +4137,18 @@ function openDay(day) {
     const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
     const mode = summaryMode(day);
 
+    /* Açma beklerken daha yeni bir doküman gelirse eskisi yazılmaz */
+    let rowsTurn = 0;
+
     const takeRows = snap => {
-        const data = snap.exists() ? snap.data() : null;
-        dayRows.set(day, new Map(Object.entries(data && data.m ? JSON.parse(data.m) : {})));
-        state.loaded = true;
-        refreshViews();
+        const turn = ++rowsTurn;
+        docJSON(snap.exists() ? snap.data() : null).then(rows => {
+            if (turn !== rowsTurn)
+                return;
+            dayRows.set(day, new Map(Object.entries(rows)));
+            state.loaded = true;
+            refreshViews();
+        }, failed);
     };
 
     const failed = () => {
@@ -4147,9 +4168,9 @@ function openDay(day) {
         state.off.push(rt.onChildAdded(log, snap => applyEventLine(day, snap.key, snap.val()), () => {}));
     };
 
-    const takeEvents = snap => {
+    const takeEvents = async snap => {
         const data = snap.exists() ? snap.data() : null;
-        dayEvents.set(day, data && data.m ? JSON.parse(data.m) : {});
+        dayEvents.set(day, await docJSON(data));
         eventKeys.set(day, data && data.t || '');
         refreshViews();
     };
@@ -4165,8 +4186,7 @@ function openDay(day) {
         if (mode === 'live')
             listenLog();
     } else if (mode) {
-        fs.getDoc(fs.doc(db, 'ozet', day)).then(snap => {
-            takeEvents(snap);
+        fs.getDoc(fs.doc(db, 'ozet', day)).then(takeEvents).then(() => {
             if (mode === 'live')
                 listenLog();
         }, () => {

@@ -209,7 +209,7 @@ async function ligYaz() {
  * Günün canlı skor satırları.
  * RTDB gun/{gün}: her maç ayrı satır, yalnızca değişen yazılır. Canlı maçlar ve bittikten sonra
  * 21 dk (b1) "c" ile başlar; site yalnızca bunları dinler. Sonra "c" kalkar (b2).
- * Firestore gun/{gün}: aynı satırlar ("c" olmadan) tek dokümanda, en fazla 10 dk'da bir.
+ * Firestore gun/{gün}: aynı satırlar ("c" olmadan) tek dokümanda, gzip ile sıkıştırılmış (z), en fazla 10 dk'da bir.
  */
 async function gunYaz(gun) {
     const rtdb = await db.dalHali('gun/' + gun);
@@ -232,7 +232,7 @@ async function gunYaz(gun) {
     }
 
     await db.dalYaz('gun/' + gun, icerik);
-    await db.yaz('gun/' + gun, { m: JSON.stringify(duz) }, A.GUN_ARALIK);
+    await db.yazSikistir('gun/' + gun, JSON.stringify(duz), {}, A.GUN_ARALIK);
 }
 
 /*
@@ -241,7 +241,7 @@ async function gunYaz(gun) {
  *     (sıra: maçın kaçıncı olayı, 0'dan; aynı satır iki kez gelse de sonuç değişmez).
  *     API eski bir olayı değiştirir ya da silerse maçın tamamı bir satır: [maç no, [olaylar]].
  *     Anahtar zamana göre sıralı ("1793...123-00"). 2 gün sonra silinir.
- *   Firestore ozet/{gün}: bütün olaylar (m) ve dahil olan son günlük anahtarı (t). Değişince yazılır.
+ *   Firestore ozet/{gün}: bütün olaylar (z, gzip ile sıkıştırılmış) ve dahil olan son günlük anahtarı (t). Değişince yazılır.
  * Önce RTDB, sonra Firestore yazılır: Firestore aksarsa eksik kalan günlükten gelir.
  * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı Firestore'dan korunur.
  */
@@ -294,7 +294,7 @@ async function ozetYaz(gun) {
         ozetHali.set(gun, { m: ozet, t: anahtarlar[anahtarlar.length - 1].split('/').pop() });
     }
 
-    await db.yaz('ozet/' + gun, { m: JSON.stringify(ozet), t: ozetHali.get(gun).t });
+    await db.yazSikistir('ozet/' + gun, JSON.stringify(ozet), { t: ozetHali.get(gun).t });
 }
 
 async function durumYaz() {
