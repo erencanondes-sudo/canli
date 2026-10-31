@@ -1138,6 +1138,17 @@ button {
     color: #777;
 }
 
+/* "Maçlar yükleniyor…" yazısının üstünde, gol bekleniyor noktasıyla aynı yanıp sönen kırmızı nokta */
+.load-dot {
+    display: block;
+    width: .7em;
+    height: .7em;
+    margin: 0 auto .9em;
+    border-radius: 50%;
+    background: #e53935;
+    animation: warnPulse 1.2s ease-in-out infinite;
+}
+
 /* -----------------------------
    MAÇ KARTI
    Üstte hafta ve saat, ortada iki takım ve skor,
@@ -3727,6 +3738,16 @@ const NAMES_FULL_AGE = 25 * 86400;
 let namesVersion = null;
 let namesSaved = {};
 
+/* Liste, takım adları hazır olmadan çizilmez (bağlantı sorununda en fazla 3 sn beklenir) */
+let namesReady = false;
+
+function setNamesReady() {
+    if (namesReady)
+        return;
+    namesReady = true;
+    refreshViews();
+}
+
 (() => {
     const saved = readJSON(NAMES_KEY, null);
     if (!saved || !saved.t)
@@ -3743,6 +3764,7 @@ function takeNames(names, version) {
     });
     namesVersion = version;
     writeJSON(NAMES_KEY, { s: version, t: namesSaved });
+    namesReady = true;
     refreshViews();
 }
 
@@ -3751,10 +3773,14 @@ function watchNames() {
     if (namesUnsub || !rd)
         return;
 
+    setTimeout(setNamesReady, 3000);
+
     namesUnsub = rt.onValue(rt.ref(rd, 'takim_surum'), snap => {
         const version = snap.val();
-        if (version === null || version === namesVersion)
+        if (version === null || version === namesVersion) {
+            setNamesReady();
             return;
+        }
 
         if (namesVersion && version - namesVersion < NAMES_FULL_AGE) {
             const added = rt.query(rt.ref(rd, 'takim_ek'), rt.orderByKey(), rt.startAfter(String(namesVersion)));
@@ -3762,15 +3788,15 @@ function watchNames() {
                 const names = {};
                 list.forEach(part => { Object.assign(names, part.val()); });
                 takeNames(names, version);
-            }, () => {});
+            }, setNamesReady);
             return;
         }
 
         rt.get(rt.ref(rd, 'takim')).then(list => {
             namesSaved = {};
             takeNames(list.val() || {}, version);
-        }, () => {});
-    }, () => {});
+        }, setNamesReady);
+    }, setNamesReady);
 }
 
 function unwatchNames() {
@@ -4221,10 +4247,10 @@ function watchDay(day) {
     openDay(day);
 }
 
-/* Seçili gün yükleniyor mu? */
+/* Seçili gün yükleniyor mu? (takım adları da hazır olmalı) */
 function dayLoading() {
     const state = days.get(selectedDay);
-    return !dataError && (!state || !state.loaded);
+    return !dataError && (!state || !state.loaded || !namesReady);
 }
 
 /* Maç sayfası açıkken istatistik ve kadro */
@@ -5048,8 +5074,8 @@ function renderLive() {
 
     let any = false;
 
-    /* Zamana göre: ligler ayrılmaz, tek kutuda saat sırasıyla */
-    const groups = timeOrder ? [null] : LEAGUES;
+    /* Zamana göre: ligler ayrılmaz, tek kutuda saat sırasıyla. Takım adları hazır değilse hiçbiri çizilmez */
+    const groups = !namesReady && !dataError ? [] : timeOrder ? [null] : LEAGUES;
 
     groups.forEach(league => {
 
@@ -5114,8 +5140,16 @@ function renderLive() {
             waiting ? 'Maçlar yükleniyor…' :
             searching ? '"' + searchInput.value.trim() + '" için maç bulunamadı.' :
             liveOnly ? 'Şu an oynanan maç yok.' : 'Bu gün maç yok.';
+        if (waiting && !dataError)
+            empty.prepend(loadDot());
         box.appendChild(empty);
     }
+}
+
+function loadDot() {
+    const dot = document.createElement('i');
+    dot.className = 'load-dot';
+    return dot;
 }
 
 /* Menünün dışına dokununca menü kapanır (dokunulan yer çalışmaz). */
