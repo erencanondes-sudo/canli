@@ -3474,7 +3474,8 @@ function rowToMatch(day, no, text, events) {
         minute: playing ? Number(playing[1]) : null,
         extra: playing && playing[2] ? Number(playing[2]) : null,
         score: hg === undefined || hg === '' ? null : [Number(hg), Number(ag)],
-        events: status === 'upcoming' ? null : rowEvents(events || [])
+        /* Olaylar bilinmiyorsa (eski günler, maç dokümanı gelmeden) null */
+        events: status === 'upcoming' || !events ? null : rowEvents(events)
     };
 }
 
@@ -3511,7 +3512,8 @@ const MATCH_BY_ID = new Map();
 
 const dayRows = new Map();       /* gün → Map(maç no → satır) (Firestore) */
 const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
-const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet dokümanı) */
+const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet: Firestore + RTDB günlüğü) */
+const eventKeys = new Map();     /* gün → işlenen son günlük anahtarı */
 const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
 function rebuildMatches() {
@@ -3520,13 +3522,16 @@ function rebuildMatches() {
     MATCH_BY_ID.clear();
 
     dayRows.forEach((stored, day) => {
-        const events = dayEvents.get(day) || {};
+        const events = dayEvents.get(day);
         const rows = new Map(stored);
         (liveRows.get(day) || new Map()).forEach((text, no) => rows.set(no, text));
         rows.forEach((text, no) => {
-            const match = rowToMatch(day, no, text, events[no]);
+            const match = rowToMatch(day, no, text, events ? events[no] || [] : null);
             const detail = matchDetails.get(match.id);
             if (detail) Object.assign(match, detail);
+            /* Özet okunmayan günlerde olaylar maç dokümanından */
+            if (!events && detail && detail.olaylar && match.status !== 'upcoming')
+                match.events = rowEvents(detail.olaylar);
             if (match.status === 'live')
                 applyFast(match);
             MATCHES.push(match);
@@ -4056,14 +4061,54 @@ function goalSound() {
  * Liste Firestore gun/{gün} dokümanından gelir (sunucu en fazla 10 dk'da bir yazar).
  * Bugün ve dün: doküman canlı dinlenir, ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan
  * satırlar (canlı ve 21 dk içinde biten maçlar) dinlenir; bunlar Firestore'dakinden önceliklidir.
- * Diğer günler bir kez okunur. Olaylar (Özet) Firestore ozet/{gün}'den; yarın ve sonrası için okunmaz.
+ * Diğer günler bir kez okunur.
+ *
+ * ÖZET (olaylar), summaryMode'a göre:
+ *   'live': Firestore ozet/{gün} bir kez okunur, sonra RTDB olay/{gün} günlüğünden yalnızca
+ *           dokümana girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; gece penceresinde dün ve yarın.
+ *   'once': Firestore ozet/{gün} bir kez okunur (dün, gece penceresi dışında).
+ *   null  : okunmaz; maç açılınca olaylar maç dokümanından gelir (eski günler, yarın).
+ * Uygulama öne gelince Özet yeniden okunmaz; günlük kalınan yerden sürer.
  */
 const days = new Map();   /* gün → { live, loaded, off: [kapatma fonksiyonları] } */
 
+function dayShift(n) {
+    const day = new Date();
+    day.setDate(day.getDate() + n);
+    return dayKey(day);
+}
+
 function isLiveDay(day) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return day === TODAY || day === dayKey(yesterday);
+    return day === TODAY || day === dayShift(-1);
+}
+
+/* Gece penceresi: 23:55–00:00 yarın, 00:00–02:30 dün de canlı */
+function summaryMode(day) {
+    const now = new Date();
+    const minute = now.getHours() * 60 + now.getMinutes();
+    if (day === TODAY) return 'live';
+    if (day === dayShift(-1)) return minute < 150 ? 'live' : 'once';
+    if (day === dayShift(1) && minute >= 1435) return 'live';
+    return null;
+}
+
+/* Günlük satırı: [maç no, sıra, olay...] yeni olay; [maç no, [olaylar]] maçın tamamı */
+function applyEventLine(day, key, text) {
+    try {
+        const line = JSON.parse(text);
+        const no = String(line[0]);
+        const events = dayEvents.get(day) || {};
+        if (Array.isArray(line[1])) {
+            events[no] = line[1];
+        } else {
+            const list = events[no] || [];
+            list[line[1]] = line.slice(2);
+            events[no] = list;
+        }
+        dayEvents.set(day, events);
+    } catch (error) {}
+    eventKeys.set(day, key);
+    refreshViews();
 }
 
 function openDay(day) {
@@ -4076,8 +4121,7 @@ function openDay(day) {
 
     const listRef = fs.doc(db, 'gun', day);
     const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
-    const summaryRef = fs.doc(db, 'ozet', day);
-    const needSummary = day <= TODAY;
+    const mode = summaryMode(day);
 
     const takeRows = snap => {
         const data = snap.exists() ? snap.data() : null;
@@ -4096,28 +4140,48 @@ function openDay(day) {
         refreshViews();
     };
 
+    const listenLog = () => {
+        if (days.get(day) !== state)
+            return;
+        const log = rt.query(rt.ref(rd, 'olay/' + day), rt.orderByKey(), rt.startAfter(eventKeys.get(day) || ''));
+        state.off.push(rt.onChildAdded(log, snap => applyEventLine(day, snap.key, snap.val()), () => {}));
+    };
+
     const takeEvents = snap => {
         const data = snap.exists() ? snap.data() : null;
         dayEvents.set(day, data && data.m ? JSON.parse(data.m) : {});
+        eventKeys.set(day, data && data.t || '');
         refreshViews();
     };
 
     if (state.live) {
         state.off.push(fs.onSnapshot(listRef, takeRows, failed));
         state.off.push(rt.onValue(liveQuery, takeLive, () => {}));
-        if (needSummary)
-            state.off.push(fs.onSnapshot(summaryRef, takeEvents, () => {}));
     } else {
         fs.getDoc(listRef).then(takeRows, failed);
-        if (needSummary)
-            fs.getDoc(summaryRef).then(takeEvents, () => {});
+    }
+
+    if (mode && dayEvents.has(day)) {
+        if (mode === 'live')
+            listenLog();
+    } else if (mode) {
+        fs.getDoc(fs.doc(db, 'ozet', day)).then(snap => {
+            takeEvents(snap);
+            if (mode === 'live')
+                listenLog();
+        }, () => {
+            if (mode !== 'live')
+                return;
+            dayEvents.set(day, {});
+            listenLog();
+        });
     }
 }
 
-/* Dinlenen günü bırakır (bir kez okunan günler hafızada kalır) */
+/* Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır) */
 function closeDay(day) {
     const state = days.get(day);
-    if (!state || !state.live)
+    if (!state || !(state.live || state.off.length))
         return;
     state.off.forEach(off => off());
     days.delete(day);
@@ -4148,18 +4212,18 @@ function watchDetail(match) {
 
     unwatchDetail();
 
-    if (!db || !leagueHasDetail(match.league.id))
+    /* Biten maçın dokümanında olaylar da var (istatistik vermeyen liglerde de) */
+    if (!db || !(leagueHasDetail(match.league.id) || match.status === 'done'))
         return;
 
     const id = match.id;
 
     detailUnsub = fs.onSnapshot(fs.doc(db, 'maclar', id), snap => {
-        if (!snap.exists())
-            return;
-        const data = snap.data();
+        const data = snap.exists() ? snap.data() : {};
         matchDetails.set(id, {
             stats: data.istatistik ? JSON.parse(data.istatistik) : null,
             lineup: data.kadro ? JSON.parse(data.kadro) : null,
+            olaylar: data.olaylar ? JSON.parse(data.olaylar) : null,
             updated: data.guncellendi ? data.guncellendi.toDate() : null
         });
         refreshViews();
@@ -6839,8 +6903,10 @@ function renderSummary(match) {
     if (!match.events) {
         const p = document.createElement('p');
         p.className = 'tab-empty';
-        p.textContent = 'Maç ' + formatDate(match.date) + ' ' + formatTime(match.date) +
-            ' saatinde başlayacak.';
+        p.textContent =
+            match.status === 'upcoming' ? 'Maç ' + formatDate(match.date) + ' ' + formatTime(match.date) + ' saatinde başlayacak.' :
+            detailId === match.id && !matchDetails.has(match.id) ? 'Yükleniyor…' :
+            'Özet bilgisi düzenlenecek.';
         box.appendChild(p);
         return;
     }
@@ -6933,15 +6999,13 @@ function renderStats(match) {
     /* Sıra: sunucu/VERITABANI.md → "İstatistik sırası" */
     const [h, a] = match.stats.map(list => list.map(value => value || 0));
 
-    const cards = side => (match.events || []).filter(e => e.side === side && e.type !== 'goal').length;
-
     [
         ['Topla oynama', h[9] + '%', a[9] + '%', h[9], a[9]],
         ['Şut', h[2], a[2]],
         ['İsabetli şut', h[0], a[0]],
         ['Korner', h[7], a[7]],
         ['Faul', h[6], a[6]],
-        ['Kart', cards('home'), cards('away')]
+        ['Kart', h[10] + h[11], a[10] + a[11]]
     ].forEach(([label, h, a, hv, av]) => {
 
         hv = hv === undefined ? h : hv;

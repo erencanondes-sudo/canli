@@ -110,8 +110,11 @@ function satir(f) {
     return alan.join(',');
 }
 
-/* Maç dokümanı: istatistik ve kadro (metin olarak, iç içe dizi Firestore'da yazılamıyor) */
-function macDokumani(f) {
+/*
+ * Maç dokümanı: istatistik ve kadro (metin olarak, iç içe dizi Firestore'da yazılamıyor).
+ * olay verilirse (maç bitince) olaylar da yazılır; doküman tam olur.
+ */
+function macDokumani(f, olay) {
 
     const taraflar = [f.teams.home.id, f.teams.away.id];
     const taraf = (liste, id) => (liste || []).find(x => x.team.id === id);
@@ -135,11 +138,13 @@ function macDokumani(f) {
         ];
     });
 
-    return {
+    const dokuman = {
         durum: f.fixture.status.short,
         istatistik: istatistik.some(Boolean) ? JSON.stringify(istatistik) : null,
         kadro: kadro.some(Boolean) ? JSON.stringify(kadro) : null
     };
+    if (olay) dokuman.olaylar = JSON.stringify(olay.map(kisaOlay));
+    return dokuman;
 }
 
 module.exports = { olaylar, kisaOlay, satir, macDokumani, ad };

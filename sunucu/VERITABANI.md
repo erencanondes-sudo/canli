@@ -19,8 +19,9 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır.
 | RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
 | RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms). Yalnızca programın çalıştığını kontrol etmek için | Hızlı kaynak | Yalnızca sen | Dakikada bir | ~20 bayt |
 | Firestore `gun/{gün}` | Günün bütün maçları: `m` = `{ "maç no": "satır" }` metni (`c` olmadan). Arşiv, silinmez | Sunucu | Canlı Skor | En fazla 10 dk'da bir, değişince | 400 maç ~15 KB |
-| Firestore `ozet/{gün}` | Günün oynanan ve biten maçlarının olayları | Sunucu | Canlı Skor, maç sayfası (Özet) | Olay olunca, en fazla 15 sn'de bir | 150 maç ~60–80 KB |
-| Firestore `maclar/{maç no}` | İstatistik ve kadro | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir | ~1,5 KB |
+| RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Firestore'a girmemiş satırlar) | Olay olunca | satır ~50 bayt |
+| Firestore `ozet/{gün}` | Dün ve bugünün oynanan ve biten maçlarının olayları (`m`) ve dahil olan son günlük anahtarı (`t`). Arşiv, silinmez | Sunucu | Site (bir kez) | Olay olunca | 150 maç ~60–80 KB |
+| Firestore `maclar/{maç no}` | İstatistik ve kadro; maç bitince olaylar da (`olaylar`, istatistik vermeyen liglerde yalnızca olaylar) | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir; maç bitince ve 2 saat sonra | ~1,5–2 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
@@ -32,8 +33,11 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 |---|---|---|---|
 | Liste (Firestore `gun`) | Canlı dinlenir (en fazla 10 dk'da bir değişir) | Bir kez | Bir kez |
 | Canlı satırlar (RTDB `gun`, `c` ile başlayanlar) | Canlı dinlenir; Firestore'dakinden önceliklidir | Okunmaz | Okunmaz |
-| Özet (Firestore `ozet`) | Listeden sonra arkada, sonra canlı dinlenir | Bir kez | Okunmaz |
+| Özet | Bugün: Firestore `ozet` bir kez, sonra RTDB `olay` günlüğünden `t`'den sonrası canlı. Dün: Firestore `ozet` bir kez | Okunmaz (maç açılınca olaylar `maclar/{no}`'dan) | Okunmaz |
 
+- Gece penceresi: 23:55–00:00 yarının, 00:00–02:30 dünün olay günlüğü de canlı dinlenir (gece yarısını geçen maçlar).
+- Uygulama öne gelince Özet yeniden okunmaz, günlük kalınan yerden sürer.
+- İstatistikteki "Kart" sayısı `maclar/{no}` istatistiğindeki sarı + kırmızı karttan.
 - Bugün her zaman dinlenir. Dün yalnızca seçiliyken dinlenir (gece yarısını geçen maçlar ve maç sonu düzeltmeleri için).
 - Takım adları telefonda saklanır; yalnızca `takim_surum` dinlenir. Değişince yalnızca son bakılandan sonraki `takim_ek` kayıtları iner; telefonda sözlük yoksa ya da 25 günden eskiyse `takim`'ın tamamı iner.
 - Maç açılınca `maclar/{no}` dinlenir, maç kapanınca bırakılır.

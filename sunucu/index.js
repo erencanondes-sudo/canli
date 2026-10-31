@@ -5,7 +5,7 @@
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
  *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), gün dokümanı (Firestore, en fazla 10 dk'da bir),
- *      Özet (Firestore, en fazla 15 sn'de bir)
+ *      Özet (RTDB olay günlüğü + Firestore, değişince)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
  */
 
@@ -172,8 +172,10 @@ async function detayCek(nolar) {
             if (OYNANMAYACAK.has(d)) k.sonHal = true;
             if (f.lineups && f.lineups.length) k.kadro = true;
 
-            if (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length))) {
-                await db.yaz('maclar/' + f.fixture.id, B.macDokumani(f));
+            /* Maç bitince doküman olaylarla birlikte tam yazılır (istatistik vermeyen liglerde de) */
+            const bitti = BITTI.has(d);
+            if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
+                await db.yaz('maclar/' + f.fixture.id, B.macDokumani(f, bitti ? (k.olaylar || []) : null));
             }
         }
     }
@@ -234,19 +236,36 @@ async function gunYaz(gun) {
 }
 
 /*
- * Firestore: günün Özet dokümanı (oynanan ve biten maçların bütün olayları), en fazla 15 sn'de bir.
- * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı korunur.
+ * ÖZET (oynanan ve biten maçların olayları), dün ve bugün için:
+ *   RTDB olay/{gün}/{anahtar}: olay günlüğü. Yeni olay bir satır: [maç no, sıra, dakika, uzatma, taraf, tür, ayrıntı, oyuncu, ikinci oyuncu]
+ *     (sıra: maçın kaçıncı olayı, 0'dan; aynı satır iki kez gelse de sonuç değişmez).
+ *     API eski bir olayı değiştirir ya da silerse maçın tamamı bir satır: [maç no, [olaylar]].
+ *     Anahtar zamana göre sıralı ("1793...123-00"). 2 gün sonra silinir.
+ *   Firestore ozet/{gün}: bütün olaylar (m) ve dahil olan son günlük anahtarı (t). Değişince yazılır.
+ * Önce RTDB, sonra Firestore yazılır: Firestore aksarsa eksik kalan günlükten gelir.
+ * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı Firestore'dan korunur.
  */
-const ozetHali = new Map();   /* gün → sunucu açıldığında dokümanda olan Özet */
+const ozetHali = new Map();   /* gün → { m: { maç no: olaylar }, t } (günlüğe son yazılan) */
+let anahtarSon = '';
+
+function yeniAnahtar() {
+    let a = String(Date.now()) + '-00';
+    if (a <= anahtarSon) {
+        const [ms, sira] = anahtarSon.split('-');
+        a = ms + '-' + String(Number(sira) + 1).padStart(2, '0');
+    }
+    return (anahtarSon = a);
+}
 
 async function ozetYaz(gun) {
     if (!ozetHali.has(gun)) {
         const eski = await db.oku('ozet/' + gun);
-        ozetHali.set(gun, eski && eski.m ? JSON.parse(eski.m) : {});
+        ozetHali.set(gun, { m: eski && eski.m ? JSON.parse(eski.m) : {}, t: eski && eski.t || '' });
     }
+    const hal = ozetHali.get(gun);
 
     const ozet = {};
-    for (const [no, olay] of Object.entries(ozetHali.get(gun))) {
+    for (const [no, olay] of Object.entries(hal.m)) {
         const k = maclar.get(Number(no));
         if (k && k.gun === gun && k.olaylar === null) ozet[no] = olay;
     }
@@ -256,7 +275,26 @@ async function ozetYaz(gun) {
         if (CANLI.has(d) || BITTI.has(d)) ozet[no] = k.olaylar.map(B.kisaOlay);
     }
 
-    await db.yaz('ozet/' + gun, { m: JSON.stringify(ozet) }, A.OZET_ARALIK);
+    /* Günlüğe yazılacaklar: önceki listenin devamıysa yalnızca yeniler, değilse maçın tamamı */
+    const satirlar = {};
+    for (const [no, yeni] of Object.entries(ozet)) {
+        const once = hal.m[no] || [];
+        const metin = olay => JSON.stringify(olay);
+        const devam = yeni.length >= once.length && once.every((o, i) => metin(o) === metin(yeni[i]));
+        if (devam) yeni.slice(once.length).forEach((o, i) => {
+            satirlar['olay/' + gun + '/' + yeniAnahtar()] = JSON.stringify([Number(no), once.length + i, ...o]);
+        });
+        else satirlar['olay/' + gun + '/' + yeniAnahtar()] = JSON.stringify([Number(no), yeni]);
+    }
+
+    /* Günlük yazılınca hal güncellenir (Firestore aksarsa günlüğe aynı satırlar tekrar yazılmasın) */
+    const anahtarlar = Object.keys(satirlar);
+    if (anahtarlar.length) {
+        await db.cokluYaz(satirlar);
+        ozetHali.set(gun, { m: ozet, t: anahtarlar[anahtarlar.length - 1].split('/').pop() });
+    }
+
+    await db.yaz('ozet/' + gun, { m: JSON.stringify(ozet), t: ozetHali.get(gun).t });
 }
 
 async function durumYaz() {
@@ -292,6 +330,7 @@ async function tur() {
             await ligYaz();
             await db.eskiSil('takim_ek', simdi() - A.TAKIM_EK_SURE);
             await db.eskiSil('gun', gunAdi(basla - A.RTDB_GUN_SAKLA * 864e5));
+            await db.eskiSil('olay', gunAdi(basla - A.RTDB_GUN_SAKLA * 864e5));
             zaman.kapsam = basla;
         }
 

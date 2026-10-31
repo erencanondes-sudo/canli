@@ -8,6 +8,11 @@
         ".indexOn": ".value"
       }
     },
+    "olay": {
+      "$gun": {
+        ".read": true
+      }
+    },
     "takim": {
       ".read": true
     },
