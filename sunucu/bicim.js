@@ -111,7 +111,7 @@ function satir(f) {
 }
 
 /*
- * Maç dokümanı: istatistik ve kadro (metin olarak, iç içe dizi Firestore'da yazılamıyor).
+ * Maç dokümanının içeriği: { durum, istatistik, kadro, olaylar } (tamamı gzip ile sıkıştırılıp yazılır).
  * olay verilirse (maç bitince) olaylar da yazılır; doküman tam olur.
  */
 function macDokumani(f, olay) {
@@ -140,10 +140,10 @@ function macDokumani(f, olay) {
 
     const dokuman = {
         durum: f.fixture.status.short,
-        istatistik: istatistik.some(Boolean) ? JSON.stringify(istatistik) : null,
-        kadro: kadro.some(Boolean) ? JSON.stringify(kadro) : null
+        istatistik: istatistik.some(Boolean) ? istatistik : null,
+        kadro: kadro.some(Boolean) ? kadro : null
     };
-    if (olay) dokuman.olaylar = JSON.stringify(olay.map(kisaOlay));
+    if (olay) dokuman.olaylar = olay.map(kisaOlay);
     return dokuman;
 }
 

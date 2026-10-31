@@ -4240,14 +4240,25 @@ function watchDetail(match) {
 
     detailUnsub = fs.onSnapshot(fs.doc(db, 'maclar', id), snap => {
         const data = snap.exists() ? snap.data() : {};
-        matchDetails.set(id, {
-            stats: data.istatistik ? JSON.parse(data.istatistik) : null,
-            lineup: data.kadro ? JSON.parse(data.kadro) : null,
-            olaylar: data.olaylar ? JSON.parse(data.olaylar) : null,
-            updated: data.guncellendi ? data.guncellendi.toDate() : null
+        /* Yeni dokümanlar gzip ile sıkıştırılmış (z); eskilerde alanlar ayrı ayrı metin */
+        const content = data.z ? docJSON(data) : Promise.resolve({
+            istatistik: data.istatistik ? JSON.parse(data.istatistik) : null,
+            kadro: data.kadro ? JSON.parse(data.kadro) : null,
+            olaylar: data.olaylar ? JSON.parse(data.olaylar) : null
         });
-        refreshViews();
+        content.then(doc => {
+            if (detailUnsub !== unsub)
+                return;
+            matchDetails.set(id, {
+                stats: doc.istatistik || null,
+                lineup: doc.kadro || null,
+                olaylar: doc.olaylar || null,
+                updated: data.guncellendi ? data.guncellendi.toDate() : null
+            });
+            refreshViews();
+        }, () => {});
     }, () => {});
+    const unsub = detailUnsub;
 }
 
 function unwatchDetail() {

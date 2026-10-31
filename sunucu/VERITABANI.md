@@ -6,7 +6,7 @@
 - **Firestore:** günün maç listesi (arşiv), Özet (olaylar), maç detayı, bildirim kayıtları, sunucu durumu.
 
 Dokümanları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), `hizli` dallarını hızlı kaynak (başka bir bilgisayardaki skor sunucusu, ayrı bir kullanıcıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
-Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (gün listesi, Özet) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar. Eski arşiv dokümanlarında açık metin `m` alanı olabilir.
+Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (gün listesi, Özet, maç dokümanı) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar. Eski arşiv dokümanlarında açık metin `m` alanı olabilir.
 
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `gun/{gün}` | Günün bütün maçları: `z` = gzip ile sıkıştırılmış `{ "maç no": "satır" }` metni (`c` olmadan). Arşiv, silinmez | Sunucu | Canlı Skor | En fazla 10 dk'da bir, değişince | 200 maç ~7,7 KB, sıkıştırılmış ~3 KB |
 | RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Firestore'a girmemiş satırlar) | Olay olunca | satır ~50 bayt |
 | Firestore `ozet/{gün}` | Dün ve bugünün oynanan ve biten maçlarının olayları (`z`, gzip ile sıkıştırılmış `{ "maç no": [olaylar] }`) ve dahil olan son günlük anahtarı (`t`). Arşiv, silinmez | Sunucu | Site (bir kez) | Olay olunca | 150 maç ~95 KB, sıkıştırılmış ~25–35 KB |
-| Firestore `maclar/{maç no}` | İstatistik ve kadro; maç bitince olaylar da (`olaylar`, istatistik vermeyen liglerde yalnızca olaylar) | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir; maç bitince ve 2 saat sonra | ~1,5–2 KB |
+| Firestore `maclar/{maç no}` | `z`: gzip ile sıkıştırılmış `{ durum, istatistik, kadro, olaylar }`. İstatistik ve kadro; maç bitince olaylar da (istatistik vermeyen liglerde yalnızca olaylar) | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir; maç bitince ve 2 saat sonra | ~1,5–2 KB, sıkıştırılmış ~0,7–1 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
@@ -136,13 +136,15 @@ Sondaki boş (`null`) alanlar yazılmaz.
 
 ## `maclar/{maç no}`
 
-Yalnızca kadro ve istatistik veren liglerde yazılır. Olaylar burada yok, `ozet/{gün}` dokümanında.
+Kadro ve istatistik veren liglerde maç öncesi ve canlıyken; bütün liglerde maç bitince yazılır.
+Tek alan `z`: aşağıdaki nesnenin gzip ile sıkıştırılmış hali (eski dokümanlarda alanlar ayrı ayrı metin olabilir).
 
 | Alan | Açıklama |
 |---|---|
 | `durum` | Maçın durumu |
-| `istatistik` | Metin: `[[ev sahibi 19 değer], [deplasman 19 değer]]`. Henüz yoksa `null` |
-| `kadro` | Metin: `[ev sahibi kadrosu, deplasman kadrosu]`. Henüz açıklanmadıysa `null` |
+| `istatistik` | `[[ev sahibi 19 değer], [deplasman 19 değer]]`. Henüz yoksa `null` |
+| `kadro` | `[ev sahibi kadrosu, deplasman kadrosu]`. Henüz açıklanmadıysa `null` |
+| `olaylar` | Yalnızca maç bitince: maçın bütün olayları (Özet'teki biçimde) |
 
 ### İstatistik sırası
 

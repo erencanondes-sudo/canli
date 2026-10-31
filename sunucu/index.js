@@ -175,7 +175,7 @@ async function detayCek(nolar) {
             /* Maç bitince doküman olaylarla birlikte tam yazılır (istatistik vermeyen liglerde de) */
             const bitti = BITTI.has(d);
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
-                await db.yaz('maclar/' + f.fixture.id, B.macDokumani(f, bitti ? (k.olaylar || []) : null));
+                await db.yazSikistir('maclar/' + f.fixture.id, JSON.stringify(B.macDokumani(f, bitti ? (k.olaylar || []) : null)));
             }
         }
     }
