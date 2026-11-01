@@ -83,29 +83,27 @@ function saat(ts) {
 }
 
 /*
- * Durum: başlamadıysa boş; oynanıyorsa dakika ("67", "45+2"); diğerlerinde API'nin kodu (HT, FT, PST…)
+ * Durum: başlamadıysa boş; diğerlerinde API'nin kodu (1H, HT, FT, PST…).
+ * Oynanan devrede (1H, 2H, ET) devrenin başladığı an eklenir (index.js verir): dakika yazılmaz, site hesaplar.
  */
-const DAKIKALI = new Set(['1H', '2H', 'ET']);
-
 function durum(f) {
     const s = f.fixture.status;
-    if (s.short === 'NS') return '';
-    if (DAKIKALI.has(s.short) && s.elapsed) return s.elapsed + (s.extra ? '+' + s.extra : '');
-    return s.short;
+    return s.short === 'NS' ? '' : s.short;
 }
 
 /*
  * Canlı skor satırı (RTDB): "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Sondaki boşlar yazılmaz.
  * ertesi: maç listenin gününden sonraki takvim gününde başlıyor (00:00–06:59): saatin sonuna "+" eklenir.
+ * devre: oynanan devrede durum yerine "2H3725" (devre + başlama saatinden kaç saniye sonra başladığı).
  */
-function satir(f, ertesi) {
+function satir(f, ertesi, devre) {
     const alan = [
         f.league.id,
         hafta(f.league.round),
         f.teams.home.id,
         f.teams.away.id,
         saat(f.fixture.timestamp) + (ertesi ? '+' : ''),
-        durum(f),
+        devre || durum(f),
         f.goals.home === null ? '' : f.goals.home,
         f.goals.away === null ? '' : f.goals.away
     ].map(String);

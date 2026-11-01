@@ -23,7 +23,7 @@ const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
 
-/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
+/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
@@ -233,6 +233,37 @@ async function ligYaz() {
  * 21 dk (b1) "c" ile başlar; site yalnızca bunları dinler. Sonra "c" kalkar (b2).
  * Firestore gun/{gün}: aynı satırlar ("c" olmadan) tek dokümanda, gzip ile sıkıştırılmış (z), en fazla 10 dk'da bir.
  */
+/*
+ * DEVRE BAŞLANGICI: dakika veritabanına yazılmaz; oynanan devrede devre kodu ve devrenin başladığı an
+ * (planlanan başlama saatinden kaç saniye sonra) yazılır: "1H40", "2H3725", "ET6400". Site dakikayı hesaplar.
+ * Devre değişince API'nin dakikasından hesaplanır; API'nin dakikası 2 dk'dan fazla saparsa bir kez düzeltilir.
+ */
+const DEVRE_TABAN = { '1H': 0, '2H': 45, 'ET': 90 };
+const DEVRE_SON = { '1H': 45, '2H': 90, 'ET': 120 };
+
+function devreMetni(k) {
+    const s = k.f.fixture.status;
+    const kod = s.short;
+    if (!(kod in DEVRE_TABAN)) return null;
+
+    const basla = k.f.fixture.timestamp;
+    const taban = DEVRE_TABAN[kod];
+    const dk = s.elapsed;
+    const t = simdi();
+
+    /* API'nin dakikası dk ise devre şu an (dk − taban − 1) dakika + yarım dakika önce başlamış sayılır */
+    const hesapla = () => dk ? t - Math.max(0, (dk - taban - 1) * 60 + 30)
+        : kod === '1H' ? basla : t;
+
+    if (!k.devre || k.devre.kod !== kod) {
+        k.devre = { kod, bas: hesapla() };
+    } else if (dk && dk < DEVRE_SON[kod] && !s.extra) {
+        const beklenen = Math.floor((t - k.devre.bas) / 60) + 1 + taban;
+        if (Math.abs(beklenen - dk) > 2) k.devre.bas = hesapla();
+    }
+    return kod + (k.devre.bas - basla);
+}
+
 async function gunYaz(gun) {
     const rtdb = await db.dalHali('gun/' + gun);
     const icerik = new Map();
@@ -241,7 +272,7 @@ async function gunYaz(gun) {
     for (const [no, k] of maclar) {
         if (k.gun !== gun && k.gun2 !== gun) continue;
         /* Kendi gününün listesinde, ertesi takvim gününde başlıyorsa saatin sonunda "+" */
-        const satir = B.satir(k.f, k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun);
+        const satir = B.satir(k.f, k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun, devreMetni(k));
         duz[no] = satir;
 
         let c = CANLI.has(durumu(k));

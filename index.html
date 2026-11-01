@@ -3375,9 +3375,14 @@ function rowToMatch(day, no, text, events) {
     /* RTDB'de canlı ve yeni biten maçların satırı "c" ile başlar */
     const [league, week, home, away, time, state, hg, ag] = text.replace(/^c/, '').split(',');
 
-    /* Durum: boş = başlamadı, sayı = oynanıyor (dakika), diğerleri API kodu */
+    /*
+     * Durum: boş = başlamadı; "2H3725" = oynanan devre ve devrenin başladığı an (planlanan başlama
+     * saatinden kaç saniye sonra), dakika buradan hesaplanır; diğerleri API kodu (HT, FT…).
+     * Eski biçim: sayı = dakika.
+     */
+    const half = /^(1H|2H|ET)(-?\d+)$/.exec(state || '');
     const playing = /^(\d+)(?:\+(\d+))?$/.exec(state || '');
-    const code = !state ? 'NS' : playing ? 'CANLI' : state;
+    const code = !state ? 'NS' : half ? half[1] : playing ? 'CANLI' : state;
 
     const status = LIVE_CODES.has(code) ? 'live' : DONE_CODES.has(code) ? 'done' : 'upcoming';
 
@@ -3386,9 +3391,13 @@ function rowToMatch(day, no, text, events) {
     const date = new Date(new Date(day + 'T' + time.slice(0, 2) + ':' + time.slice(2, 4) + ':00+03:00').getTime() +
         (nextDay ? 86400000 : 0));
 
+    const halfStart = half ? date.getTime() + Number(half[2]) * 1000 : null;
+    const clock = halfStart ? halfMinute(code, halfStart) : null;
+
     return {
         id: no,
         day: day,
+        halfStart: halfStart,
         /* 04:00–06:59 başlayan maç iki listede de "sabah" notuyla görünür */
         morning: Number(time.slice(0, 2)) >= 4 && Number(time.slice(0, 2)) < 7,
         league: leagueInfo(Number(league)),
@@ -3398,8 +3407,8 @@ function rowToMatch(day, no, text, events) {
         away: teamInfo(Number(away)),
         code: code,
         status: status,
-        minute: playing ? Number(playing[1]) : null,
-        extra: playing && playing[2] ? Number(playing[2]) : null,
+        minute: clock ? clock[0] : playing ? Number(playing[1]) : null,
+        extra: clock ? clock[1] : playing && playing[2] ? Number(playing[2]) : null,
         score: hg === undefined || hg === '' ? null : [Number(hg), Number(ag)],
         /* Olaylar bilinmiyorsa (eski günler, maç dokümanı gelmeden) null */
         events: status === 'upcoming' || !events ? null : rowEvents(events)
@@ -3429,8 +3438,43 @@ function matchWhen(match) {
 /* Canlı maçın dakikası: "63'", "45+2'", devre arasında "İY" */
 function minuteText(match) {
     if (match.code === 'HT') return 'İY';
+    if (match.code === 'BT') return 'UA';
+    if (match.code === 'P') return 'PEN';
     if (!match.minute) return '';
     return match.minute + (match.extra ? '+' + match.extra : '') + "'";
+}
+
+/*
+ * Oynanan devrenin dakikası, devrenin başladığı andan (sunucu saatiyle): [dakika, uzatma].
+ * 1. yarı 1–45 (sonra 45+N), 2. yarı 46–90 (90+N), uzatmalar 91–120 (120+N).
+ */
+const HALF_BASE = { '1H': 0, '2H': 45, 'ET': 90 };
+const HALF_END = { '1H': 45, '2H': 90, 'ET': 120 };
+
+function halfMinute(code, start) {
+    const minute = Math.max(1, Math.floor((serverNow() - start) / 60000) + 1) + HALF_BASE[code];
+    return minute > HALF_END[code] ? [HALF_END[code], minute - HALF_END[code]] : [minute, null];
+}
+
+/* Telefonun saati yanlış olsa da doğru dakika için sunucu saati */
+let serverOffset = 0;
+
+function serverNow() {
+    return Date.now() + serverOffset;
+}
+
+/* Ekrandaki dakika, bir sonraki dakikanın dolduğu anda yenilenir (veritabanından bir şey inmez) */
+let minuteTimer = null;
+
+function scheduleMinuteTick() {
+    clearTimeout(minuteTimer);
+    let wait = Infinity;
+    MATCHES.forEach(match => {
+        if (match.status === 'live' && match.halfStart)
+            wait = Math.min(wait, 60000 - ((serverNow() - match.halfStart) % 60000 + 60000) % 60000);
+    });
+    if (wait !== Infinity)
+        minuteTimer = setTimeout(refreshViews, wait + 50);
 }
 
 /* Uygulamanın kullandığı maç listesi (gelen dokümanlardan kurulur) */
@@ -3675,6 +3719,7 @@ function refreshViews() {
     requestAnimationFrame(() => {
         refreshQueued = false;
         rebuildMatches();
+        scheduleMinuteTick();
         findGoals();
         renderLive();
         renderSaved();
@@ -3869,6 +3914,9 @@ function watchFast() {
     });
 
     fastUnsubs = [
+        rt.onValue(rt.ref(rd, '.info/serverTimeOffset'), snap => {
+            serverOffset = Number(snap.val()) || 0;
+        }),
         rt.onValue(rt.ref(rd, 'hizli'), snap => {
             takeScores(snap);
             fastReady = true;

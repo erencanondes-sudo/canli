@@ -81,14 +81,14 @@ Virgülle ayrılmış metin. Sondaki boş alanlar yazılmaz (başlamamış maçt
 
 **Başta `c`:** maç canlı ya da 21 dakika içinde bitti (b1); site yalnızca bunları RTDB'den dinler. 21 dakika sonra `c` kalkar (b2). Firestore'daki satırlarda `c` yoktur.
 
-**Durum:** boş = başlamadı; sayı = oynanıyor, dakika (`67`, uzatmada `45+2`); diğerlerinde aşağıdaki kodlar.
+**Durum:** boş = başlamadı; oynanan devrede devre kodu + devrenin başladığı an, planlanan başlama saatinden kaç saniye sonra (`1H-30`, `2H3725`, `ET6400`; dakika yazılmaz, site sunucu saatiyle hesaplar, 45'ten sonra `45+N`); diğerlerinde aşağıdaki kodlar. Devre değişince ve API'nin dakikası 2 dk'dan fazla saparsa bir kez yazılır.
 
 ### Durumlar
 
 | Kod | Anlamı |
 |---|---|
 | TBD | Saati belli değil |
-| 1H, 2H, ET | 1. yarı, 2. yarı, uzatma (dakika bilinmiyorsa; biliniyorsa dakika yazar) |
+| 1H, 2H, ET | 1. yarı, 2. yarı, uzatma (devre başlangıcı bilinmiyorsa yalnız kod) |
 | HT | Devre arası |
 | BT, P | Uzatma arası, penaltılar |
 | SUSP, INT | Askıya alındı, durduruldu |
