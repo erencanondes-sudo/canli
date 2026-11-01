@@ -1,6 +1,6 @@
 /*
  * Veritabanına yazma. Sunucu Google'ın kendi bağlantısıyla yazar (anahtar dosyası yok).
- *   Firestore : gün listesi ve Özet (gzip ile sıkıştırılmış), maç detayı, sistem durumu
+ *   Firestore : gün listesi, Özet, oranlar (gzip ile sıkıştırılmış), maç detayı, sistem durumu
  *               (bir doküman son yazılandan farklı değilse yazılmaz)
  *   RTDB      : canlı skor listesi, takım adları (yalnızca değişen satırlar yazılır)
  */
@@ -54,6 +54,12 @@ async function yazSikistir(yol, metin, ek = {}, aralik = 0) {
 
     if (z.length > 900000) console.warn('Uyarı: ' + yol + ' 900 KB üstünde (' + z.length + ' bayt)');
     return true;
+}
+
+/* Artık yazılmayacak dokümanı hafızadan siler (hafıza büyümesin) */
+function unut(yol) {
+    sonYazilan.delete(yol);
+    sonZaman.delete(yol);
 }
 
 /* Firestore dokümanını bir kez okur (sunucu açılınca eski Özet'i korumak için); z açılır, m olarak döner */
@@ -121,4 +127,4 @@ async function eskiSil(yol, sinir) {
     }
 }
 
-module.exports = { yaz, yazSikistir, oku, dalYaz, dalHali, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };
+module.exports = { yaz, yazSikistir, oku, unut, dalYaz, dalHali, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };

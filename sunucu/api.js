@@ -82,7 +82,10 @@ async function gonder(yol, deneme = 0) {
     const hatalar = veri.errors ? Object.values(veri.errors) : [];
     if (hatalar.length) throw new Error('API hatası: ' + hatalar.join(' | '));
 
-    return veri.response;
+    /* Sayfalı cevaplarda (oranlar) toplam sayfa sayısı da döner */
+    const sonuc = veri.response;
+    if (veri.paging) sonuc.sayfa = veri.paging;
+    return sonuc;
 }
 
 /* Hak azaldı mı? (arka plan işleri durur) */

@@ -14,6 +14,7 @@ const api = require('./api');
 const B = require('./bicim');
 const db = require('./veritabani');
 const bildirim = require('./bildirim');
+const oran = require('./oran');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -414,6 +415,11 @@ async function tur() {
         await takimYaz();
         for (const gun of hazir) await gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
+
+        /* Oranlar (günde 2 kez): bugün ve sonraki 7 günün fikstürü hazırsa. Beklenmez, arka planda sürer */
+        const ileri = tumu.slice(1);
+        if (ileri.every(gun => hazir.includes(gun)))
+            oran.kontrol(maclar, ileri, bugun);
 
         temizle(dun);
         sonHata = null;

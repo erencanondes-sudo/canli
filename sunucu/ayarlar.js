@@ -101,6 +101,12 @@ module.exports = {
     TAKIM_EK_SURE: 30 * 86400,      /* takım ekleri (takim_ek) bu kadar saniye saklanır */
     KAPSAM_ARALIK: 24 * 3600000,    /* liglerin veri kapsamı: günde 1 */
 
+    /* ORANLAR (maç öncesi, canlı değil) */
+    ORAN_SAATLER: [6, 12],          /* oranlar bu saatlerde (Türkiye saati) güncellenir */
+    ORAN_SIRKETLER: [8, 11],        /* oranları alınan 2 şirketin API numarası (sitede adları geçmez) */
+    /* Türkiye oranlarına çevirirken eklenen pay: seçenek sayısına göre (2: alt/üst, 3: 1-X-2, çok: skor, İY/MS) */
+    ORAN_PAY: { 2: 0.16, 3: 0.15, cok: 0.30 },
+
     KADRO_ONCESI: 3600,             /* maçtan bu kadar saniye önce kadro aranır */
     KADRO_ARALIK: 300,              /* kadro bu kadar saniyede bir aranır */
     DUZELTME_SONRA: 2 * 3600,       /* maç bitince bu kadar saniye sonra son kez çekilir */

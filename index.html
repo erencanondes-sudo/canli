@@ -258,7 +258,7 @@ button {
  * Gün kutusu: her zaman 4 gün sığar (dün, bugün, yarın, öbür gün).
  * Düğme genişliği ve yazı boyu kutunun genişliğine göre ayarlanır (cqw).
  */
-#dayBox {
+#dayBox, #oddsDays {
     --day-gap: 1.8%;
 
     position: relative;
@@ -273,12 +273,12 @@ button {
     font-size: .6875rem;
 }
 
-#dayBox::-webkit-scrollbar {
+#dayBox::-webkit-scrollbar, #oddsDays::-webkit-scrollbar {
     display: none;
 }
 
 /* İki satır: üstte gün (Cmt), altta tarih (17.10) */
-#dayBox button {
+#dayBox button, #oddsDays button {
     flex: 0 0 calc((100% - 3 * var(--day-gap)) / 4);
     min-width: 0;
     scroll-snap-align: start;
@@ -299,10 +299,19 @@ button {
     white-space: nowrap;
 }
 
-#dayBox button.active {
+#dayBox button.active, #oddsDays button.active {
     border-color: #1d2340;
     background: #1d2340;
     color: white;
+}
+
+/* Oranlar menüsünün günleri (bugün ve 7 gün); lig seçilince gizlenir (ligin bütün günleri görünür) */
+#oddsDays {
+    margin-bottom: .7em;
+}
+
+#oddsDays.hidden {
+    display: none;
 }
 
 /* "Canlı" ya da arama açıkken gün seçimi kullanılmaz: soluk görünür */
@@ -723,7 +732,7 @@ button {
 }
 
 /* Canlı maç olan günün düğmesinde küçük kırmızı nokta */
-#dayBox button .day-date {
+#dayBox button .day-date, #oddsDays button .day-date {
     font-weight: 600;
 }
 
@@ -1270,6 +1279,11 @@ button {
     color: #1d2340;
 }
 
+/* Oranı olmayan kutu */
+.odd.empty b {
+    color: #b5b9c3;
+}
+
 /* ORANLAR KARTI: ev sahibi | 1 X 2 | deplasman, altında alt / üst satırları */
 /* Oranlar kartı üst satırı: solda bayrak + lig adı (silik), sağda tarih ve saat (bir tık küçük) */
 .odds-card .match-head {
@@ -1580,10 +1594,9 @@ body.has-layer .ac-kapa svg {
 }
 
 /*
- * KUPON TOPU (koyu sarı)
- * Oranlardan seçim yapılınca mavi topun hizasında, sağda belirir.
- * Basınca Kuponlarım açılır; top yerinde kalır.
- * Kupon kaydedilince (seçimler temizlenince) kaybolur.
+ * KAYITLI ORANLAR TOPU (koyu sarı)
+ * Sonuçlanmamış kayıtlı oran varsa mavi topun hizasında, sağda görünür; kaç oran olduğu yazar.
+ * Basınca Kayıtlı Oranlarım açılır; top yerinde kalır.
  */
 #couponBall {
     position: fixed;
@@ -1626,16 +1639,11 @@ body.has-layer .ac-kapa svg {
 }
 
 #couponBall .cb-count {
-    font-size: .75rem;
-    font-weight: 700;
-}
-
-#couponBall .cb-total {
-    font-size: .875rem;
+    font-size: .8125rem;
     font-weight: 800;
 }
 
-/* Oranlar sekmesinde seçilen oran: koyu sarı */
+/* Kaydedilen oran: koyu sarı */
 .odd.pickable {
     cursor: pointer;
 }
@@ -1649,48 +1657,35 @@ body.has-layer .ac-kapa svg {
     color: white;
 }
 
-/* KUPONLARIM */
+/* KAYITLI ORANLARIM: maç maç kartlar, her kartta kaydedilen oranlar */
 .coupon-card {
     margin-bottom: .9em;
     padding: .8em .9em;
     background: white;
     border-radius: 1rem;
-    box-shadow: 0 1px .375rem rgba(0,0,0,.10);
+    box-shadow: 0 .0625rem .375rem rgba(0,0,0,.10);
     font-size: .875rem;
 }
 
-.coupon-card.new {
-    border: 2px solid #e09d00;
-}
-
 .coupon-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: .4em;
     font-size: .85em;
     font-weight: 700;
-    color: #6b7080;
+    color: #8a8f9c;
+}
+
+.cp-teams {
+    margin: .15em 0 .3em;
+    font-weight: 700;
+    color: #222;
 }
 
 .coupon-pick {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     align-items: center;
     gap: .6em;
     padding: .5em 0;
-    border-top: 1px solid #eef0f4;
-}
-
-.coupon-pick small {
-    display: block;
-    font-size: .8em;
-    color: #8a8f9c;
-}
-
-.coupon-pick .cp-teams {
-    font-weight: 600;
-    color: #222;
+    border-top: .0625rem solid #eef0f4;
 }
 
 .coupon-pick .cp-choice {
@@ -1705,6 +1700,17 @@ body.has-layer .ac-kapa svg {
     color: #1d2340;
 }
 
+/* Sonuç: tuttu yeşil, tutmadı kırmızı, belli değilse boş */
+.coupon-pick .cp-result {
+    min-width: 4.6em;
+    text-align: center;
+    font-size: .8em;
+    font-weight: 800;
+}
+
+.cp-result.won { color: #1a9a4b; }
+.cp-result.lost { color: #d93025; }
+
 .coupon-pick .cp-remove {
     width: 1.8em;
     height: 1.8em;
@@ -1714,66 +1720,6 @@ body.has-layer .ac-kapa svg {
     background: #f1f3f7;
     color: #6b7080;
     font-size: .85em;
-}
-
-.coupon-pick.removable {
-    grid-template-columns: 1fr auto auto auto;
-}
-
-.coupon-total {
-    display: flex;
-    justify-content: space-between;
-    padding-top: .55em;
-    border-top: 1px solid #eef0f4;
-    font-weight: 800;
-    color: #1d2340;
-}
-
-.coupon-actions {
-    display: flex;
-    gap: .5em;
-    margin-top: .75em;
-}
-
-.coupon-clear {
-    flex: none;
-    padding: .7em 1.1em;
-    border: 1px solid #d5d8de;
-    border-radius: .75rem;
-    background: white;
-    color: #555a66;
-    font-size: 1em;
-    font-weight: 700;
-}
-
-.coupon-save {
-    flex: 1;
-    width: 100%;
-    padding: .7em;
-    border: none;
-    border-radius: .75rem;
-    background: #ebb21c;
-    color: white;
-    font-size: 1em;
-    font-weight: 800;
-}
-
-.coupon-delete {
-    padding: .2em .6em;
-    border: 1px solid #d5d8de;
-    border-radius: 62.4375rem;
-    background: white;
-    font-size: .95em;
-    font-weight: 600;
-    color: #6b7080;
-}
-
-.coupon-section {
-    margin: 1.1em .2em .55em;
-    font-size: .75rem;
-    font-weight: 800;
-    letter-spacing: .03em;
-    color: #8a8f9c;
 }
 
 /* -----------------------------
@@ -1956,7 +1902,8 @@ body.has-layer .ac-kapa svg {
     width: 20%;
     height: 100%;
     overflow-y: auto;
-    padding: 1rem 1.125rem 2.5rem;
+    /* Altta mavi topun yüksekliği kadar boşluk: son satırlar topun altında kalmaz */
+    padding: 1rem 1.125rem calc(6rem + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
 }
 
@@ -2313,6 +2260,14 @@ body.has-layer .ac-kapa svg {
     margin-top: 1.5em;
     font-size: .75rem;
     color: #9aa0ab;
+}
+
+/* Maç başlayınca: oranlar kapandı */
+.odds-closed {
+    margin: 0 0 1em;
+    font-size: .8125rem;
+    font-weight: 700;
+    color: #d93025;
 }
 
 
@@ -3124,6 +3079,7 @@ body.has-layer .ac-kapa svg {
                 <div id="anList"></div>
             </div>
             <div class="home-page" data-page="odds">
+                <div id="oddsDays"></div>
                 <div id="oddsTools" class="tool-row"></div>
                 <label id="oddsSearchBox" class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -3145,7 +3101,7 @@ body.has-layer .ac-kapa svg {
 
         <div id="myTabs">
             <button data-my="saved" class="active">Kayıtlı Maçlarım</button>
-            <button data-my="coupons">Kuponlarım</button>
+            <button data-my="coupons">Kayıtlı Oranlarım</button>
         </div>
 
         <div id="myPager">
@@ -3187,10 +3143,9 @@ body.has-layer .ac-kapa svg {
     </div>
 </div>
 
-<!-- KUPON TOPU (oran seçilince belirir) -->
-<button id="couponBall" type="button" aria-label="Kuponu aç">
+<!-- KAYITLI ORANLAR TOPU (sonuçlanmamış kayıtlı oran varsa görünür) -->
+<button id="couponBall" type="button" aria-label="Kayıtlı oranları aç">
     <span class="cb-count"></span>
-    <span class="cb-total"></span>
 </button>
 
 <!-- MAÇ SAYFASI -->
@@ -3520,6 +3475,7 @@ function teamInfo(id) {
         const color = style ? { bg: style[2], fg: style[3] } : nameColor(name);
 
         teamCache.set(key, {
+            id: id,
             name: name,
             mid: mid !== name ? mid : undefined,
             short: style ? style[1] : mid.replace(/[^\p{L}]/gu, '').slice(0, 3).toLocaleUpperCase('tr'),
@@ -3909,7 +3865,8 @@ function refreshViews() {
         renderLive();
         renderSaved();
         renderOdds();
-        renderCouponBall();
+        renderSavedOdds();
+        renderSavedOddsBall();
         refreshDetail();
     });
 }
@@ -4741,24 +4698,37 @@ const ICONS = {
    MAÇ KARTI
 ================================================= */
 
-/* Tek oran kutusu: üstte ad (1 / X / 2, 2,5 Üst...), altta oran.
-   pickable: basınca kupona eklenir / çıkarılır */
-function oddBox(match, label, key, pickable) {
+/* Oran: 185 → "1,85" */
+function oddText(value) {
+    return (value / 100).toFixed(2).replace('.', ',');
+}
+
+/* Baraj: "2.5" → "2,5" */
+function lineText(line) {
+    return String(line).replace('.', ',');
+}
+
+/*
+ * Tek oran kutusu: üstte ad (1 / X / 2, 2,5 Üst...), altta oran (yoksa "–").
+ * key: kayıt anahtarı (VERITABANI.md → "Oranlar": "ms:1", "au:2.5:u"...).
+ * pickable: basınca Kayıtlı Oranlarım'a kaydedilir / çıkarılır
+ */
+function oddBox(match, label, key, value, pickable) {
 
     const box = document.createElement('div');
-    box.className = 'odd';
+    box.className = 'odd' + (value ? '' : ' empty');
     box.innerHTML = '<span></span><b></b>';
     box.querySelector('span').textContent = label;
-    box.querySelector('b').textContent = match.odds[key];
+    box.querySelector('b').textContent = value ? oddText(value) : '–';
 
-    if (pickable) {
+    if (pickable && key && value) {
         box.classList.add('pickable');
         box.dataset.match = match.id;
         box.dataset.key = key;
-        box.classList.toggle('picked', couponPicks.get(match.id) === key);
+        box.classList.toggle('picked', isSavedOdd(match.id, key));
         box.addEventListener('click', event => {
             event.stopPropagation();
-            togglePick(match.id, key);
+            toggleSavedOdd(match, key, value);
         });
     }
 
@@ -4766,16 +4736,10 @@ function oddBox(match, label, key, pickable) {
 }
 
 /*
- * ORANLAR SEKMESİ KARTI
- * Üstte lig / tarih / durum; ortada ev sahibi | 1 X 2 | deplasman;
- * altta toplam gol, korner ve kart alt / üst.
+ * ORANLAR MENÜSÜ KARTI
+ * Üstte lig / tarih; ortada ev sahibi | - | deplasman;
+ * altta maç sonucu (1 X 2), toplam gol 2,5, korner, kart ve ofsayt alt / üst.
  */
-const ODDS_MARKETS = [
-    ['Toplam gol', '2,5', 'under', 'over'],
-    ['Korner', '9,5', 'cornerUnder', 'cornerOver'],
-    ['Toplam kart', '4,5', 'cardUnder', 'cardOver']
-];
-
 function oddsCard(match) {
 
     const card = document.createElement('button');
@@ -4826,23 +4790,33 @@ function oddsCard(match) {
     const markets = document.createElement('div');
     markets.className = 'oc-markets';
 
+    const odds = match.odds;
+
     const resultRow = document.createElement('div');
     resultRow.className = 'oc-market three';
     resultRow.innerHTML = '<span class="oc-label">Maç sonucu</span>';
-    [['1', 'home'], ['X', 'draw'], ['2', 'away']].forEach(([label, key]) => {
-        resultRow.appendChild(oddBox(match, label, key, true));
+    [['1', odds.home], ['X', odds.draw], ['2', odds.away]].forEach(([label, value]) => {
+        resultRow.appendChild(oddBox(match, label, 'ms:' + label, value, true));
     });
     markets.appendChild(resultRow);
 
-    ODDS_MARKETS.forEach(([title, line, underKey, overKey]) => {
+    /* Baraj 10 ile çarpılmış gelir (95 = 9,5); gol her zaman 2,5 */
+    [
+        ['Toplam gol', 'au', 25, odds.under, odds.over],
+        ['Korner', 'kor', odds.cornerLine, odds.cornerUnder, odds.cornerOver],
+        ['Kart', 'kart', odds.cardLine, odds.cardUnder, odds.cardOver],
+        ['Ofsayt', 'ofs', odds.offLine, odds.offUnder, odds.offOver]
+    ].forEach(([title, code, line, under, over]) => {
         const row = document.createElement('div');
         row.className = 'oc-market';
         const label = document.createElement('span');
         label.className = 'oc-label';
         label.textContent = title;
         row.appendChild(label);
-        row.appendChild(oddBox(match, line + ' Alt', underKey, true));
-        row.appendChild(oddBox(match, line + ' Üst', overKey, true));
+        const l = line ? (line / 10).toFixed(1) : null;
+        const prefix = l ? lineText(l) + ' ' : '';
+        row.appendChild(oddBox(match, prefix + 'Alt', l && code + ':' + l + ':a', under, true));
+        row.appendChild(oddBox(match, prefix + 'Üst', l && code + ':' + l + ':u', over, true));
         markets.appendChild(row);
     });
 
@@ -4852,21 +4826,6 @@ function oddsCard(match) {
     card.addEventListener('click', () => openDetail(match.id, 'odds'));
 
     return card;
-}
-
-function oddsRow(match, labels, keys, pickable) {
-
-    const row = document.createElement('div');
-    row.className = 'odds-row';
-
-    labels.forEach((label, i) => {
-        row.appendChild(oddBox(match, label, keys[i], pickable));
-    });
-
-    if (labels.length === 2)
-        row.style.gridTemplateColumns = 'repeat(2, 1fr)';
-
-    return row;
 }
 
 function weekTitle(text) {
@@ -5162,12 +5121,15 @@ function buildTools(row, state, options) {
         });
     }
 
-    tools.liveBtn = pill('tb-live', 'Canlı', () => {
-        state.liveOnly = !state.liveOnly;
-        if (state.liveOnly && tools.input && options.liveClearsSearch)
-            tools.input.value = '';
-        changed();
-    });
+    /* Oranlar'da yok (oranlar maç başlamadan kapanır) */
+    if (!options.noLive) {
+        tools.liveBtn = pill('tb-live', 'Canlı', () => {
+            state.liveOnly = !state.liveOnly;
+            if (state.liveOnly && tools.input && options.liveClearsSearch)
+                tools.input.value = '';
+            changed();
+        });
+    }
 
     /* Ligler: işaret kutulu menü */
     const filter = document.createElement('div');
@@ -5261,7 +5223,8 @@ function buildTools(row, state, options) {
     tools.refresh = () => {
         if (tools.popularBtn)
             tools.popularBtn.classList.toggle('active', !!state.popular);
-        tools.liveBtn.classList.toggle('active', state.liveOnly);
+        if (tools.liveBtn)
+            tools.liveBtn.classList.toggle('active', state.liveOnly);
         tools.timeBtn.classList.toggle('active', state.timeOrder);
         leagueBtn.firstChild.textContent =
             state.leagues.size ? 'Ligler (' + state.leagues.size + ') ' : 'Ligler ';
@@ -5826,19 +5789,12 @@ myMain.addEventListener('touchend', endMySwipe, { passive: true });
 myMain.addEventListener('touchcancel', endMySwipe, { passive: true });
 
 /*
- * KUPON
- * Her maçtan bir seçim (1 / X / 2). Aynı maçta başka orana basınca
- * seçim değişir, seçili olana tekrar basınca çıkar.
- * Yeni kupon ve kaydedilen kuponlar telefonun hafızasında tutulur.
+ * KAYITLI ORANLARIM
+ * Oran kutusuna basınca oran o anki değeriyle kaydedilir, tekrar basınca çıkar.
+ * Maç bitince tuttu / tutmadı yazar (bir kez belli olunca saklanır).
+ * Kayıtlar telefonun hafızasında tutulur; Firestore'a yazılmaz.
  */
-const COUPON_KEY = 'canliSkorKupon';
-const COUPONS_KEY = 'canliSkorKuponlar';
-const PICK_NAMES = {
-    home: 'MS 1', draw: 'MS X', away: 'MS 2',
-    under: 'Gol 2,5 Alt', over: 'Gol 2,5 Üst',
-    cornerUnder: 'Korner 9,5 Alt', cornerOver: 'Korner 9,5 Üst',
-    cardUnder: 'Kart 4,5 Alt', cardOver: 'Kart 4,5 Üst'
-};
+const SAVED_ODDS_KEY = 'canliSkorOranlar';
 
 function readJSON(key, fallback) {
     try {
@@ -5854,249 +5810,407 @@ function writeJSON(key, value) {
     } catch (error) {}
 }
 
-/* Yeni kupon: maç id → seçim */
-const couponPicks = new Map(readJSON(COUPON_KEY, []));
+/* Eski kupon kayıtları silinir (kupon kaldırıldı) */
+try {
+    localStorage.removeItem('canliSkorKupon');
+    localStorage.removeItem('canliSkorKuponlar');
+} catch (error) {}
 
-/* Kaydedilen kuponlar: en yenisi başta */
-let savedCoupons = readJSON(COUPONS_KEY, []);
+/*
+ * Kayıt: { id: maç no, k: anahtar ("au:2.5:u"), o: oran (185), l: lig no, h / a: takım no,
+ *          t: başlama (ms), r: sonuç (true tuttu, false tutmadı; belli değilse yok) }
+ */
+let savedOdds = readJSON(SAVED_ODDS_KEY, []);
 
-function pickOdd(id, key) {
-    return parseFloat(MATCH_BY_ID.get(id).odds[key]);
+function isSavedOdd(id, key) {
+    return savedOdds.some(p => p.id === id && p.k === key);
 }
 
-/* Maçı ve oranı gelmiş seçimler (veri gelene kadar diğerleri gösterilmez) */
-function validPicks(picks) {
-    return picks.filter(([id, key]) => {
-        const match = MATCH_BY_ID.get(id);
-        return match && match.odds && match.odds[key];
-    });
-}
+function toggleSavedOdd(match, key, value) {
 
-function picksTotal(picks) {
-    return picks.reduce((total, [id, key]) => total * pickOdd(id, key), 1).toFixed(2);
-}
+    const index = savedOdds.findIndex(p => p.id === match.id && p.k === key);
 
-function togglePick(id, key) {
-
-    if (couponPicks.get(id) === key)
-        couponPicks.delete(id);
+    if (index >= 0)
+        savedOdds.splice(index, 1);
     else
-        couponPicks.set(id, key);
+        savedOdds.push({
+            id: match.id, k: key, o: value,
+            l: match.league.id, h: match.home.id, a: match.away.id,
+            t: match.date.getTime()
+        });
 
-    couponChanged();
+    savedOddsChanged();
 }
 
-function couponChanged() {
+function savedOddsChanged() {
 
-    writeJSON(COUPON_KEY, Array.from(couponPicks));
+    writeJSON(SAVED_ODDS_KEY, savedOdds);
 
     document.querySelectorAll('.odd.pickable').forEach(box => {
-        box.classList.toggle('picked', couponPicks.get(box.dataset.match) === box.dataset.key);
+        box.classList.toggle('picked', isSavedOdd(box.dataset.match, box.dataset.key));
     });
 
-    renderCouponBall();
-    renderCoupons();
+    renderSavedOddsBall();
+    renderSavedOdds();
 }
 
-function renderCouponBall() {
+/* Kayıtta gösterilen ad: "MS 1", "Gol 2,5 Üst", "Handikap (0:1) X"... */
+const PICK_TITLES = {
+    ms: 'MS', cs: 'Çifte şans', iy: 'İY', iyms: 'İY/MS', au: 'Gol', iau: 'İY gol',
+    tg: 'Toplam gol', skor: 'Skor', kor: 'Korner', kart: 'Kart', ofs: 'Ofsayt'
+};
+const HND_LABELS = { '-1': '(0:1)', '1': '(1:0)' };
 
-    const ball = document.getElementById('couponBall');
-    const picks = validPicks(Array.from(couponPicks));
-
-    ball.classList.toggle('show', picks.length > 0);
-
-    if (!picks.length)
-        return;
-
-    ball.querySelector('.cb-count').textContent = picks.length + ' maç';
-    ball.querySelector('.cb-total').textContent = picksTotal(picks);
+function pickName(key) {
+    const [m, a, b] = key.split(':');
+    if (['au', 'iau', 'kor', 'kart', 'ofs'].includes(m))
+        return PICK_TITLES[m] + ' ' + lineText(a) + ' ' + (b === 'u' ? 'Üst' : 'Alt');
+    if (m === 'hnd') return 'Handikap ' + (HND_LABELS[a] || a) + ' ' + b;
+    if (m === 'kg') return 'KG ' + (a === 'var' ? 'Var' : 'Yok');
+    if (m === 'tc') return 'Toplam gol ' + (a === 'tek' ? 'tek' : 'çift');
+    return PICK_TITLES[m] + ' ' + a;
 }
 
-/* Kupondaki bir satır: maç, seçim, oran (yeni kuponda çıkarma düğmesi) */
-function couponPickRow([id, key], removable) {
+/*
+ * Tuttu mu? Maç normal sürede bittiyse (MS) skordan; korner, kart, ofsayt maç sayfası
+ * açılıp istatistik geldiyse. İlk yarı bahislerinin sonucu yazılmaz (ilk yarı skoru yok). Belli değilse null.
+ */
+function pickResult(key, match) {
 
-    const match = MATCH_BY_ID.get(id);
+    if (!match || match.code !== 'FT' || !match.score)
+        return null;
 
-    const row = document.createElement('div');
-    row.className = 'coupon-pick' + (removable ? ' removable' : '');
+    const [h, a] = match.score;
+    const total = h + a;
+    const [m, x, y] = key.split(':');
+    const sign = (p, q) => p > q ? '1' : p < q ? '2' : 'X';
+    const overUnder = value => y === 'u' ? value > Number(x) : value < Number(x);
 
-    const info = document.createElement('div');
-    info.innerHTML = '<small></small><span class="cp-teams"></span>';
-    info.querySelector('small').textContent =
-        match.league.name + ' · ' + formatDate(match.date) + ' ' + formatTime(match.date);
-    info.querySelector('.cp-teams').textContent = match.home.name + ' - ' + match.away.name;
-
-    const choice = document.createElement('span');
-    choice.className = 'cp-choice';
-    choice.textContent = PICK_NAMES[key];
-
-    const odd = document.createElement('span');
-    odd.className = 'cp-odd';
-    odd.textContent = match.odds[key];
-
-    row.appendChild(info);
-    row.appendChild(choice);
-    row.appendChild(odd);
-
-    if (removable) {
-        const remove = document.createElement('button');
-        remove.className = 'cp-remove';
-        remove.setAttribute('aria-label', 'Kupondan çıkar');
-        remove.textContent = '✕';
-        remove.addEventListener('click', () => {
-            couponPicks.delete(id);
-            couponChanged();
-        });
-        row.appendChild(remove);
+    switch (m) {
+        case 'ms': return x === sign(h, a);
+        case 'cs': return x.includes(sign(h, a));
+        case 'kg': return (h > 0 && a > 0) === (x === 'var');
+        case 'au': return overUnder(total);
+        case 'tc': return (total % 2 === 1) === (x === 'tek');
+        case 'hnd': return y === sign(h + Number(x), a);
+        case 'skor': return x === h + '-' + a;
+        case 'tg': {
+            if (x === '6+') return total >= 6;
+            const [low, high] = x.split('-').map(Number);
+            return total >= low && total <= high;
+        }
     }
 
-    return row;
+    /* İstatistik sırası: VERITABANI.md → "İstatistik sırası" */
+    const stats = (matchDetails.get(match.id) || {}).stats;
+    if (!stats || !stats[0] || !stats[1])
+        return null;
+    const sum = i => (stats[0][i] || 0) + (stats[1][i] || 0);
+    if (m === 'kor') return overUnder(sum(7));
+    if (m === 'kart') return overUnder(sum(10) + sum(11));
+    if (m === 'ofs') return overUnder(sum(8));
+    return null;
 }
 
-function couponTotalRow(picks) {
-    const total = document.createElement('div');
-    total.className = 'coupon-total';
-    total.innerHTML = '<span>Toplam oran</span><span></span>';
-    total.lastChild.textContent = picksTotal(picks);
-    return total;
+/* Sonucu belli olanlar saklanır (maç listeden düşse de kalır) */
+function settleSavedOdds() {
+    let changed = false;
+    savedOdds.forEach(p => {
+        if (p.r !== undefined) return;
+        const result = pickResult(p.k, findMatch(p.id));
+        if (result !== null) {
+            p.r = result;
+            changed = true;
+        }
+    });
+    if (changed)
+        writeJSON(SAVED_ODDS_KEY, savedOdds);
 }
 
-function saveCoupon() {
-
-    const picks = Array.from(couponPicks);
-
-    if (!picks.length)
-        return;
-
-    savedCoupons.unshift({ id: Date.now(), date: Date.now(), picks: picks });
-    writeJSON(COUPONS_KEY, savedCoupons);
-
-    couponPicks.clear();
-    couponChanged();
+/* Sonuçlanmamış (maçı bitmemiş) kayıtlar: topta sayısı yazar */
+function openSavedOdds() {
+    return savedOdds.filter(p => p.r === undefined && p.t + 3 * 3600000 > Date.now());
 }
 
-function renderCoupons() {
+function renderSavedOddsBall() {
+
+    const ball = document.getElementById('couponBall');
+    const open = openSavedOdds();
+
+    ball.classList.toggle('show', open.length > 0);
+
+    if (open.length)
+        ball.querySelector('.cb-count').textContent = open.length + ' oran';
+}
+
+/* Kayıttaki maç: listede varsa güncel hali, yoksa kayıttaki bilgilerle */
+function savedOddMatch(p) {
+    return findMatch(p.id) || {
+        id: p.id,
+        league: leagueInfo(p.l),
+        home: teamInfo(p.h),
+        away: teamInfo(p.a),
+        date: new Date(p.t),
+        status: 'upcoming'
+    };
+}
+
+function renderSavedOdds() {
+
+    settleSavedOdds();
 
     const box = document.getElementById('myCoupons');
     box.textContent = '';
 
-    const picks = validPicks(Array.from(couponPicks));
+    if (!savedOdds.length) {
+        const empty = document.createElement('p');
+        empty.className = 'home-empty';
+        empty.textContent = 'Kayıtlı oranın yok. Oranlar\'da bir orana basınca buraya kaydedilir.';
+        box.appendChild(empty);
+        return;
+    }
 
-    /* Yeni kupon (henüz kaydedilmemiş) */
-    if (picks.length) {
+    /* Maç maç: sonuçlanmamışlar önce (yakın tarihli üstte), sonra bitenler (yeni tarihli üstte) */
+    const groups = new Map();
+    savedOdds.forEach(p => {
+        if (!groups.has(p.id)) groups.set(p.id, []);
+        groups.get(p.id).push(p);
+    });
+    const done = list => list.every(p => p.r !== undefined) || list[0].t + 3 * 3600000 < Date.now();
+    const order = Array.from(groups.values()).sort((x, y) =>
+        done(x) - done(y) || (done(x) ? y[0].t - x[0].t : x[0].t - y[0].t));
+
+    order.forEach(list => {
+
+        const match = savedOddMatch(list[0]);
 
         const card = document.createElement('div');
-        card.className = 'coupon-card new';
+        card.className = 'coupon-card';
 
         const head = document.createElement('div');
         head.className = 'coupon-head';
-        head.innerHTML = '<span>Yeni kupon</span><span></span>';
-        head.lastChild.textContent = picks.length + ' maç';
+        head.textContent = match.league.name + ' · ' + formatDate(match.date) + ' ' + formatTime(match.date);
         card.appendChild(head);
 
-        picks.forEach(pick => card.appendChild(couponPickRow(pick, true)));
-        card.appendChild(couponTotalRow(picks));
+        const teams = document.createElement('div');
+        teams.className = 'cp-teams';
+        teams.textContent = (match.home.mid || match.home.name) + ' - ' + (match.away.mid || match.away.name) +
+            (match.score && match.status !== 'upcoming' ? '  ' + match.score[0] + '-' + match.score[1] : '');
+        card.appendChild(teams);
 
-        /* Temizle | Kuponu kaydet */
-        const actions = document.createElement('div');
-        actions.className = 'coupon-actions';
-
-        const clear = document.createElement('button');
-        clear.className = 'coupon-clear';
-        clear.textContent = 'Temizle';
-        clear.addEventListener('click', () => {
-            couponPicks.clear();
-            couponChanged();
+        list.forEach(p => {
+            const row = document.createElement('div');
+            row.className = 'coupon-pick';
+            row.innerHTML = '<span class="cp-choice"></span><span class="cp-odd"></span>' +
+                '<span class="cp-result"></span><button class="cp-remove" aria-label="Kaydı sil">✕</button>';
+            row.querySelector('.cp-choice').textContent = pickName(p.k);
+            row.querySelector('.cp-odd').textContent = oddText(p.o);
+            const result = row.querySelector('.cp-result');
+            if (p.r !== undefined) {
+                result.textContent = p.r ? 'TUTTU' : 'TUTMADI';
+                result.classList.add(p.r ? 'won' : 'lost');
+            }
+            row.querySelector('.cp-remove').addEventListener('click', () => {
+                savedOdds = savedOdds.filter(q => q !== p);
+                savedOddsChanged();
+            });
+            card.appendChild(row);
         });
-
-        const save = document.createElement('button');
-        save.className = 'coupon-save';
-        save.textContent = 'Kuponu kaydet';
-        save.addEventListener('click', saveCoupon);
-
-        actions.appendChild(clear);
-        actions.appendChild(save);
-        card.appendChild(actions);
 
         box.appendChild(card);
-    }
-
-    /* Kaydedilen kuponlar */
-    const list = savedCoupons
-        .map(c => ({ ...c, picks: validPicks(c.picks) }))
-        .filter(c => c.picks.length);
-
-    if (list.length) {
-
-        const title = document.createElement('div');
-        title.className = 'coupon-section';
-        title.textContent = 'KAYDEDİLEN KUPONLAR';
-        box.appendChild(title);
-
-        list.forEach(coupon => {
-
-            const card = document.createElement('div');
-            card.className = 'coupon-card';
-
-            const head = document.createElement('div');
-            head.className = 'coupon-head';
-            head.innerHTML = '<span></span><button class="coupon-delete">Sil</button>';
-            head.firstChild.textContent = formatDate(new Date(coupon.date)) + ' · ' + coupon.picks.length + ' maç';
-            head.lastChild.addEventListener('click', () => {
-                savedCoupons = savedCoupons.filter(c => c.id !== coupon.id);
-                writeJSON(COUPONS_KEY, savedCoupons);
-                renderCoupons();
-            });
-            card.appendChild(head);
-
-            coupon.picks.forEach(pick => card.appendChild(couponPickRow(pick, false)));
-            card.appendChild(couponTotalRow(coupon.picks));
-
-            box.appendChild(card);
-        });
-    }
-
-    if (!picks.length && !list.length) {
-        const empty = document.createElement('p');
-        empty.className = 'home-empty';
-        empty.textContent = 'Kuponun yok. Oranlar\'da bir orana basınca kupon oluşur.';
-        box.appendChild(empty);
-    }
+    });
 }
 
 /*
- * Oranlar: oranı gelmiş, bitmemiş maçlar, 1 / X / 2 ile.
- * Araç satırı: Popüler, Canlı, Ligler, Zaman; arama altta.
+ * ORANLAR (veri): sunucu/VERITABANI.md → "Oranlar"
+ * Dokümanlar gerekince bir kez okunur (oran_gun seçili gün, oran_lig seçilen lig, oran_mac
+ * Oranlar sekmesi açılınca); 1 saatten eskiyse yeniden okunur (sunucu günde 2 kez yazar).
+ */
+const ODDS_DOCS = new Map();          /* "oran_gun/2026-11-01" → { at, data, loading } */
+const ODDS_MATCH_BY_ID = new Map();   /* Oranlar menüsündeki, günün listesinde olmayan maçlar */
+const ODDS_TTL = 60 * 60000;
+
+/* Dokümanın içeriği; okunuyorsa (ilk kez) undefined, okununca ekranlar yenilenir */
+function oddsDoc(path) {
+
+    const entry = ODDS_DOCS.get(path);
+    if (entry && (entry.loading || Date.now() - entry.at < ODDS_TTL))
+        return entry.data;
+    if (!db)
+        return entry ? entry.data : undefined;
+
+    const next = { at: Date.now(), data: entry ? entry.data : undefined, loading: true };
+    ODDS_DOCS.set(path, next);
+
+    const [collection, id] = path.split('/');
+    fs.getDoc(fs.doc(db, collection, id))
+        .then(snap => docJSON(snap.exists() ? snap.data() : null))
+        .then(data => { next.data = data; }, () => { next.data = next.data || {}; })
+        .finally(() => {
+            next.loading = false;
+            next.at = Date.now();
+            refreshViews();
+        });
+
+    return next.data;
+}
+
+/* Maç sayfası için: günün listesindeki maç ya da Oranlar menüsündeki maç */
+function findMatch(id) {
+    return MATCH_BY_ID.get(id) || ODDS_MATCH_BY_ID.get(id);
+}
+
+/* Menü satırındaki 14 sayı (VERITABANI.md → "Menü satırı") */
+const ODDS_FIELDS = ['home', 'draw', 'away', 'under', 'over',
+    'cornerLine', 'cornerUnder', 'cornerOver', 'cardLine', 'cardUnder', 'cardOver', 'offLine', 'offUnder', 'offOver'];
+
+function parseOddsRow(values) {
+    const odds = {};
+    ODDS_FIELDS.forEach((key, i) => {
+        if (values[i]) odds[key] = Number(values[i]);
+    });
+    return odds;
+}
+
+/* Günün listesinde olmayan maç (yarın ve sonrası): satırdaki lig, takımlar ve saatle */
+function oddsMenuMatch(id, day, [league, home, away, time], odds) {
+    const hour = Number(time.slice(0, 2));
+    const date = new Date(new Date(day + 'T' + time.slice(0, 2) + ':' + time.slice(2, 4) + ':00+03:00').getTime() +
+        (hour < 7 ? 86400000 : 0));
+    const match = {
+        id: id, day: day, morning: hour >= 4 && hour < 7,
+        league: leagueInfo(Number(league)), week: '', date: date,
+        home: teamInfo(Number(home)), away: teamInfo(Number(away)),
+        code: 'NS', status: 'upcoming', minute: null, extra: null, score: null, events: null,
+        odds: odds
+    };
+    ODDS_MATCH_BY_ID.set(id, match);
+    return match;
+}
+
+/* Menüdeki maçlar (başlamamış); doküman okunuyorsa null */
+function oddsMenuMatches() {
+
+    const now = Date.now();
+    const list = [];
+
+    const add = (id, day, info, values) => {
+        const odds = parseOddsRow(values);
+        const known = MATCH_BY_ID.get(id);
+        const match = known ? { ...known, odds: odds } : info[0] ? oddsMenuMatch(id, day, info, odds) : null;
+        if (match && match.status === 'upcoming' && match.date > now)
+            list.push(match);
+    };
+
+    if (oddsState.leagues.size) {
+        let waiting = false;
+        oddsState.leagues.forEach(league => {
+            const data = oddsDoc('oran_lig/' + league);
+            if (data === undefined) {
+                waiting = true;
+                return;
+            }
+            Object.entries(data).forEach(([id, text]) => {
+                const v = text.split(',');
+                add(id, v[0], [String(league), v[1], v[2], v[3]], v.slice(4));
+            });
+        });
+        return waiting && !list.length ? null : list;
+    }
+
+    /* Bugünün maçlarının bilgisi günün listesinden gelir: liste yüklenmeden gösterilmez */
+    const today = days.get(TODAY);
+    if (oddsState.day === TODAY && !(today && today.loaded && namesReady))
+        return null;
+
+    const data = oddsDoc('oran_gun/' + oddsState.day);
+    if (data === undefined)
+        return null;
+    Object.entries(data).forEach(([id, text]) => {
+        const v = text.split(',');
+        add(id, oddsState.day, v.slice(0, 4), v.slice(4));
+    });
+    return list;
+}
+
+/*
+ * Oranlar menüsü: üstte günler (bugün ve 7 gün), araç satırı: Popüler, Ligler, Zaman; arama altta.
+ *   Lig seçilince günler gizlenir, seçilen liglerin 8 günü görünür.
  *   Popüler : en çok yorum alan maçlar
  *   Zaman   : ligler ayrılmadan saat sırasıyla
  *   ikisi de kapalı: lig lig, hafta hafta
  */
-const oddsState = { popular: true, liveOnly: false, timeOrder: false, leagues: new Set() };
+const oddsState = { popular: true, liveOnly: false, timeOrder: false, leagues: new Set(), day: TODAY };
 const oddsSearchInput = document.getElementById('oddsSearchInput');
 
 const oddsToolbar = buildTools(document.getElementById('oddsTools'), oddsState, {
     popular: true,
+    noLive: true,
     input: oddsSearchInput,
     render: () => renderOdds()
 });
 
+/* Gün düğmeleri: bugün değişince yeniden çizilir, yoksa yalnızca seçili olan değişir (kaydırma yerinde kalır) */
+let oddsDaysFor = null;
+
+function renderOddsDays() {
+
+    const box = document.getElementById('oddsDays');
+    const keys = Array.from({ length: 8 }, (_, i) => dayShift(i));
+
+    if (!keys.includes(oddsState.day))
+        oddsState.day = TODAY;
+
+    if (oddsDaysFor !== TODAY) {
+        oddsDaysFor = TODAY;
+        box.textContent = '';
+        keys.forEach(key => {
+            const date = new Date(key + 'T12:00:00');
+            const button = document.createElement('button');
+            const name = document.createElement('span');
+            name.className = 'day-name';
+            name.textContent = key === TODAY ? 'Bugün' : DAYS[date.getDay()];
+            button.appendChild(name);
+            if (key !== TODAY) {
+                const dm = document.createElement('span');
+                dm.className = 'day-date';
+                dm.textContent = String(date.getDate()).padStart(2, '0') + '.' + String(date.getMonth() + 1).padStart(2, '0');
+                button.appendChild(dm);
+            }
+            button.dataset.day = key;
+            button.addEventListener('click', () => {
+                oddsState.day = key;
+                renderOdds();
+            });
+            box.appendChild(button);
+        });
+    }
+
+    box.querySelectorAll('button').forEach(button => {
+        button.classList.toggle('active', button.dataset.day === oddsState.day);
+    });
+    box.classList.toggle('hidden', oddsState.leagues.size > 0);
+}
+
 function renderOdds() {
+
+    renderOddsDays();
 
     const box = document.getElementById('oddsList');
     box.textContent = '';
 
-    const withOdds = MATCHES.filter(m => m.odds && m.status !== 'done');
-
-    const list = filterMatches(withOdds, oddsToolbar).sort((a, b) => a.date - b.date);
+    const all = oddsMenuMatches();
+    const list = all ? filterMatches(all, oddsToolbar).sort((a, b) => a.date - b.date) : [];
 
     if (!list.length) {
         const query = oddsSearchInput.value.trim();
         const empty = document.createElement('p');
         empty.className = 'home-empty';
         empty.textContent =
-            !withOdds.length ? 'Tahmini oranlar yakında burada olacak.' :
-            query ? '"' + query + '" için maç bulunamadı.' :
-            oddsState.liveOnly ? 'Şu an oynanan maç yok.' : 'Maç yok.';
+            !all ? 'Yükleniyor…' :
+            query && all.length ? '"' + query + '" için maç bulunamadı.' :
+            oddsState.leagues.size ? 'Seçilen liglerde oranı açıklanmış maç yok.' :
+            'Bu gün için oranı açıklanmış maç yok.';
         box.appendChild(empty);
         return;
     }
@@ -6126,7 +6240,6 @@ function renderOdds() {
         });
     });
 }
-
 
 /* =================================================
    ANALİZ
@@ -6711,8 +6824,8 @@ renderAnalysis();
 renderLive();
 renderSaved();
 renderOdds();
-renderCoupons();
-renderCouponBall();
+renderSavedOdds();
+renderSavedOddsBall();
 startData();
 
 
@@ -6913,7 +7026,7 @@ function setMyPageInstant(name) {
 }
 
 /*
- * Sarı top Kuponlarım'ı açar / kapatır. Pencere kapanınca önceki sekmeye
+ * Sarı top Kayıtlı Oranlarım'ı açar / kapatır. Pencere kapanınca önceki sekmeye
  * dönülür; mavi top her zamanki gibi çalışır.
  */
 let pageBeforeCoupon = null;
@@ -7750,34 +7863,91 @@ function renderPlayerList(match, box, events) {
     box.appendChild(grid);
 }
 
+/* Skor sırası: ev sahibinin golü, sonra deplasmanın */
+function byScore(x, y) {
+    const [a, b] = x.split('-').map(Number);
+    const [c, d] = y.split('-').map(Number);
+    return a - c || b - d;
+}
+
+const IYMS = ['1/1', '1/X', '1/2', 'X/1', 'X/X', 'X/2', '2/1', '2/X', '2/2'];
+
+/* Maçın bütün oranları: oran_mac/{no}, Oranlar sekmesi açılınca bir kez okunur */
 function renderDetailOdds(match) {
 
     const box = document.getElementById('oddsBox');
     box.textContent = '';
 
-    if (!match.odds) {
+    const path = 'oran_mac/' + match.id;
+    const data = detailTab === 'odds' || ODDS_DOCS.has(path) ? oddsDoc(path) : undefined;
+
+    const message = text => {
         const p = document.createElement('p');
         p.className = 'tab-empty';
-        p.textContent = 'Tahmini oranlar yakında eklenecek.';
+        p.textContent = text;
         box.appendChild(p);
-        return;
+    };
+
+    if (data === undefined)
+        return message('Yükleniyor…');
+    if (!Object.keys(data).length)
+        return message(match.status === 'upcoming'
+            ? 'Bu maçın oranları henüz yok. Oranlar maçtan birkaç gün önce açıklanır.'
+            : 'Bu maç için oran yok.');
+
+    /* Maç başlayınca kaydedilemez */
+    const open = match.status === 'upcoming' && match.date > Date.now();
+    if (!open) {
+        const closed = document.createElement('p');
+        closed.className = 'odds-closed';
+        closed.textContent = 'Maç başladı, oranlar kapandı.';
+        box.appendChild(closed);
     }
 
-    const block = (title, labels, keys) => {
+    /* cells: [ad, anahtar, oran] */
+    const block = (title, cells, columns) => {
         const wrap = document.createElement('div');
         wrap.className = 'odds-block';
         const t = document.createElement('p');
         t.className = 'odds-title';
         t.textContent = title;
         wrap.appendChild(t);
-        wrap.appendChild(oddsRow(match, labels, keys, true));
+        const row = document.createElement('div');
+        row.className = 'odds-row';
+        row.style.gridTemplateColumns = 'repeat(' + (columns || cells.length) + ', 1fr)';
+        cells.forEach(([label, key, value]) => row.appendChild(oddBox(match, label, key, value, open)));
+        wrap.appendChild(row);
         box.appendChild(wrap);
     };
+    const three = (code, labels, values) => labels.map((label, i) => [label, code + ':' + label, values[i]]);
+    const overUnder = (title, code, lines) => {
+        if (!lines) return;
+        const cells = [];
+        Object.keys(lines).sort((a, b) => a - b).forEach(line => {
+            cells.push([lineText(line) + ' Alt', code + ':' + line + ':a', lines[line][0]]);
+            cells.push([lineText(line) + ' Üst', code + ':' + line + ':u', lines[line][1]]);
+        });
+        block(title, cells, 2);
+    };
 
-    block('MAÇ SONUCU', ['1', 'X', '2'], ['home', 'draw', 'away']);
-    block('2,5 GOL ALT / ÜST', ['Alt', 'Üst'], ['under', 'over']);
-    block('9,5 KORNER ALT / ÜST', ['Alt', 'Üst'], ['cornerUnder', 'cornerOver']);
-    block('4,5 KART ALT / ÜST', ['Alt', 'Üst'], ['cardUnder', 'cardOver']);
+    if (data.ms) block('MAÇ SONUCU', three('ms', ['1', 'X', '2'], data.ms));
+    if (data.cs) block('ÇİFTE ŞANS', three('cs', ['1X', '12', 'X2'], data.cs));
+    if (data.iy) block('İLK YARI SONUCU', three('iy', ['1', 'X', '2'], data.iy));
+    if (data.iyms) block('İLK YARI / MAÇ SONUCU', three('iyms', IYMS, data.iyms), 3);
+    if (data.kg) block('KARŞILIKLI GOL', [['Var', 'kg:var', data.kg[0]], ['Yok', 'kg:yok', data.kg[1]]]);
+    overUnder('GOL ALT / ÜST', 'au', data.au);
+    overUnder('İLK YARI GOL ALT / ÜST', 'iau', data.iau);
+    if (data.tg) block('TOPLAM GOL ARALIĞI', three('tg', ['0-1', '2-3', '4-5', '6+'], data.tg));
+    if (data.tc) block('TOPLAM GOL TEK / ÇİFT', [['Tek', 'tc:tek', data.tc[0]], ['Çift', 'tc:cift', data.tc[1]]]);
+    if (data.hnd)
+        Object.keys(data.hnd).sort((a, b) => a - b).forEach(line => block(
+            'HANDİKAPLI MAÇ SONUCU ' + (HND_LABELS[line] || line),
+            ['1', 'X', '2'].map((label, i) => [label, 'hnd:' + line + ':' + label, data.hnd[line][i]])
+        ));
+    if (data.skor) block('SKOR', Object.keys(data.skor).sort(byScore).map(s => [s, 'skor:' + s, data.skor[s]]), 3);
+    overUnder('KORNER ALT / ÜST', 'kor', data.kor);
+    overUnder('KART ALT / ÜST', 'kart', data.kart);
+    overUnder('OFSAYT ALT / ÜST', 'ofs', data.ofs);
 
     const note = document.createElement('p');
     note.className = 'odds-note';
@@ -7793,7 +7963,7 @@ let detailWaiting = false;
 
 function openDetail(id, tab = 'summary') {
 
-    const match = MATCH_BY_ID.get(id);
+    const match = findMatch(id);
 
     detailId = id;
     setDetailMode(false);
@@ -7863,7 +8033,7 @@ function refreshDetail() {
     if (!detailId || !detailSheet.classList.contains('open'))
         return;
 
-    const match = MATCH_BY_ID.get(detailId);
+    const match = findMatch(detailId);
 
     if (!match) {
         if (detailWaiting)
@@ -7900,6 +8070,11 @@ function setDetailTab(name, keepScroll) {
     detailSheet.querySelectorAll('#detailTabs button').forEach(button => {
         button.classList.toggle('active', button.dataset.tab === name);
     });
+
+    /* Oranlar sekmesine gelince maçın oranları okunur */
+    const match = name === 'odds' && detailId ? findMatch(detailId) : null;
+    if (match)
+        renderDetailOdds(match);
 
     placeDetailTrack(0);
 

@@ -3,7 +3,7 @@
 İki veritabanı var:
 
 - **Realtime Database (RTDB):** canlı maçların satırları, takım adları, hızlı kaynak. Küçük ve sık değişen veri. Yalnızca değişen satır gönderilir.
-- **Firestore:** günün maç listesi (arşiv), Özet (olaylar), maç detayı, bildirim kayıtları, sunucu durumu.
+- **Firestore:** günün maç listesi (arşiv), Özet (olaylar), maç detayı, oranlar, bildirim kayıtları, sunucu durumu.
 
 Dokümanları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), `hizli` dallarını hızlı kaynak (başka bir bilgisayardaki skor sunucusu, ayrı bir kullanıcıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
 Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (gün listesi, Özet, maç dokümanı) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar. Eski arşiv dokümanlarında açık metin `m` alanı olabilir.
@@ -22,6 +22,10 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Firestore'a girmemiş satırlar) | Olay olunca | satır ~50 bayt |
 | Firestore `ozet/{gün}` | Dün ve bugünün oynanan ve biten maçlarının olayları (`z`, gzip ile sıkıştırılmış `{ "maç no": [olaylar] }`) ve dahil olan son günlük anahtarı (`t`). Arşiv, silinmez | Sunucu | Site (bir kez) | Olay olunca | 150 maç ~95 KB, sıkıştırılmış ~25–35 KB |
 | Firestore `maclar/{maç no}` | `z`: gzip ile sıkıştırılmış `{ durum, istatistik, kadro, olaylar }`. İstatistik ve kadro; maç bitince olaylar da (istatistik vermeyen liglerde yalnızca olaylar) | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir; maç bitince ve 2 saat sonra | ~1,5–2 KB, sıkıştırılmış ~0,7–1 KB |
+| Firestore `oran_gun/{gün}` | Bugün ve sonraki 7 günün başlamamış maçlarının menü oranları (`z`, gzip: `{ "maç no": "satır" }`) | Sunucu | Oranlar menüsü (seçili gün, bir kez) | Günde 2 kez, değişince | hafta içi ~2,5–3 KB, hafta sonu ~6–8 KB (sıkıştırılmış) |
+| Firestore `oran_lig/{lig no}` | Aynı oranlar, ligin 8 günü | Sunucu | Oranlar menüsü (lig seçilince, bir kez) | Günde 2 kez, değişince | ~0,3–1 KB (sıkıştırılmış) |
+| Firestore `oran_mac/{maç no}` | Maçın bütün oranları (`z`, gzip) | Sunucu | Maç sayfası, Oranlar sekmesine basılınca (bir kez) | Günde 2 kez, maç başlayınca durur | ~0,3–0,6 KB (sıkıştırılmış) |
+| Firestore `sistem/oran` | Son oran güncellemesi: zaman, istek sayısı, maç sayısı, süre | Sunucu | Sunucu (açılışta), sen | Günde 2 kez | < 1 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
@@ -46,6 +50,8 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - Uygulama arka plana geçince bütün dinlemeler durur, RTDB bağlantısı kapanır.
 
 - `hizli`, `hizli_u` canlı dinlenir (dallarda yalnızca oynanan maçlar durur).
+- Oranlar menüsü açılınca seçili günün `oran_gun` dokümanı, lig seçilince o ligin `oran_lig` dokümanı bir kez okunur. Maç sayfasında Oranlar sekmesine gelince `oran_mac/{no}` bir kez okunur. Okunan oran dokümanı 1 saatten eskiyse yeniden okunur.
+- Kayıtlı Oranlarım telefonda saklanır (Firestore'a yazılmaz).
 
 ## Hızlı kaynak (`hizli`, `hizli_u`)
 
@@ -172,6 +178,37 @@ Tek alan `z`: aşağıdaki nesnenin gzip ile sıkıştırılmış hali (eski dok
 - İlk 11 oyuncusu: `[forma no, ad, mevki, sahadaki yer]`. Yer `"2:3"` = 2. sıra, 3. oyuncu (1. sıra kaleci)
 - Yedek: `[forma no, ad, mevki]`
 - Mevki: `G` kaleci, `D` defans, `M` orta saha, `F` forvet
+
+---
+
+## Oranlar
+
+Maç öncesi oranlar (canlı değil). Günde 2 kez (06 ve 12, Türkiye saati; sunucu o saatte kapalıydıysa açılınca hemen) bugün ve sonraki 7 günün başlamamış maçları için 2 şirketin oranları lig lig çekilir. Her seçeneğin olasılığı şirket payı çıkarılarak bulunur, iki şirketin ortalaması alınır, Türkiye oranlarına benzemesi için pay eklenip oran yeniden hesaplanır (**tahmini**; pay `ayarlar.js` → `ORAN_PAY`). Şirket adları hiçbir yere yazılmaz. Başlamış maçların oranı bir daha yazılmaz.
+
+Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda olduğu gibi (`"2.5"`), menü satırında 10 ile çarpılmış (`95` = 9,5).
+
+### `oran_mac/{maç no}` (olmayan oran yazılmaz)
+
+| Anahtar | Ne | Değer |
+|---|---|---|
+| `ms` | Maç sonucu | `[1, X, 2]` |
+| `cs` | Çifte şans | `[1X, 12, X2]` |
+| `iy` | İlk yarı sonucu | `[1, X, 2]` |
+| `iyms` | İlk yarı / maç sonucu | `[1/1, 1/X, 1/2, X/1, X/X, X/2, 2/1, 2/X, 2/2]` |
+| `kg` | Karşılıklı gol | `[var, yok]` |
+| `au` | Gol alt / üst (0,5–4,5) | `{ "2.5": [alt, üst], ... }` |
+| `iau` | İlk yarı gol alt / üst (0,5, 1,5) | `{ "0.5": [alt, üst], ... }` |
+| `tc` | Toplam gol tek / çift | `[tek, çift]` |
+| `hnd` | Handikaplı maç sonucu (ev sahibine −1 / +1) | `{ "-1": [1, X, 2], "1": [1, X, 2] }` |
+| `tg` | Toplam gol aralığı | `[0-1, 2-3, 4-5, 6+]` |
+| `skor` | Skor (en olası 18) | `{ "1-0": oran, ... }` |
+| `kor`, `kart`, `ofs` | Korner, kart, ofsayt alt / üst (dengeye en yakın 3 baraj) | `{ "9.5": [alt, üst], ... }` |
+
+### Menü satırı (`oran_gun`, `oran_lig`)
+
+`oran_gun`: `"lig,ev,dep,saat,1,X,2,altı,üstü,korner barajı,alt,üst,kart barajı,alt,üst,ofsayt barajı,alt,üst"`. Bugünün satırlarında lig, ev, dep ve saat boştur (sitede canlı skor listesinde var). Olmayan oran boş.
+
+`oran_lig`: `"gün,ev,dep,saat,1,X,2,..."` (gün `2026-11-03`, saat Türkiye saati `2000`; 00:00–06:59 başlayan maç önceki günün maçıdır).
 
 ---
 
