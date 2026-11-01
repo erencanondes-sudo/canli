@@ -6166,7 +6166,8 @@ function oddsMenuMatches() {
  *   Zaman   : ligler ayrılmadan saat sırasıyla
  *   ikisi de kapalı: lig lig, hafta hafta
  */
-const oddsState = { popular: true, liveOnly: false, timeOrder: false, leagues: new Set(), day: TODAY };
+/* Popüler şimdilik kapalı açılır (yorumlar gelince en çok yorum alanlar) */
+const oddsState = { popular: false, liveOnly: false, timeOrder: false, leagues: new Set(), day: TODAY };
 const oddsSearchInput = document.getElementById('oddsSearchInput');
 
 const oddsToolbar = buildTools(document.getElementById('oddsTools'), oddsState, {
