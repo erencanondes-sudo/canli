@@ -2270,12 +2270,12 @@ body.has-layer .ac-kapa svg {
 
 /* =====================================================
    ANALİZ SAYFASI
-   Gün satırı (Bugün, sonraki günler, Tümü), arama, analiz kartları;
+   Gün satırı (bugünden 7 gün, birden çok seçilebilir) ve Ligler, arama, analiz kartları;
    karta basınca açılır, "Detaylı Analiz" alttan açılan pencerede.
 ===================================================== */
 /*
- * Analiz gün satırı: 4 gün, Tümü ve Ligler tek satırda.
- * Hepsi yazısı kadar yer alır, kalan boşluğu paylaşır; yazı ekrana göre küçülür.
+ * Analiz gün satırı: solda 7 gün (yana kayar, 5'i görünür), sağda Ligler.
+ * Gün düğmesinde üstte gün adı, altta analiz sayısı.
  */
 #anDayRow {
     display: flex;
@@ -2285,22 +2285,41 @@ body.has-layer .ac-kapa svg {
 }
 
 #anDayBox {
-    display: contents;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: .3em;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-#anDayBox button,
-#anAll,
+#anDayBox::-webkit-scrollbar {
+    display: none;
+}
+
+#anDayBox button {
+    flex: 0 0 calc((100% - 4 * .3em) / 5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+}
+
+#anDayBox button small {
+    font-size: .9em;
+    font-weight: 600;
+}
+
 #anLeagueFilter {
-    flex: 1 1 auto;
+    flex: none;
 }
 
 #anDayBox button,
-#anAll,
 #anLeagueBtn {
-    width: 100%;
-    height: 2.6em;
+    height: 2.9em;
     padding: 0 .4em;
-    border: 1px solid #d5d8de;
+    border: .0625rem solid #d5d8de;
     border-radius: .9em;
     background: white;
     font-size: inherit;
@@ -2309,8 +2328,11 @@ body.has-layer .ac-kapa svg {
     white-space: nowrap;
 }
 
+#anLeagueBtn {
+    padding: 0 .8em;
+}
+
 #anDayBox button.active,
-#anAll.active,
 #anLeagueBtn.active {
     border-color: #1d2340;
     background: #1d2340;
@@ -3057,10 +3079,9 @@ body.has-layer .ac-kapa svg {
                 <p class="home-empty">Ai kuponları yakında burada olacak.</p>
             </div>
             <div class="home-page" data-page="analysis">
-                <!-- Gün satırı: Bugün ve sonraki 3 gün (yanında analiz sayısı), sağda Tümü ve Ligler -->
+                <!-- Gün satırı: bugünden 7 gün (altında analiz sayısı), sağda Ligler -->
                 <div id="anDayRow">
                     <div id="anDayBox"></div>
-                    <button id="anAll">Tümü</button>
                     <div class="league-filter" id="anLeagueFilter">
                         <button class="tb-league" id="anLeagueBtn">Ligler <span class="caret">▾</span></button>
                         <div class="league-menu" id="anLeagueMenu"></div>
@@ -3478,26 +3499,28 @@ function nameColor(name) {
     return { bg: 'hsl(' + hue + ', 55%, ' + light + '%)', fg: '#ffffff' };
 }
 
+/* Takımın adından görünümü: kısa ad, rozet kısaltması ve renkleri (analizlerde de kullanılır) */
+function teamLook(name) {
+    const plain = lower(name);
+    const style = TEAM_STYLES.find(([word]) => plain.includes(word));
+    const mid = shortName(name);
+    const color = style ? { bg: style[2], fg: style[3] } : nameColor(name);
+    return {
+        name: name,
+        mid: mid !== name ? mid : undefined,
+        short: style ? style[1] : mid.replace(/[^\p{L}]/gu, '').slice(0, 3).toLocaleUpperCase('tr'),
+        bg: color.bg,
+        fg: color.fg
+    };
+}
+
 function teamInfo(id) {
 
     const name = teamNames.get(id) || 'Takım ' + id;
     const key = id + '|' + name;
 
-    if (!teamCache.has(key)) {
-        const plain = lower(name);
-        const style = TEAM_STYLES.find(([word]) => plain.includes(word));
-        const mid = shortName(name);
-        const color = style ? { bg: style[2], fg: style[3] } : nameColor(name);
-
-        teamCache.set(key, {
-            id: id,
-            name: name,
-            mid: mid !== name ? mid : undefined,
-            short: style ? style[1] : mid.replace(/[^\p{L}]/gu, '').slice(0, 3).toLocaleUpperCase('tr'),
-            bg: color.bg,
-            fg: color.fg
-        });
-    }
+    if (!teamCache.has(key))
+        teamCache.set(key, { id: id, ...teamLook(name) });
     return teamCache.get(key);
 }
 
@@ -3741,6 +3764,8 @@ async function startData() {
     }
 
     readLeagues();
+    if (anShown)
+        anRedraw();
     watchNames();
     watchFast();
     openDay(TODAY);
@@ -6029,25 +6054,26 @@ function renderSavedOdds() {
 }
 
 /*
- * ORANLAR (veri): sunucu/VERITABANI.md → "Oranlar"
- * Dokümanlar gerekince bir kez okunur (oran_gun seçili gün, oran_lig seçilen lig, oran_mac
- * Oranlar sekmesi açılınca); 1 saatten eskiyse yeniden okunur (sunucu günde 2 kez yazar).
+ * BİR KEZ OKUNAN DOKÜMANLAR (oranlar, analizler): gzip ile sıkıştırılmış (z) dokümanlar gerekince
+ * bir kez okunur, 1 saatten eskiyse yeniden okunur.
+ *   Oranlar: sunucu/VERITABANI.md → "Oranlar" (oran_gun seçili gün, oran_lig seçilen lig,
+ *   oran_mac maçın oranları açılınca; sunucu günde 2 kez yazar).
  */
-const ODDS_DOCS = new Map();          /* "oran_gun/2026-11-01" → { at, data, loading } */
+const DOC_CACHE = new Map();          /* "oran_gun/2026-11-01" → { at, data, loading } */
 const ODDS_MATCH_BY_ID = new Map();   /* Oranlar menüsündeki, günün listesinde olmayan maçlar */
-const ODDS_TTL = 60 * 60000;
+const DOC_TTL = 60 * 60000;
 
-/* Dokümanın içeriği; okunuyorsa (ilk kez) undefined, okununca ekranlar yenilenir */
-function oddsDoc(path) {
+/* Dokümanın içeriği; okunuyorsa (ilk kez) undefined. Okununca onLoad çağrılır (yoksa ekranlar yenilenir) */
+function cachedDoc(path, onLoad) {
 
-    const entry = ODDS_DOCS.get(path);
-    if (entry && (entry.loading || Date.now() - entry.at < ODDS_TTL))
+    const entry = DOC_CACHE.get(path);
+    if (entry && (entry.loading || Date.now() - entry.at < DOC_TTL))
         return entry.data;
     if (!db)
         return entry ? entry.data : undefined;
 
     const next = { at: Date.now(), data: entry ? entry.data : undefined, loading: true };
-    ODDS_DOCS.set(path, next);
+    DOC_CACHE.set(path, next);
 
     const [collection, id] = path.split('/');
     fs.getDoc(fs.doc(db, collection, id))
@@ -6056,7 +6082,7 @@ function oddsDoc(path) {
         .finally(() => {
             next.loading = false;
             next.at = Date.now();
-            refreshViews();
+            (onLoad || refreshViews)();
         });
 
     return next.data;
@@ -6111,7 +6137,7 @@ function oddsMenuMatches() {
     if (oddsState.leagues.size) {
         let waiting = false;
         oddsState.leagues.forEach(league => {
-            const data = oddsDoc('oran_lig/' + league);
+            const data = cachedDoc('oran_lig/' + league);
             if (data === undefined) {
                 waiting = true;
                 return;
@@ -6129,7 +6155,7 @@ function oddsMenuMatches() {
     if (oddsState.day === TODAY && !(today && today.loaded && namesReady))
         return null;
 
-    const data = oddsDoc('oran_gun/' + oddsState.day);
+    const data = cachedDoc('oran_gun/' + oddsState.day);
     if (data === undefined)
         return null;
     Object.entries(data).forEach(([id, text]) => {
@@ -6241,14 +6267,70 @@ function renderOdds() {
 /* =================================================
    ANALİZ
    -------------------------------------------------
-   Veri: şimdilik boş. İleride veritabanından gelecek.
+   Veri: yönetim sayfasının yazdığı dokümanlar (sunucu/VERITABANI.md → "Analiz").
+   Sekme ilk açılınca analiz_dizin/futbol (gün ve lig sayıları) ve seçili günün analiz_gun
+   dokümanı okunur; lig seçilince analiz_lig, Detaylı Analiz'e basınca analiz_futbol/{no}.
 ================================================= */
-const AN_DATA = {};
-/* Biten maçlar (başlayalı 2 saatten fazla) listelenmez */
-const AN_LIST = Object.values(AN_DATA)
-    .filter(m => m.ts * 1000 + 2 * 3600000 > Date.now())
-    .sort((a, b) => a.ts - b.ts);
 
+/* Sekme açıldı mı (açılmadan okuma yapılmaz) */
+let anShown = false;
+
+/* Lig dokümanının adı: "/" kullanılamaz */
+function anLeagueKey(name) {
+    return name.replace(/\//g, '-');
+}
+
+/* Maçın günü: başlama saati − 7 saat (Türkiye saati) */
+function anDayOf(ts) {
+    return new Date((ts - 4 * 3600) * 1000).toISOString().slice(0, 10);
+}
+
+/* Bir doküman okununca gün düğmeleri, lig menüsü ve liste yeniden çizilir */
+function anRedraw() {
+    renderAnDays();
+    buildAnLeagueMenu();
+    renderAnalysis();
+}
+
+function anDoc(path) {
+    return anShown ? cachedDoc(path, anRedraw) : undefined;
+}
+
+/* Dizin: { gunler: { gün: sayı }, ligler: { lig: sayı } } */
+function anIndex() {
+    return anDoc('analiz_dizin/futbol');
+}
+
+/*
+ * Gösterilecek analizler (okunuyorsa null): seçili günlerin maçları. Lig seçiliyse seçilen liglerin
+ * dokümanlarından, değilse seçili günlerin dokümanlarından. Biten maçlar (başlayalı 2 saatten fazla) listelenmez.
+ */
+function anMatches() {
+
+    const docs = anLeagues.size
+        ? Array.from(anLeagues).map(name => anDoc('analiz_lig/' + anLeagueKey(name)))
+        : Array.from(anDays).map(day => anDoc('analiz_gun/' + day));
+
+    if (docs.some(data => data === undefined))
+        return null;
+
+    const list = new Map();
+    docs.forEach(data => Object.entries(data).forEach(([id, m]) => {
+        list.set(id, { ...m, key: id, day: anDayOf(m.ts) });
+    }));
+
+    return Array.from(list.values()).filter(m =>
+        m.ts * 1000 + 2 * 3600000 > Date.now() && anDays.has(m.day));
+}
+
+/* Analiz metinlerindeki kalın yazı (<b>) dışında hiçbir etiket çalışmaz */
+function escapeHTML(text) {
+    return String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+}
+
+function boldHTML(text) {
+    return escapeHTML(text).replace(/&lt;(\/?)b&gt;/g, '<$1b>');
+}
 
 /* Analizdeki liglerin bayrakları (kodla çizilmiş); Avrupa kupaları için Avrupa bayrağı */
 const AN_FLAGS = (() => {
@@ -6296,90 +6378,99 @@ function AN_FLAG(league) {
     return AN_FLAGS[league] || '';
 }
 
-/* Seçili gün: 'YYYY-AA-GG' ya da 'ALL' (Tümü) */
-let anDay = TODAY;
+/* Seçili günler: açılışta bugün; basınca eklenir, seçili olana basınca çıkar */
+const anDays = new Set([TODAY]);
 
-/* Bugün ve sonraki 3 gün (hepsi aynı anda görünür) */
+/* Bugün ve sonraki 6 gün */
 function anDayKeys() {
-    const keys = [];
-    for (let d = 0; d <= 3; d++) {
-        const day = new Date(TODAY + 'T12:00:00');
-        day.setDate(day.getDate() + d);
-        keys.push(dayKey(day));
-    }
-    return keys;
+    return Array.from({ length: 7 }, (_, i) => dayShift(i));
 }
 
 function renderAnDays() {
 
     const box = document.getElementById('anDayBox');
+    const scroll = box.scrollLeft;
     box.textContent = '';
 
-    const keys = anDayKeys();
+    const index = anIndex();
 
-    keys.forEach(key => {
+    anDayKeys().forEach(key => {
 
         const date = new Date(key + 'T12:00:00');
         const button = document.createElement('button');
 
-        /* Gün adı ve yanında o günkü analiz sayısı: "Bugün (72)" */
-        button.textContent = (key === TODAY ? 'Bugün' : DAYS[date.getDay()]) +
-            ' (' + AN_LIST.filter(m => m.date_iso === key).length + ')';
+        /* Üstte gün adı, altta o günkü analiz sayısı */
+        const name = document.createElement('span');
+        name.textContent = key === TODAY ? 'Bugün' : DAYS[date.getDay()];
+        button.appendChild(name);
+        if (index) {
+            const count = document.createElement('small');
+            count.textContent = '(' + ((index.gunler || {})[key] || 0) + ')';
+            button.appendChild(count);
+        }
 
-        button.classList.toggle('active', key === anDay);
-        button.addEventListener('click', () => selectAnDay(key));
+        button.classList.toggle('active', anDays.has(key));
+        button.addEventListener('click', () => {
+            if (anDays.has(key))
+                anDays.delete(key);
+            else
+                anDays.add(key);
+            renderAnDays();
+            renderAnalysis();
+        });
         box.appendChild(button);
     });
 
-    /* Tümü de yanında bütün analizlerin sayısıyla: "Tümü (84)" */
-    const all = document.getElementById('anAll');
-    all.textContent = 'Tümü (' + AN_LIST.length + ')';
-    all.classList.toggle('active', anDay === 'ALL');
+    /* Yeniden çizilince kaydırma yerinde kalır */
+    box.scrollLeft = scroll;
 }
-
-function selectAnDay(key) {
-    anDay = key;
-    renderAnDays();
-    renderAnalysis();
-}
-
-/* Tümü: açıkken tekrar basınca seçim iptal olur, Bugün'e dönülür */
-document.getElementById('anAll').addEventListener('click', () => {
-    selectAnDay(anDay === 'ALL' ? TODAY : 'ALL');
-});
 
 /* Ligler: analizdeki ligler, işaret kutulu (boşsa hepsi) */
 const anLeagues = new Set();
 const anLeagueMenu = document.getElementById('anLeagueMenu');
 const anLeagueBtn = document.getElementById('anLeagueBtn');
 
-[...new Set(AN_LIST.map(m => m.league))].sort((a, b) => a.localeCompare(b, 'tr')).forEach(name => {
+/* Menü dizindeki liglerden çizilir (dizin değişmediyse yeniden çizilmez) */
+let anLeagueMenuFor = null;
 
-    const label = document.createElement('label');
-    const input = document.createElement('input');
-    const text = document.createElement('span');
-    const count = document.createElement('small');
+function buildAnLeagueMenu() {
 
-    input.type = 'checkbox';
-    text.textContent = name;
-    count.textContent = AN_LIST.filter(m => m.league === name).length;
+    const index = anIndex();
+    if (!index || index === anLeagueMenuFor)
+        return;
+    anLeagueMenuFor = index;
+    anLeagueMenu.textContent = '';
 
-    input.addEventListener('change', () => {
-        if (input.checked)
-            anLeagues.add(name);
-        else
-            anLeagues.delete(name);
+    const leagues = index.ligler || {};
+    Object.keys(leagues).sort((a, b) => a.localeCompare(b, 'tr')).forEach(name => {
 
-        anLeagueBtn.firstChild.textContent = anLeagues.size ? 'Ligler (' + anLeagues.size + ') ' : 'Ligler ';
-        anLeagueBtn.classList.toggle('active', anLeagues.size > 0);
-        renderAnalysis();
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        const text = document.createElement('span');
+        const count = document.createElement('small');
+
+        input.type = 'checkbox';
+        input.checked = anLeagues.has(name);
+        text.textContent = name;
+        count.textContent = leagues[name];
+
+        input.addEventListener('change', () => {
+            if (input.checked)
+                anLeagues.add(name);
+            else
+                anLeagues.delete(name);
+
+            anLeagueBtn.firstChild.textContent = anLeagues.size ? 'Ligler (' + anLeagues.size + ') ' : 'Ligler ';
+            anLeagueBtn.classList.toggle('active', anLeagues.size > 0);
+            renderAnalysis();
+        });
+
+        label.appendChild(input);
+        label.appendChild(text);
+        label.appendChild(count);
+        anLeagueMenu.appendChild(label);
     });
-
-    label.appendChild(input);
-    label.appendChild(text);
-    label.appendChild(count);
-    anLeagueMenu.appendChild(label);
-});
+}
 
 anLeagueBtn.addEventListener('click', () => {
 
@@ -6404,7 +6495,8 @@ function anCard(m) {
     card.className = 'an-card';
     card.setAttribute('role', 'button');
 
-    const stars = '★'.repeat(m.stars) + '<i>' + '★'.repeat(5 - m.stars) + '</i>';
+    const starCount = Math.max(0, Math.min(5, Number(m.stars) || 0));
+    const stars = '★'.repeat(starCount) + '<i>' + '★'.repeat(5 - starCount) + '</i>';
 
     card.innerHTML =
         '<div class="an-head"><span class="oc-league"></span><span class="an-when"></span></div>' +
@@ -6431,7 +6523,7 @@ function anCard(m) {
 
     ['home', 'away'].forEach(side => {
         const el = card.querySelector('.an-team[data-side="' + side + '"]');
-        el.appendChild(crest({ short: m[side + '_code'], bg: m[side + '_bg'], fg: m[side + '_fg'] }));
+        el.appendChild(crest(teamLook(m[side])));
         const name = document.createElement('span');
         name.textContent = m[side];
         el.appendChild(name);
@@ -6445,10 +6537,10 @@ function anCard(m) {
     chips[2].textContent = m.offside_chip;
 
     /* Gerekçeler analiz dosyasından geliyor (kalın yazılar için <b> içerir) */
-    card.querySelector('.an-reasons').innerHTML = m.card_reasons.map(r => '<li>' + r + '</li>').join('');
+    card.querySelector('.an-reasons').innerHTML = (m.card_reasons || []).map(r => '<li>' + boldHTML(r) + '</li>').join('');
 
     const subs = card.querySelector('.an-subs');
-    m.sub_boxes.forEach(box => {
+    (m.sub_boxes || []).forEach(box => {
         const el = document.createElement('div');
         el.className = 'an-sub';
         el.innerHTML = '<span></span><b></b>';
@@ -6488,7 +6580,7 @@ function anCard(m) {
 
     card.querySelector('.an-deep').addEventListener('click', event => {
         event.stopPropagation();
-        openAnSheet(m.key);
+        openAnSheet(m);
     });
 
     return card;
@@ -6560,8 +6652,8 @@ function renderAnalysis() {
     const raw = document.getElementById('anSearch').value.trim();
     const query = lower(raw);
 
-    const list = AN_LIST.filter(m =>
-        (anDay === 'ALL' || m.date_iso === anDay) &&
+    const all = anMatches();
+    const list = (all || []).filter(m =>
         (!anLeagues.size || anLeagues.has(m.league)) &&
         (!query || lower(m.home + ' ' + m.away + ' ' + m.league).includes(query))
     );
@@ -6569,9 +6661,11 @@ function renderAnalysis() {
     if (!list.length) {
         const empty = document.createElement('p');
         empty.className = 'home-empty';
-        empty.textContent = query
-            ? '"' + raw + '" için analiz bulunamadı.'
-            : 'Bu gün için analiz yok.';
+        empty.textContent =
+            !anDays.size ? 'Bir gün seçin.' :
+            !all ? 'Yükleniyor…' :
+            query ? '"' + raw + '" için analiz bulunamadı.' :
+            'Seçilen günlerde analiz yok.';
         box.appendChild(empty);
         return;
     }
@@ -6582,27 +6676,27 @@ function renderAnalysis() {
     list.forEach(m => box.appendChild(anCard(m)));
 }
 
-/* DETAYLI ANALİZ penceresi */
+/* DETAYLI ANALİZ penceresi: maçın dokümanı (analiz_futbol/{no}) basınca bir kez okunur */
 let anSheetKey = null;
+const anDetails = new Map();   /* maç no → doküman */
 
 function anFormDots(arr) {
     return '<span class="form-dots">' + (arr || []).map(x => {
         const cls = x === 'G' ? 'f-g' : (x === 'B' ? 'f-b' : 'f-m');
-        return '<span class="f-dot ' + cls + '">' + x + '</span>';
+        return '<span class="f-dot ' + cls + '">' + escapeHTML(x) + '</span>';
     }).join('') + '</span>';
 }
 
-function renderAnSheet() {
+function renderAnSheet(m) {
 
-    const m = AN_DATA[anSheetKey];
-    if (!m) return '';
-
-    const t = m.taraf, g = m.gol, k = m.korner, c = m.kart, o = m.ofsayt;
-    const pct = (a, b) => Math.round(a / Math.max(0.1, a + b) * 100);
-    const xgTot = (g.xgH + g.xgA).toFixed(2);
+    const t = m.taraf || {}, g = m.gol || {}, k = m.korner || {}, c = m.kart || {}, o = m.ofsayt || {};
+    const num = v => Number(v) || 0;
+    const pct = (a, b) => Math.round(num(a) / Math.max(0.1, num(a) + num(b)) * 100);
+    const xgTot = (num(g.xgH) + num(g.xgA)).toFixed(2);
     const xgHPct = pct(g.xgH, g.xgA), scHPct = pct(g.scoredH, g.scoredA);
     const krHPct = pct(k.avgH, k.avgA), cdHPct = pct(c.teamCardH, c.teamCardA), ofHPct = pct(o.offH, o.offA);
-    const notes = list => '<ul class="simple-notes">' + list.map(n => '<li>' + n + '</li>').join('') + '</ul>';
+    const notes = list => '<ul class="simple-notes">' + (list || []).map(n => '<li>' + boldHTML(n) + '</li>').join('') + '</ul>';
+    const e = escapeHTML;
     const pane = key => 'data-pane="' + key + '"';
 
     return `
@@ -6610,27 +6704,26 @@ function renderAnSheet() {
         <div class="sec-card">
           <div class="sec-title"><span>🏆 Taraf Bahsi Önerileri</span></div>
           <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Taraf</span><span class="p-val">${t.mainPick}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Güvenli Sigorta</span><span class="p-val">${t.safePick}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Sürpriz Seçim</span><span class="p-val">${t.surprisePick}</span></div>
-            <div class="p-box red"><span class="p-lbl">⛔ Uzak Dur</span><span class="p-val">${t.avoidPick}</span></div>
+            <div class="p-box green"><span class="p-lbl">Öne Çıkan Taraf</span><span class="p-val">${e(t.mainPick)}</span></div>
+            <div class="p-box amber"><span class="p-lbl">Cesur Tercih</span><span class="p-val">${e(t.cesurPick)}</span></div>
+            <div class="p-box red"><span class="p-lbl">⛔ Uzak Dur</span><span class="p-val">${e(t.neverPick)}</span></div>
           </div>
         </div>
         <div class="sec-card">
           <div class="sec-title"><span>📊 Kazanma İhtimali & Form</span></div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>Ev %${t.probH}</span><span class="lbl">Beraberlik %${t.probD}</span><span>Dep %${t.probA}</span></div>
+            <div class="stat-cmp-head"><span>Ev %${num(t.probH)}</span><span class="lbl">Beraberlik %${num(t.probD)}</span><span>Dep %${num(t.probA)}</span></div>
             <div class="stat-bar-track">
-              <div class="stat-bar-left" style="width:${t.probH}%"></div>
-              <div style="width:${t.probD}%; background:#9ca3af;"></div>
-              <div class="stat-bar-right" style="width:${t.probA}%"></div>
+              <div class="stat-bar-left" style="width:${num(t.probH)}%"></div>
+              <div style="width:${num(t.probD)}%; background:#9ca3af;"></div>
+              <div class="stat-bar-right" style="width:${num(t.probA)}%"></div>
             </div>
           </div>
           <div class="stat-cmp-row">
             <div class="stat-cmp-head"><span>${anFormDots(t.formH)}</span><span class="lbl">Son 5 Maç Formu</span><span>${anFormDots(t.formA)}</span></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${t.ppgH} Puan</span><span class="lbl">Maç Başı Puan Ortalaması</span><span>${t.ppgA} Puan</span></div>
+            <div class="stat-cmp-head"><span>${num(t.ppgH)} Puan</span><span class="lbl">Maç Başı Puan Ortalaması</span><span>${num(t.ppgA)} Puan</span></div>
           </div>
         </div>
         <div class="sec-card">
@@ -6643,24 +6736,23 @@ function renderAnSheet() {
         <div class="sec-card">
           <div class="sec-title"><span>⚽ Gol Tercihleri</span><span>Toplam xG: ${xgTot}</span></div>
           <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Ana Gol Tercihi</span><span class="p-val">${g.mainPick}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Alternatif Gol</span><span class="p-val">${g.altPick}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Takım Gol Baremi</span><span class="p-val">${g.teamPick}</span></div>
-            <div class="p-box"><span class="p-lbl">Yakın Skorlar</span><span class="p-val">${g.scores.map(s => '<span class="score-pill">' + s + '</span>').join('')}</span></div>
+            <div class="p-box green"><span class="p-lbl">Ana Gol Tercihi</span><span class="p-val">${e(g.mainPick)}</span></div>
+            <div class="p-box blue"><span class="p-lbl">Alternatif Gol</span><span class="p-val">${e(g.altPick)}</span></div>
+            <div class="p-box amber"><span class="p-lbl">Takım Gol Baremi</span><span class="p-val">${e(g.teamPick)}</span></div>
           </div>
         </div>
         <div class="sec-card">
           <div class="sec-title"><span>📊 Gol & Hücum Verileri</span></div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${g.xgH} xG</span><span class="lbl">Gol Beklentisi (xG)</span><span>${g.xgA} xG</span></div>
+            <div class="stat-cmp-head"><span>${num(g.xgH)} xG</span><span class="lbl">Gol Beklentisi (xG)</span><span>${num(g.xgA)} xG</span></div>
             <div class="stat-bar-track"><div class="stat-bar-left" style="width:${xgHPct}%"></div><div class="stat-bar-right" style="width:${100 - xgHPct}%"></div></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${g.scoredH}</span><span class="lbl">Maç Başı Atılan Gol</span><span>${g.scoredA}</span></div>
+            <div class="stat-cmp-head"><span>${num(g.scoredH)}</span><span class="lbl">Maç Başı Atılan Gol</span><span>${num(g.scoredA)}</span></div>
             <div class="stat-bar-track"><div class="stat-bar-left" style="width:${scHPct}%"></div><div class="stat-bar-right" style="width:${100 - scHPct}%"></div></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${g.concededH}</span><span class="lbl">Maç Başı Yenilen Gol</span><span>${g.concededA}</span></div>
+            <div class="stat-cmp-head"><span>${num(g.concededH)}</span><span class="lbl">Maç Başı Yenilen Gol</span><span>${num(g.concededA)}</span></div>
           </div>
         </div>
         <div class="sec-card">
@@ -6673,20 +6765,19 @@ function renderAnSheet() {
         <div class="sec-card">
           <div class="sec-title"><span>🚩 Korner Tercihleri</span></div>
           <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Korner</span><span class="p-val">${k.mainPick}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Taraf Korner</span><span class="p-val">${k.teamPick}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Korner Üstünlüğü</span><span class="p-val">${k.mostPick}</span></div>
-            <div class="p-box"><span class="p-lbl">İlk Yarı Korner</span><span class="p-val">${k.htPick}</span></div>
+            <div class="p-box green"><span class="p-lbl">Öne Çıkan Korner</span><span class="p-val">${e(k.mainPick)}</span></div>
+            <div class="p-box blue"><span class="p-lbl">Taraf Korner</span><span class="p-val">${e(k.teamPick)}</span></div>
+            <div class="p-box amber"><span class="p-lbl">Korner Üstünlüğü</span><span class="p-val">${e(k.mostPick)}</span></div>
           </div>
         </div>
         <div class="sec-card">
           <div class="sec-title"><span>📊 Korner Ortalamaları</span></div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${k.avgH}</span><span class="lbl">Maç Başı Kullanılan Korner</span><span>${k.avgA}</span></div>
+            <div class="stat-cmp-head"><span>${num(k.avgH)}</span><span class="lbl">Maç Başı Kullanılan Korner</span><span>${num(k.avgA)}</span></div>
             <div class="stat-bar-track"><div class="stat-bar-left" style="width:${krHPct}%"></div><div class="stat-bar-right" style="width:${100 - krHPct}%"></div></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${k.againstH}</span><span class="lbl">Rakiplere Verilen Korner</span><span>${k.againstA}</span></div>
+            <div class="stat-cmp-head"><span>${num(k.againstH)}</span><span class="lbl">Rakiplere Verilen Korner</span><span>${num(k.againstA)}</span></div>
           </div>
         </div>
         <div class="sec-card">
@@ -6699,20 +6790,20 @@ function renderAnSheet() {
         <div class="sec-card">
           <div class="sec-title"><span>🟨 Kart Tercihleri</span></div>
           <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Kart Baremi</span><span class="p-val">${c.mainPick}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Daha Çok Kart Görür</span><span class="p-val">${c.mostPick}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Hakem / Kart Ortalaması</span><span class="p-val">${c.refAvg}</span></div>
-            <div class="p-box"><span class="p-lbl">Kırmızı Kart Riski</span><span class="p-val">${c.redRisk}</span></div>
+            <div class="p-box green"><span class="p-lbl">Öne Çıkan Kart Baremi</span><span class="p-val">${e(c.mainPick)}</span></div>
+            <div class="p-box blue"><span class="p-lbl">Daha Çok Kart Görür</span><span class="p-val">${e(c.mostPick)}</span></div>
+            <div class="p-box amber"><span class="p-lbl">Hakem / Kart Ortalaması</span><span class="p-val">${e(c.refAvg)}</span></div>
+            <div class="p-box"><span class="p-lbl">Kırmızı Kart Riski</span><span class="p-val">${e(c.redRisk)}</span></div>
           </div>
         </div>
         <div class="sec-card">
           <div class="sec-title"><span>📊 Takım Kart & Faul Ortalamaları</span></div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${c.teamCardH} Kart</span><span class="lbl">Maç Başı Görülen Kart</span><span>${c.teamCardA} Kart</span></div>
+            <div class="stat-cmp-head"><span>${num(c.teamCardH)} Kart</span><span class="lbl">Maç Başı Görülen Kart</span><span>${num(c.teamCardA)} Kart</span></div>
             <div class="stat-bar-track"><div class="stat-bar-left" style="width:${cdHPct}%"></div><div class="stat-bar-right" style="width:${100 - cdHPct}%"></div></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${c.foulH} Faul</span><span class="lbl">Maç Başı Faul Ortalaması</span><span>${c.foulA} Faul</span></div>
+            <div class="stat-cmp-head"><span>${num(c.foulH)} Faul</span><span class="lbl">Maç Başı Faul Ortalaması</span><span>${num(c.foulA)} Faul</span></div>
           </div>
         </div>
         <div class="sec-card">
@@ -6725,20 +6816,20 @@ function renderAnSheet() {
         <div class="sec-card">
           <div class="sec-title"><span>📐 Ofsayt Tercihleri</span></div>
           <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Ofsayt Baremi</span><span class="p-val">${o.mainPick}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Daha Çok Ofsayta Düşer</span><span class="p-val">${o.mostPick}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Takım Ofsayt Baremi</span><span class="p-val">${o.teamPick}</span></div>
-            <div class="p-box"><span class="p-lbl">Savunma Çizgisi</span><span class="p-val">${o.lineStyle}</span></div>
+            <div class="p-box green"><span class="p-lbl">Öne Çıkan Ofsayt Baremi</span><span class="p-val">${e(o.mainPick)}</span></div>
+            <div class="p-box blue"><span class="p-lbl">Daha Çok Ofsayta Düşer</span><span class="p-val">${e(o.mostPick)}</span></div>
+            <div class="p-box amber"><span class="p-lbl">Takım Ofsayt Baremi</span><span class="p-val">${e(o.teamPick)}</span></div>
+            <div class="p-box"><span class="p-lbl">Savunma Çizgisi</span><span class="p-val">${e(o.lineStyle)}</span></div>
           </div>
         </div>
         <div class="sec-card">
           <div class="sec-title"><span>📊 Ofsayt & Savunma Çizgisi Verileri</span></div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${o.offH}</span><span class="lbl">Maç Başı Ofsayta Düşme</span><span>${o.offA}</span></div>
+            <div class="stat-cmp-head"><span>${num(o.offH)}</span><span class="lbl">Maç Başı Ofsayta Düşme</span><span>${num(o.offA)}</span></div>
             <div class="stat-bar-track"><div class="stat-bar-left" style="width:${ofHPct}%"></div><div class="stat-bar-right" style="width:${100 - ofHPct}%"></div></div>
           </div>
           <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${o.trapH}</span><span class="lbl">Rakibi Ofsayta Düşürme</span><span>${o.trapA}</span></div>
+            <div class="stat-cmp-head"><span>${num(o.trapH)}</span><span class="lbl">Rakibi Ofsayta Düşürme</span><span>${num(o.trapA)}</span></div>
           </div>
         </div>
         <div class="sec-card">
@@ -6772,35 +6863,47 @@ function setDetailMode(analysis) {
     });
 }
 
-function openAnSheet(key) {
+/* Beş bölme maç sayfasının beş sekmesine yerleşir (doküman gelmediyse "Yükleniyor…") */
+function fillAnPanes(m) {
 
-    const m = AN_DATA[key];
-    if (!m)
-        return;
-
-    anSheetKey = key;
-    detailId = null;
-
-    document.getElementById('sbLeague').textContent =
-        m.league + ' · ' + m.day_name + ' ' + m.date_tr.slice(0, 5);
-
-    sbTeam(document.getElementById('sbHome'), { name: m.home, short: m.home_code, bg: m.home_bg, fg: m.home_fg });
-    sbTeam(document.getElementById('sbAway'), { name: m.away, short: m.away_code, bg: m.away_bg, fg: m.away_fg });
-
-    document.getElementById('sbScoreText').textContent = m.time_tr;
-    const status = document.getElementById('sbStatus');
-    status.textContent = 'ANALİZ';
-    status.className = '';
-
-    /* Beş bölme maç sayfasının beş sekmesine yerleşir */
     const temp = document.createElement('div');
-    temp.innerHTML = renderAnSheet();
+    if (m)
+        temp.innerHTML = renderAnSheet(m);
 
     AN_TABS.forEach(([page, pane]) => {
         const target = detailSheet.querySelector('.tab-page[data-page="' + page + '"] .an-pane');
         const source = temp.querySelector('[data-pane="' + pane + '"]');
-        target.innerHTML = source ? source.innerHTML : '';
+        target.innerHTML = m ? (source ? source.innerHTML : '') : '<p class="tab-empty">Yükleniyor…</p>';
     });
+}
+
+/* card: listedeki kart (üst alan bundan çizilir), ayrıntılar maçın dokümanından */
+function openAnSheet(card) {
+
+    const key = card.key;
+    anSheetKey = key;
+    detailId = null;
+
+    const when = new Date(card.ts * 1000);
+    document.getElementById('sbLeague').textContent = card.league + ' · ' + formatDate(when);
+
+    sbTeam(document.getElementById('sbHome'), teamLook(card.home));
+    sbTeam(document.getElementById('sbAway'), teamLook(card.away));
+
+    document.getElementById('sbScoreText').textContent = formatTime(when);
+    const status = document.getElementById('sbStatus');
+    status.textContent = 'ANALİZ';
+    status.className = '';
+
+    fillAnPanes(anDetails.get(key));
+
+    if (!anDetails.has(key) && db) {
+        fs.getDoc(fs.doc(db, 'analiz_futbol', key)).then(snap => {
+            anDetails.set(key, snap.exists() ? snap.data() : {});
+            if (anSheetKey === key)
+                fillAnPanes(anDetails.get(key));
+        }, () => {});
+    }
 
     setDetailMode(true);
 
@@ -6816,8 +6919,7 @@ function openAnSheet(key) {
 }
 
 renderDays();
-renderAnDays();
-renderAnalysis();
+anRedraw();
 renderLive();
 renderSaved();
 renderOdds();
@@ -7077,6 +7179,12 @@ function setHomeModeView(mode) {
     const index = HOME_ORDER.indexOf(mode);
 
     homeMode = mode;
+
+    /* Analiz verisi sekme ilk açılınca okunur */
+    if (mode === 'analysis' && !anShown) {
+        anShown = true;
+        anRedraw();
+    }
 
     homeModeBox.querySelectorAll('button').forEach(button => {
         button.classList.toggle('active', button.dataset.mode === mode);
@@ -7885,7 +7993,7 @@ function renderMatchOdds(match, box, load) {
     box.textContent = '';
 
     const path = 'oran_mac/' + match.id;
-    const data = load || ODDS_DOCS.has(path) ? oddsDoc(path) : undefined;
+    const data = load || DOC_CACHE.has(path) ? cachedDoc(path) : undefined;
 
     const message = text => {
         const p = document.createElement('p');

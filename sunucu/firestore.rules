@@ -38,15 +38,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    /* Analizler: her maç bir doküman. Herkes okur; yalnızca yönetici (yonetim.html ile) yazar */
-    match /analiz_futbol/{mac} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
-    }
-
-    match /analiz_nba/{mac} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
+    /*
+     * Analizler: maç, gün, lig ve dizin dokümanları. Herkes okur; yalnızca yönetici (yonetim.html ile) yazar.
+     * analiz_futbol, analiz_nba, analiz_gun, analiz_nba_gun, analiz_lig, analiz_nba_lig, analiz_dizin
+     */
+    match /{koleksiyon}/{belge} {
+      allow read: if koleksiyon in ['analiz_futbol', 'analiz_nba', 'analiz_gun', 'analiz_nba_gun',
+                                    'analiz_lig', 'analiz_nba_lig', 'analiz_dizin'];
+      allow write: if koleksiyon in ['analiz_futbol', 'analiz_nba', 'analiz_gun', 'analiz_nba_gun',
+                                     'analiz_lig', 'analiz_nba_lig', 'analiz_dizin']
+        && request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
     }
 
     /* Zil kayıtları: herkes yalnızca kendi kaydını yazar (görünmez giriş), kimse okuyamaz */
