@@ -790,12 +790,12 @@ button {
     border-bottom: 0;
 }
 
-/* Sabah maçının altındaki küçük not ("*03.11 salı sabah") */
+/* Sabah maçının altındaki küçük not ("*02.11 pazartesi sabah") */
 .score-note {
     grid-column: 1 / -1;
     margin-top: -.25em;
     text-align: center;
-    font-size: .6875rem;
+    font-size: .625rem;
     font-weight: 600;
     color: #8a8f9c;
 }
@@ -3387,8 +3387,8 @@ function rowToMatch(day, no, text, events) {
     return {
         id: no,
         day: day,
-        /* 04:00–06:59 başlayan maç önceki günün listesinde "sabah" notuyla görünür */
-        morning: nextDay && Number(time.slice(0, 2)) >= 4,
+        /* 04:00–06:59 başlayan maç iki listede de "sabah" notuyla görünür */
+        morning: Number(time.slice(0, 2)) >= 4 && Number(time.slice(0, 2)) < 7,
         league: leagueInfo(Number(league)),
         week: week || '',
         date: date,
@@ -4871,7 +4871,7 @@ function scoreRow(match, showDate, showLeague) {
 
     row.appendChild(bell);
 
-    /* Önceki günün listesindeki sabah maçı: altında küçük not ("*03.11 salı sabah") */
+    /* Sabah maçı (04:00–06:59): iki günün listesinde de altında küçük not ("*02.11 pazartesi sabah") */
     if (match.morning) {
         const note = document.createElement('span');
         note.className = 'score-note';
