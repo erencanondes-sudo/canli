@@ -7,8 +7,8 @@
  *   Türkiye oranlarına benzetmek için ORAN_PAY eklenip oran yeniden hesaplanır (tahmini).
  * Yazılanlar (Firestore, gzip ile sıkıştırılmış, değişmediyse yazılmaz):
  *   oran_mac/{maç no} : maçın bütün oranları (maç sayfası, Oranlar sekmesi)
- *   oran_gun/{gün}    : günün maçları, menüdeki 5 oran (Oranlar menüsü)
- *   oran_lig/{lig}    : ligin 8 günü, menüdeki 5 oran (Oranlar menüsü, lig seçilince)
+ *   oran_gun/{gün}    : günün maçları, menüdeki 3 oran (Oranlar menüsü)
+ *   oran_lig/{lig}    : ligin 8 günü, menüdeki 3 oran (Oranlar menüsü, lig seçilince)
  *   sistem/oran       : son güncelleme
  */
 
@@ -197,17 +197,12 @@ function hesapla(sirketBahisleri) {
     return { o: Object.keys(o).length ? o : null, P };
 }
 
-/*
- * Menüdeki 5 oran (14 sayı): 1, X, 2, 2,5 alt, 2,5 üst,
- * korner baraj×10, alt, üst, kart baraj×10, alt, üst, ofsayt baraj×10, alt, üst. Olmayan boş.
- */
+/* Menüdeki 3 oran (8 sayı): 1, X, 2, 2,5 alt, 2,5 üst, korner baraj×10, alt, üst. Olmayan boş */
 function menuSatiri(o, P) {
     const s = [...(o.ms || ['', '', '']), ...((o.au || {})['2.5'] || ['', ''])];
-    ['kor', 'kart', 'ofs'].forEach(kod => {
-        const baraj = dengeli(P, kod)[0];
-        const v = baraj && o[kod] && o[kod][baraj];
-        s.push(...(v ? [Math.round(Number(baraj) * 10), v[0], v[1]] : ['', '', '']));
-    });
+    const baraj = dengeli(P, 'kor')[0];
+    const v = baraj && o.kor && o.kor[baraj];
+    s.push(...(v ? [Math.round(Number(baraj) * 10), v[0], v[1]] : ['', '', '']));
     return s;
 }
 

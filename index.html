@@ -4767,7 +4767,7 @@ function oddBox(match, label, key, value, pickable) {
 /*
  * ORANLAR MENÜSÜ KARTI
  * Üstte lig / tarih; ortada ev sahibi | - | deplasman;
- * altta maç sonucu (1 X 2), toplam gol 2,5, korner, kart ve ofsayt alt / üst.
+ * altta maç sonucu (1 X 2), toplam gol 2,5 ve korner alt / üst.
  */
 function oddsCard(match) {
 
@@ -4832,9 +4832,7 @@ function oddsCard(match) {
     /* Baraj 10 ile çarpılmış gelir (95 = 9,5); gol her zaman 2,5 */
     [
         ['Toplam gol', 'au', 25, odds.under, odds.over],
-        ['Korner', 'kor', odds.cornerLine, odds.cornerUnder, odds.cornerOver],
-        ['Kart', 'kart', odds.cardLine, odds.cardUnder, odds.cardOver],
-        ['Ofsayt', 'ofs', odds.offLine, odds.offUnder, odds.offOver]
+        ['Korner', 'kor', odds.cornerLine, odds.cornerUnder, odds.cornerOver]
     ].forEach(([title, code, line, under, over]) => {
         const row = document.createElement('div');
         row.className = 'oc-market';
@@ -6089,9 +6087,8 @@ function findMatch(id) {
     return MATCH_BY_ID.get(id) || ODDS_MATCH_BY_ID.get(id);
 }
 
-/* Menü satırındaki 14 sayı (VERITABANI.md → "Menü satırı") */
-const ODDS_FIELDS = ['home', 'draw', 'away', 'under', 'over',
-    'cornerLine', 'cornerUnder', 'cornerOver', 'cardLine', 'cardUnder', 'cardOver', 'offLine', 'offUnder', 'offOver'];
+/* Menü satırındaki 8 sayı (VERITABANI.md → "Menü satırı") */
+const ODDS_FIELDS = ['home', 'draw', 'away', 'under', 'over', 'cornerLine', 'cornerUnder', 'cornerOver'];
 
 function parseOddsRow(values) {
     const odds = {};
