@@ -26,6 +26,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `oran_lig/{lig no}` | Aynı oranlar, ligin 8 günü | Sunucu | Oranlar menüsü (lig seçilince, bir kez) | Günde 2 kez, değişince | ~0,3–1 KB (sıkıştırılmış) |
 | Firestore `oran_mac/{maç no}` | Maçın bütün oranları (`z`, gzip) | Sunucu | Maç sayfası, Oranlar sekmesine basılınca (bir kez) | Günde 2 kez, maç başlayınca durur | ~0,3–0,6 KB (sıkıştırılmış) |
 | Firestore `sistem/oran` | Son oran güncellemesi: zaman, istek sayısı, maç sayısı, süre | Sunucu | Sunucu (açılışta), sen | Günde 2 kez | < 1 KB |
+| Firestore `analiz_futbol/{maç no}`, `analiz_nba/{maç no}` | Analiz dosyasındaki maçın bütün alanları (sıkıştırılmadan) + `gun` (başlama − 7 saat), `dosya_surum`, `dosya_olusturma`, `yuklendi`. Maç numarası analiz kaynağınınki (API'ninkiyle aynı değil) | Yönetici (bilgisayardaki yonetim.html, e-posta/şifre ile) | Henüz okunmuyor | Dosya yüklenince | ~2–3 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 

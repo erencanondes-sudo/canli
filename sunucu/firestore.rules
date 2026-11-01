@@ -38,6 +38,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /* Analizler: her maç bir doküman. Herkes okur; yalnızca yönetici (yonetim.html ile) yazar */
+    match /analiz_futbol/{mac} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
+    }
+
+    match /analiz_nba/{mac} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
+    }
+
     /* Zil kayıtları: herkes yalnızca kendi kaydını yazar (görünmez giriş), kimse okuyamaz */
     match /zil/{kimlik} {
       allow read: if false;
