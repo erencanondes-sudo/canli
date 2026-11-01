@@ -790,6 +790,16 @@ button {
     border-bottom: 0;
 }
 
+/* Sabah maçının altındaki küçük not ("*03.11 salı sabah") */
+.score-note {
+    grid-column: 1 / -1;
+    margin-top: -.25em;
+    text-align: center;
+    font-size: .6875rem;
+    font-weight: 600;
+    color: #8a8f9c;
+}
+
 /* Hızlı kaynakta uyarı: satır hafif kırmızı */
 .score-row.warn {
     background: #fdecec;
@@ -3170,7 +3180,19 @@ const FLAGS = (() => {
             '<rect x="8" width="5" height="20" fill="#fff"/><rect y="7.5" width="30" height="5" fill="#fff"/>' +
             '<rect x="9.25" width="2.5" height="20" fill="#00205b"/><rect y="8.75" width="30" height="2.5" fill="#00205b"/>'),
         se: svg('<rect width="30" height="20" fill="#006aa7"/>' +
-            '<rect x="9" width="3.5" height="20" fill="#fecc02"/><rect y="8.25" width="30" height="3.5" fill="#fecc02"/>')
+            '<rect x="9" width="3.5" height="20" fill="#fecc02"/><rect y="8.25" width="30" height="3.5" fill="#fecc02"/>'),
+        ro: svg('<rect width="10" height="20" fill="#002b7f"/><rect x="10" width="10" height="20" fill="#fcd116"/>' +
+            '<rect x="20" width="10" height="20" fill="#ce1126"/>'),
+        at: svg('<rect width="30" height="20" fill="#ed2939"/><rect y="6.67" width="30" height="6.67" fill="#fff"/>'),
+        fi: svg('<rect width="30" height="20" fill="#fff"/>' +
+            '<rect x="8" width="5" height="20" fill="#002f6c"/><rect y="7.5" width="30" height="5" fill="#002f6c"/>'),
+        br: svg('<rect width="30" height="20" fill="#009c3b"/><polygon points="15,2.5 27,10 15,17.5 3,10" fill="#ffdf00"/>' +
+            '<circle cx="15" cy="10" r="4.2" fill="#002776"/>'),
+        ar: svg('<rect width="30" height="20" fill="#74acdf"/><rect y="6.67" width="30" height="6.67" fill="#fff"/>' +
+            '<circle cx="15" cy="10" r="1.8" fill="#f6b40e"/>'),
+        us: svg('<rect width="30" height="20" fill="#fff"/>' +
+            [0, 2, 4, 6, 8, 10, 12].map(i => '<rect y="' + (i * 20 / 13) + '" width="30" height="' + (20 / 13) + '" fill="#b22234"/>').join('') +
+            '<rect width="12" height="' + (140 / 13) + '" fill="#3c3b6e"/>')
     };
 })();
 
@@ -3190,6 +3212,12 @@ const LEAGUES = [
     { id: 119, name: 'Superliga', country: 'Danimarka', flag: FLAGS.dk },
     { id: 103, name: 'Eliteserien', country: 'Norveç', flag: FLAGS.no },
     { id: 113, name: 'Allsvenskan', country: 'İsveç', flag: FLAGS.se },
+    { id: 283, name: 'Liga I', country: 'Romanya', flag: FLAGS.ro },
+    { id: 218, name: 'Bundesliga', country: 'Avusturya', flag: FLAGS.at },
+    { id: 244, name: 'Veikkausliiga', country: 'Finlandiya', flag: FLAGS.fi },
+    { id: 71, name: 'Série A', country: 'Brezilya', flag: FLAGS.br },
+    { id: 128, name: 'Liga Profesional', country: 'Arjantin', flag: FLAGS.ar },
+    { id: 253, name: 'MLS', country: 'ABD', flag: FLAGS.us },
     { id: 141, name: 'Segunda División', country: 'İspanya', flag: FLAGS.es },
     { id: 204, name: '1. Lig', country: 'Türkiye', flag: FLAGS.tr },
     { id: 40, name: 'Championship', country: 'İngiltere', flag: FLAGS.en },
@@ -3351,11 +3379,19 @@ function rowToMatch(day, no, text, events) {
 
     const status = LIVE_CODES.has(code) ? 'live' : DONE_CODES.has(code) ? 'done' : 'upcoming';
 
+    /* Saatin sonunda "+": maç listenin gününden sonraki takvim gününde (00:00–06:59) başlıyor */
+    const nextDay = time.endsWith('+');
+    const date = new Date(new Date(day + 'T' + time.slice(0, 2) + ':' + time.slice(2, 4) + ':00+03:00').getTime() +
+        (nextDay ? 86400000 : 0));
+
     return {
         id: no,
+        day: day,
+        /* 04:00–06:59 başlayan maç önceki günün listesinde "sabah" notuyla görünür */
+        morning: nextDay && Number(time.slice(0, 2)) >= 4,
         league: leagueInfo(Number(league)),
         week: week || '',
-        date: new Date(day + 'T' + time.slice(0, 2) + ':' + time.slice(2, 4) + ':00+03:00'),
+        date: date,
         home: teamInfo(Number(home)),
         away: teamInfo(Number(away)),
         code: code,
@@ -3400,6 +3436,8 @@ const MATCHES = [];
 const MATCH_BY_ID = new Map();
 
 const dayRows = new Map();       /* gün → Map(maç no → satır) (Firestore) */
+let scoresReady = false;         /* bir önceki çizimde canlı veri tazeydi */
+let scoresSettled = false;       /* bu çizimdeki skor değişimleri gerçek değişim sayılır */
 const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
 const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet: Firestore + RTDB günlüğü) */
 const eventKeys = new Map();     /* gün → işlenen son günlük anahtarı */
@@ -3410,23 +3448,59 @@ function rebuildMatches() {
     MATCHES.length = 0;
     MATCH_BY_ID.clear();
 
+    /* Canlı veri bu çizimde ve bir öncekinde tazeyse skor değişimleri "en son değişen" sayılır */
+    const ready = liveDataReady();
+    scoresSettled = ready && scoresReady;
+    scoresReady = ready;
+
+    const yesterday = dayShift(-1);
+    const morning = inMorning();
+
     dayRows.forEach((stored, day) => {
         const events = dayEvents.get(day);
+        const live = liveRows.get(day) || new Map();
         const rows = new Map(stored);
-        (liveRows.get(day) || new Map()).forEach((text, no) => rows.set(no, text));
+        live.forEach((text, no) => rows.set(no, text));
         rows.forEach((text, no) => {
-            const match = rowToMatch(day, no, text, events ? events[no] || [] : null);
+            const match = rowToMatch(day, no, text, matchEvents(day, no));
             const detail = matchDetails.get(match.id);
             if (detail) Object.assign(match, detail);
             /* Özet okunmayan günlerde olaylar maç dokümanından */
-            if (!events && detail && detail.olaylar && match.status !== 'upcoming')
+            if (!match.events && detail && detail.olaylar && match.status !== 'upcoming')
                 match.events = rowEvents(detail.olaylar);
+            if (!match.events && events && match.status !== 'upcoming')
+                match.events = [];
+            /* 04:00–07:00: önceki günün canlı (ve yeni biten) maçları bugünün listesinde de */
+            match.alsoToday = morning && day === yesterday && live.has(no);
             if (match.status === 'live')
                 applyFast(match);
             MATCHES.push(match);
-            MATCH_BY_ID.set(match.id, match);
+            if (!MATCH_BY_ID.has(match.id) || day === TODAY)
+                MATCH_BY_ID.set(match.id, match);
         });
     });
+}
+
+/* Maçın olayları: kendi gününün Özet'inde yoksa (sabah maçı iki listede) yüklü diğer günlerde aranır */
+function matchEvents(day, no) {
+    const own = dayEvents.get(day);
+    if (own && own[no])
+        return own[no];
+    for (const events of dayEvents.values())
+        if (events[no])
+            return events[no];
+    return null;
+}
+
+/* Aynı maç iki günün listesinde olabilir: bir kez gösterilir (bugününki önce) */
+function uniqueMatches(list) {
+    const seen = new Map();
+    list.forEach(match => {
+        const before = seen.get(match.id);
+        if (!before || (match.day === TODAY && before.day !== TODAY))
+            seen.set(match.id, match);
+    });
+    return list.filter(match => seen.get(match.id) === match);
 }
 
 /* Lig kadro / istatistik veriyor mu? (bilinmiyorsa evet) */
@@ -3469,6 +3543,8 @@ async function startData() {
     watchFast();
     openDay(TODAY);
     watchDay(selectedDay);
+    checkDay();
+    setInterval(checkDay, 60000);
 
     /* İzin daha önce verildiyse: cihaz kimliği değişmiş olabilir, gerekirse zil kaydı yenilenir */
     if (bildirimVar() && Notification.permission === 'granted' && savedIds.size)
@@ -3713,8 +3789,9 @@ function applyFast(match) {
     const source = sourceOf(match.id);
     const api = match.score ? match.score.join('-') : null;
 
+    /* Uygulama açılırken / öne gelirken gelen ilk değerler "değişim" sayılmaz (iki kaynak farklıysa hızlı) */
     if (source.api !== api) {
-        source.apiAt = source.api === null ? 0 : Date.now();
+        source.apiAt = source.api === null || !scoresSettled ? 0 : Date.now();
         source.api = api;
     }
 
@@ -3811,6 +3888,11 @@ function unwatchFast() {
     fastUnsubs.forEach(off => off());
     fastUnsubs = [];
     fastReady = false;
+    /* Öne gelince "en son değişen" baştan değerlendirilir: iki kaynak farklıysa hızlı */
+    scoreSources.forEach(source => {
+        source.apiAt = 0;
+        source.fastAt = 0;
+    });
 }
 
 /* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */
@@ -4004,15 +4086,17 @@ async function docJSON(data) {
  *
  * ÖZET (olaylar), summaryMode'a göre:
  *   'live': Firestore ozet/{gün} bir kez okunur, sonra RTDB olay/{gün} günlüğünden yalnızca
- *           dokümana girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; gece penceresinde dün ve yarın.
- *   'once': Firestore ozet/{gün} bir kez okunur (dün, gece penceresi dışında).
+ *           dokümana girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; 04:00–07:00 dün de.
+ *   'once': Firestore ozet/{gün} bir kez okunur (dün, 07:00'den sonra).
  *   null  : okunmaz; maç açılınca olaylar maç dokümanından gelir (eski günler, yarın).
+ * GÜN TANIMI (sunucuda da aynı): maçın günü = başlama − 7 saat; "Bugün" = şu an − 4 saat (04:00'te değişir).
  * Uygulama öne gelince Özet yeniden okunmaz; günlük kalınan yerden sürer.
  */
 const days = new Map();   /* gün → { live, loaded, off: [kapatma fonksiyonları] } */
 
+/* Bugünden n gün önce / sonra (gün tanımına göre) */
 function dayShift(n) {
-    const day = new Date();
+    const day = new Date(TODAY + 'T12:00:00');
     day.setDate(day.getDate() + n);
     return dayKey(day);
 }
@@ -4021,14 +4105,47 @@ function isLiveDay(day) {
     return day === TODAY || day === dayShift(-1);
 }
 
-/* Gece penceresi: 23:55–00:00 yarın, 00:00–02:30 dün de canlı */
+/* 04:00–07:00: önceki günün canlı satırları ve olay günlüğü de dinlenir */
+function inMorning() {
+    const hour = new Date().getHours();
+    return hour >= 4 && hour < 7;
+}
+
 function summaryMode(day) {
-    const now = new Date();
-    const minute = now.getHours() * 60 + now.getMinutes();
     if (day === TODAY) return 'live';
-    if (day === dayShift(-1)) return minute < 150 ? 'live' : 'once';
-    if (day === dayShift(1) && minute >= 1435) return 'live';
+    if (day === dayShift(-1)) return inMorning() ? 'live' : 'once';
     return null;
+}
+
+/*
+ * Gün değişimi (04:00) ve sabah penceresi: dakikada bir, açılışta ve uygulama öne gelince bakılır.
+ * Gün değişince "Bugün" yeni güne geçer (seçili gün bugünse o da), yeni günün listesi okunur.
+ */
+function checkDay() {
+
+    const today = sportDay();
+
+    if (today !== TODAY) {
+        const old = TODAY;
+        TODAY = today;
+        if (selectedDay === old)
+            selectedDay = today;
+        openDay(today);
+        watchDay(selectedDay);
+        renderDays();
+    }
+
+    /* Sabah penceresinde dün açılır; gerekmeyen dinlenen günler (bugün, seçili gün dışında) bırakılır */
+    const yesterday = dayShift(-1);
+    const morning = inMorning();
+    if (morning)
+        openDay(yesterday);
+    Array.from(days.keys()).forEach(day => {
+        if (day !== TODAY && day !== watchedDay && !(morning && day === yesterday))
+            closeDay(day);
+    });
+
+    refreshViews();
 }
 
 /* Günlük satırı: [maç no, sıra, olay...] yeni olay; [maç no, [olaylar]] maçın tamamı */
@@ -4226,6 +4343,7 @@ document.addEventListener('visibilitychange', () => {
     watchFast();
     openDay(TODAY);
     openDay(watchedDay);
+    checkDay();
 
     if (detailId && MATCH_BY_ID.has(detailId))
         watchDetail(MATCH_BY_ID.get(detailId));
@@ -4345,6 +4463,7 @@ function renderSavedLater() {
 ================================================= */
 
 const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const DAY_NAMES = ['pazar', 'pazartesi', 'salı', 'çarşamba', 'perşembe', 'cuma', 'cumartesi'];
 const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
 function formatDate(date) {
@@ -4527,14 +4646,19 @@ function weekTitle(text) {
    ANA SAYFA LİSTELERİ
 ================================================= */
 
-/* Günün anahtarı: "2026-10-17" (telefonun saatine göre) */
+/* Takvim gününün anahtarı: "2026-10-17" (telefonun saatine göre) */
 function dayKey(date) {
     return date.getFullYear() + '-' +
         String(date.getMonth() + 1).padStart(2, '0') + '-' +
         String(date.getDate()).padStart(2, '0');
 }
 
-const TODAY = dayKey(new Date());
+/* "Bugün": gün 04:00'te değişir (sunucuyla aynı) */
+function sportDay() {
+    return dayKey(new Date(Date.now() - 4 * 3600000));
+}
+
+let TODAY = sportDay();
 
 /* Düğmedeki yazı: Dün / Bugün / Yarın ya da "Cmt 17 Eki" */
 function dayLabel(key) {
@@ -4666,7 +4790,7 @@ function scoreRow(match, showDate, showLeague) {
 
         if (showDate) {
             date.appendChild(document.createTextNode(
-                (showLeague ? ' · ' : '') + [dayLabel(dayKey(match.date)), roundText(match)].filter(Boolean).join(' · ')
+                (showLeague ? ' · ' : '') + [dayLabel(match.day), roundText(match)].filter(Boolean).join(' · ')
             ));
         }
 
@@ -4746,6 +4870,15 @@ function scoreRow(match, showDate, showLeague) {
     });
 
     row.appendChild(bell);
+
+    /* Önceki günün listesindeki sabah maçı: altında küçük not ("*03.11 salı sabah") */
+    if (match.morning) {
+        const note = document.createElement('span');
+        note.className = 'score-note';
+        note.textContent = '*' + String(match.date.getDate()).padStart(2, '0') + '.' +
+            String(match.date.getMonth() + 1).padStart(2, '0') + ' ' + DAY_NAMES[match.date.getDay()] + ' sabah';
+        row.appendChild(note);
+    }
 
     row.addEventListener('click', () => openDetail(match.id));
 
@@ -5009,7 +5142,9 @@ function renderLive() {
             list = list.filter(m => leagueSelected.has(m.league.id));
 
         if (!liveOnly && !searching)
-            list = list.filter(m => dayKey(m.date) === selectedDay);
+            list = list.filter(m => m.day === selectedDay || (selectedDay === TODAY && m.alsoToday));
+
+        list = uniqueMatches(list);
 
         /* Aramada en yeni maç üstte, diğerlerinde saat sırasıyla */
         list.sort((a, b) => searching ? b.date - a.date : a.date - b.date);
@@ -5223,7 +5358,7 @@ function renderSaved() {
     const box = document.getElementById('mySaved');
     box.textContent = '';
 
-    const all = MATCHES.filter(m => savedIds.has(m.id));
+    const all = uniqueMatches(MATCHES.filter(m => savedIds.has(m.id)));
 
     document.getElementById('savedClear').disabled = all.length === 0;
 
@@ -5245,8 +5380,8 @@ function renderSaved() {
 
     LEAGUES.forEach(league => {
 
-        const list = MATCHES
-            .filter(m => m.league === league && savedIds.has(m.id))
+        const list = uniqueMatches(MATCHES
+            .filter(m => m.league === league && savedIds.has(m.id)))
             .sort((a, b) => a.date - b.date);
 
         if (!list.length)

@@ -94,14 +94,17 @@ function durum(f) {
     return s.short;
 }
 
-/* Canlı skor satırı (RTDB): "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Sondaki boşlar yazılmaz */
-function satir(f) {
+/*
+ * Canlı skor satırı (RTDB): "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Sondaki boşlar yazılmaz.
+ * ertesi: maç listenin gününden sonraki takvim gününde başlıyor (00:00–06:59): saatin sonuna "+" eklenir.
+ */
+function satir(f, ertesi) {
     const alan = [
         f.league.id,
         hafta(f.league.round),
         f.teams.home.id,
         f.teams.away.id,
-        saat(f.fixture.timestamp),
+        saat(f.fixture.timestamp) + (ertesi ? '+' : ''),
         durum(f),
         f.goals.home === null ? '' : f.goals.home,
         f.goals.away === null ? '' : f.goals.away

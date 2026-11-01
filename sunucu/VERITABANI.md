@@ -25,6 +25,8 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
 | Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
 
+**Gün tanımı (sunucu ve site aynı):** maçın günü = başlama saati − 7 saat (00:00–06:59 başlayan maç önceki günün listesindedir); "bugün" = şu an − 4 saat (gün 04:00'te değişir). 04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır; site 04:00–07:00 arası önceki günün canlı satırlarını ve olay günlüğünü de dinler. Canlı skor 12:30–07:00 arası çekilir.
+
 Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, dün ve yarın saatte bir, sonraki günler 6 saatte bir yenilenir). RTDB'deki günler 2 gün sonra silinir; Firestore'daki günler arşiv olarak kalır.
 
 ## Site ne zaman ne okur
@@ -70,7 +72,7 @@ Virgülle ayrılmış metin. Sondaki boş alanlar yazılmaz (başlamamış maçt
 | 2 | Hafta (aşağıda) | 9 |
 | 3 | Ev sahibi takım no | 994 |
 | 4 | Deplasman takım no | 6343 |
-| 5 | Başlama saati (Türkiye saati) | 2030 (20:30) |
+| 5 | Başlama saati (Türkiye saati). Sonunda `+` varsa maç listenin gününden sonraki takvim gününde başlıyor (00:00–06:59) | 2030 (20:30), 0500+ |
 | 6 | Durum (aşağıda) | 67 |
 | 7 | Ev sahibi gol | 2 |
 | 8 | Deplasman gol | 1 |

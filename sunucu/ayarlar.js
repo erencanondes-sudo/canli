@@ -24,6 +24,12 @@ module.exports = {
         { no: 119, ad: 'Superliga' },
         { no: 103, ad: 'Eliteserien' },
         { no: 113, ad: 'Allsvenskan' },
+        { no: 283, ad: 'Liga I' },
+        { no: 218, ad: 'Bundesliga' },
+        { no: 244, ad: 'Veikkausliiga' },
+        { no: 71, ad: 'Série A' },
+        { no: 128, ad: 'Liga Profesional' },
+        { no: 253, ad: 'MLS' },
         /* 2. ligler */
         { no: 141, ad: 'Segunda División' },
         { no: 204, ad: '1. Lig' },
@@ -76,7 +82,10 @@ module.exports = {
     ],
 
     /* Canlı skor yalnızca bu saatler arasında çekilir (Türkiye saati, gece yarısını geçebilir) */
-    CANLI_SAAT: ['12:30', '01:00'],
+    CANLI_SAAT: ['12:30', '07:00'],
+    GUN_KAYMA: 7,                   /* maçın günü = başlama saati − 7 saat (07:00'den önce başlayan önceki güne yazılır) */
+    BUGUN_KAYMA: 4,                 /* "bugün" = şu an − 4 saat (gün 04:00'te değişir, sitede de aynı) */
+    SABAH: [4, 7],                  /* 04:00–06:59 başlayan maç kendi takvim gününün listesine de yazılır */
     TUR_ARALIK: 15000,              /* canlı saatlerde: canlı skor ve yazma 15 sn */
     GUN_ARALIK: 10 * 60000,         /* Firestore gün dokümanı en fazla 10 dk'da bir yazılır */
     B1_SURE: 21 * 60,               /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */

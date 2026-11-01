@@ -23,7 +23,7 @@ const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
 
-/* Takip edilen maçlar: no → { f, gun, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
+/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
@@ -44,13 +44,27 @@ function canliSaatte() {
 
 const turAraligi = () => canliSaatte() ? A.TUR_ARALIK : A.BEKLEME_ARALIK;
 
+/*
+ * GÜN TANIMI (sitede de aynı)
+ *   Maçın günü  = başlama saati − 7 saat: 00:00–06:59 başlayan maç önceki günün listesindedir.
+ *   "Bugün"     = şu an − 4 saat: gün 04:00'te değişir.
+ *   04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır.
+ */
+const SAAT_MS = 3600000;
+const macGunu = ts => gunAdi(ts * 1000 - A.GUN_KAYMA * SAAT_MS);
+const takvimGunu = ts => gunAdi(ts * 1000);
+const saatTR = ts => Number(new Date(ts * 1000).toLocaleTimeString('en-GB', { timeZone: A.SAAT_DILIMI, hour: '2-digit', hour12: false }));
+
 /* Dün, bugün ve ILERI_GUN gün ileri */
 function gunler() {
-    const n = Date.now();
+    const n = Date.now() - A.BUGUN_KAYMA * SAAT_MS;
     const liste = [];
     for (let i = -1; i <= A.ILERI_GUN; i++) liste.push(gunAdi(n + i * 864e5));
     return liste;
 }
+
+/* Bir sonraki takvim günü ("2026-11-02" → "2026-11-03") */
+const sonrakiGun = gun => gunAdi(new Date(gun + 'T12:00:00Z').getTime() + 864e5);
 
 /*
  * API'den gelen maçı kaydeder; olay içermeyen cevaplarda eski olayları korur.
@@ -67,7 +81,10 @@ function kaydet(f, canliIstek) {
     if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
         return k;
     k.f = f;
-    k.gun = f.fixture.date.slice(0, 10);
+    const ts = f.fixture.timestamp;
+    const sa = saatTR(ts);
+    k.gun = macGunu(ts);
+    k.gun2 = sa >= A.SABAH[0] && sa < A.SABAH[1] ? takvimGunu(ts) : null;
     if (f.events) k.olaylar = B.olaylar(f);
     if (BITTI.has(f.fixture.status.short) && !k.bitis) k.bitis = simdi();
     bildirim.kontrol(f, k.olaylar, canliSaatte());
@@ -222,8 +239,9 @@ async function gunYaz(gun) {
     const duz = {};
 
     for (const [no, k] of maclar) {
-        if (k.gun !== gun) continue;
-        const satir = B.satir(k.f);
+        if (k.gun !== gun && k.gun2 !== gun) continue;
+        /* Kendi gününün listesinde, ertesi takvim gününde başlıyorsa saatin sonunda "+" */
+        const satir = B.satir(k.f, k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun);
         duz[no] = satir;
 
         let c = CANLI.has(durumu(k));
@@ -319,7 +337,7 @@ async function durumYaz() {
 
 /* Dünden eski maçları hafızadan sil (veritabanında kalırlar) */
 function temizle(dun) {
-    for (const [no, k] of maclar) if (k.gun < dun) maclar.delete(no);
+    for (const [no, k] of maclar) if (k.gun < dun && !(k.gun2 && k.gun2 >= dun)) maclar.delete(no);
 }
 
 /* ---------- Tur ---------- */
@@ -339,10 +357,12 @@ async function tur() {
             zaman.kapsam = basla;
         }
 
-        for (const gun of tumu) {
-            const aralik = gun === bugun ? A.FIKSTUR_BUGUN : gun === dun || gun === yarin ? A.FIKSTUR_DIGER : A.FIKSTUR_ILERI;
+        /* Bir gün iki takvim gününe yayılır (07:00 → ertesi gün 06:59): bir takvim günü fazla çekilir */
+        const takvim = [...tumu, sonrakiGun(tumu[tumu.length - 1])];
+        for (const gun of takvim) {
+            const aralik = gun === bugun || gun === yarin ? A.FIKSTUR_BUGUN : gun === dun ? A.FIKSTUR_DIGER : A.FIKSTUR_ILERI;
             if (basla - (zaman.fikstur[gun] || 0) < aralik) continue;
-            if (gun !== bugun && api.yedekte()) continue;
+            if (gun !== bugun && gun !== yarin && api.yedekte()) continue;
             await fiksturCek(gun);
             zaman.fikstur[gun] = basla;
         }
@@ -359,7 +379,7 @@ async function tur() {
         }
 
         /* Fikstürü bu açılışta çekilmemiş gün yazılmaz (yarım liste eski satırları silmesin) */
-        const hazir = tumu.filter(gun => zaman.fikstur[gun]);
+        const hazir = tumu.filter(gun => zaman.fikstur[gun] && zaman.fikstur[sonrakiGun(gun)]);
         await takimYaz();
         for (const gun of hazir) await gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
