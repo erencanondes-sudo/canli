@@ -1136,19 +1136,6 @@ button {
     visibility: hidden;
 }
 
-/* Hafta başlığı ("7. Hafta") */
-.week-title {
-    margin: .875rem .25rem .5rem;
-    font-size: .8125rem;
-    font-weight: 800;
-    color: #6b7080;
-    letter-spacing: .02em;
-}
-
-.week-title:first-child {
-    margin-top: .25rem;
-}
-
 .home-empty {
     margin: 1.875rem .625rem;
     text-align: center;
@@ -4855,13 +4842,6 @@ function oddsCard(match) {
     return card;
 }
 
-function weekTitle(text) {
-    const el = document.createElement('div');
-    el.className = 'week-title';
-    el.textContent = text;
-    return el;
-}
-
 
 /* =================================================
    ANA SAYFA LİSTELERİ
@@ -6254,18 +6234,8 @@ function renderOdds() {
         return;
     }
 
-    LEAGUES.forEach(league => {
-
-        const own = list.filter(m => m.league === league);
-        const rounds = Array.from(new Set(own.map(roundText)));
-
-        rounds.forEach(round => {
-            box.appendChild(weekTitle(
-                [league.name, round].filter(Boolean).join(' · ').toLocaleUpperCase('tr') + ' ORANLARI'
-            ));
-            own.filter(m => roundText(m) === round).forEach(card);
-        });
-    });
+    /* Lig sırasıyla (başlık yok) */
+    LEAGUES.forEach(league => list.filter(m => m.league === league).forEach(card));
 }
 
 /* =================================================
