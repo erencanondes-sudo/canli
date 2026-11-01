@@ -52,7 +52,9 @@ module.exports = {
         { no: 41, ad: 'League One' },
         { no: 42, ad: 'League Two' },
         { no: 63, ad: 'National' },
-        { no: 138, ad: 'Serie C' },
+        { no: 138, ad: 'Serie C - A' },
+        { no: 942, ad: 'Serie C - B' },
+        { no: 943, ad: 'Serie C - C' },
         { no: 80, ad: '3. Liga' },
         /* Kupalar */
         { no: 143, ad: 'Kral Kupası' },
