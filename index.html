@@ -3933,15 +3933,22 @@ function nameColor(name) {
     return { bg: 'hsl(' + hue + ', 55%, ' + light + '%)', fg: '#ffffff' };
 }
 
-/* Takımın adından görünümü: kısa ad, rozet kısaltması ve renkleri (analizlerde de kullanılır) */
+/* Ekranda takım adı en fazla 13 harf: uzunsa 12 harf ve nokta ("Borussia Mönc.") */
+function teamLabel(name) {
+    const letters = Array.from(name);
+    return letters.length > 13 ? letters.slice(0, 12).join('') + '.' : name;
+}
+
+/* Takımın adından görünümü: ekrandaki ad (mid), rozet kısaltması ve renkleri (analizlerde de kullanılır) */
 function teamLook(name) {
     const plain = lower(name);
     const style = TEAM_STYLES.find(([word]) => plain.includes(word));
     const mid = shortName(name);
+    const label = teamLabel(mid);
     const color = style ? { bg: style[2], fg: style[3] } : nameColor(name);
     return {
         name: name,
-        mid: mid !== name ? mid : undefined,
+        mid: label !== name ? label : undefined,
         short: style ? style[1] : mid.replace(/[^\p{L}]/gu, '').slice(0, 3).toLocaleUpperCase('tr'),
         bg: color.bg,
         fg: color.fg
@@ -5346,9 +5353,10 @@ let selectedDay = TODAY;
 let dayKeys = [];
 
 /* Gün düğmeleri: bugünün iki yanında 8 gün (takvimden seçilen gün de eklenir) */
-function renderDays() {
+function renderDays(keepScroll) {
 
     const box = document.getElementById('dayBox');
+    const scroll = box.scrollLeft;
     box.textContent = '';
 
     /* Bugünün solunda ve sağında 8'er gün */
@@ -5383,7 +5391,7 @@ function renderDays() {
         button.dataset.day = key;
         button.classList.toggle('active', key === selectedDay);
 
-        button.addEventListener('click', () => selectDay(key));
+        button.addEventListener('click', () => selectDay(key, true));
 
         box.appendChild(button);
     });
@@ -5397,10 +5405,13 @@ function renderDays() {
 
     dayKeys = list;
 
-    /* Seçili gün soldan ikinci sırada: önceki gün, seçili gün, sonraki iki gün */
+    /* Seçili gün soldan ikinci sırada: önceki gün, seçili gün, sonraki iki gün.
+       Gün düğmesine basılınca kaydırma yerinde kalır. */
     const active = box.querySelector('button.active');
 
-    if (active) {
+    if (keepScroll)
+        box.scrollLeft = scroll;
+    else if (active) {
         const step = active.offsetWidth + parseFloat(getComputedStyle(box).columnGap || 0);
         box.scrollLeft = active.offsetLeft - step;
     }
@@ -5410,7 +5421,7 @@ function renderDays() {
  * Bir gün seçilir: "Canlı" ve arama kapanır, liste o güne döner.
  * (Gün düğmeleri ve takvim kullanır.)
  */
-function selectDay(key) {
+function selectDay(key, keepScroll) {
 
     selectedDay = key;
     searchInput.value = '';
@@ -5420,7 +5431,7 @@ function selectDay(key) {
         liveState.liveOnly = false;
 
     watchDay(key);
-    renderDays();
+    renderDays(keepScroll);
     renderLive();
 }
 
@@ -7019,7 +7030,7 @@ function anCard(m) {
         const el = card.querySelector('.an-team[data-side="' + side + '"]');
         el.appendChild(crest(teamLook(m[side])));
         const name = document.createElement('span');
-        name.textContent = m[side];
+        name.textContent = teamLabel(m[side]);
         el.appendChild(name);
     });
 
@@ -7978,7 +7989,7 @@ function sbTeam(el, team) {
     el.textContent = '';
     el.appendChild(shieldCrest(team));
     const name = document.createElement('span');
-    name.textContent = team.name;
+    name.textContent = team.mid || team.name;
     el.appendChild(name);
 }
 
