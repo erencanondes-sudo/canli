@@ -3190,136 +3190,24 @@ body.has-layer .ac-kapa svg {
 
 
 /* =====================================================
-   ANA SAYFA: KOYU GÖRÜNÜM (maç sayfasının Oranlar sekmesi temel alındı)
-   Koyu lacivert zemin, ışıklı çerçeveli düğme ve kartlar, renkli başlıklar,
-   beyaz skor / oran kutuları; seçili olan yeşil. Açılır menüler ve takvim beyaz kalır.
+   ANA SAYFA: ölçü ayarları (renkler ilk hâlindeki gibi)
 ===================================================== */
-#homePage {
-    --hp-text: #e3ebf7;
-    --hp-muted: #9fb0c8;
-    --hp-line: rgba(70, 200, 255, .45);
-    --hp-glow: 0 0 .6rem rgba(40, 170, 255, .22);
-    --hp-chip: linear-gradient(180deg, #35527c, #2a4368);
-    --hp-green: #3ff07c;
-    --hp-green-line: #39e46f;
-    --hp-green-bg: linear-gradient(180deg, rgba(34, 197, 94, .1), rgba(34, 197, 94, .38));
-    --hp-white: linear-gradient(180deg, #ffffff, #e2e7ef);
 
-    background:
-        radial-gradient(ellipse 90% 30% at 50% 100%, rgba(255, 255, 255, .14), transparent 70%),
-        radial-gradient(ellipse 90% 30% at 50% 50%, rgba(255, 255, 255, .14), transparent 70%),
-        linear-gradient(180deg, #2c405e 0%, #2f4768 60%, #334d71 100%);
-    color: var(--hp-text);
-}
-
-/* Düğmeler: sekmeler, günler, araç satırı, Ligler, takvim, spor topları */
-#homePage #homeModeBox button,
-#homePage #dayBox button,
-#homePage #oddsDays button,
-#homePage #anDayBox button,
-#homePage #anLeagueBtn,
-#homePage .tb-live,
-#homePage .tb-league,
-#homePage .tb-time,
-#homePage .tb-popular,
-#homePage #calendarBtn,
-#homePage .sport-btn,
-#homePage .search-box {
-    border-color: var(--hp-line);
-    background: var(--hp-chip);
-
-    /* Hafif ışık */
-    box-shadow: 0 0 .3rem rgba(40, 170, 255, .14);
-    color: var(--hp-text);
-}
-
-#homePage #homeModeBox button.active,
-#homePage #dayBox button.active,
-#homePage #oddsDays button.active,
-#homePage #anDayBox button.active,
-#homePage #anLeagueBtn.active,
-#homePage .tb-league.active,
-#homePage .tb-time.active,
-#homePage .tb-popular.active {
-    border-color: var(--hp-green-line);
-    background: var(--hp-green-bg);
-    box-shadow: 0 0 .3rem rgba(57, 228, 111, .25);
-    color: var(--hp-green);
-}
-
-/* Canlı düğmesi açıkken kırmızı kalır */
-#homePage .tb-live.active {
-    border-color: #f0544b;
-    background: linear-gradient(180deg, #f0544b, #d32f2f);
-    box-shadow: 0 0 .6rem rgba(240, 84, 75, .5);
-    color: white;
-}
-
-#homePage .sport-btn {
-    opacity: .7;
-}
-
-#homePage .sport-btn.active {
-    border-color: var(--hp-green-line);
-    box-shadow: 0 0 .3rem rgba(57, 228, 111, .3);
-    opacity: 1;
-}
-
-#homePage #menuBtn,
-#homePage .day-arrow {
-    color: var(--hp-text);
-}
-
-/* Arama kutuları */
-#homePage .search-box:focus-within {
-    border-color: var(--hp-green-line);
-}
-
-#homePage .search-box input {
-    color: var(--hp-text);
-}
-
-#homePage .search-box input::placeholder {
-    color: var(--hp-text);
-}
-
-/* Yazılar */
-#homePage .home-empty {
-    color: #b8c3d6;
-}
-
-#homePage .week-title,
-#homePage .coupon-section,
-#homePage .score-date {
-    color: var(--hp-muted);
-}
-
-#homePage .score-date b {
-    color: var(--hp-text);
-}
-
-/* CANLI SKOR: lig kartları tek renk ve sade; maç satırları açık renk */
+/* Lig kartı: köşeler daha az yuvarlak */
 #homePage .league-block {
-    /* Mat çizgi (öncekinden biraz koyu); parlama yok; köşeler daha az yuvarlak */
-    border: 1px solid rgba(160, 185, 215, .17);
     border-radius: .6rem;
-    box-shadow: 0 1px .375rem rgba(0, 0, 0, .18);
 }
 
 /* Lig adı satırı biraz alçak */
 #homePage .league-head {
     padding-top: .45em;
     padding-bottom: .45em;
-    background: linear-gradient(180deg, #35527c, #2a4368);
 }
 
-/* Maç satırı: açık gri ile çok açık mavi arası */
+/* Maç satırı biraz alçak */
 #homePage .score-row {
-    /* Biraz alçak */
     padding-top: .415em;
     padding-bottom: .415em;
-    background: #f9fafc;
-    border-bottom-color: #e9ecf1;
 }
 
 /* Takım adları biraz kalın (kazanan daha kalın) */
@@ -3329,157 +3217,6 @@ body.has-layer .ac-kapa svg {
 
 #homePage .score-team.won {
     font-weight: 750;
-}
-
-#homePage .score-row:active {
-    background: #eef1f5;
-}
-
-/* Uyarıda satır hafif kırmızı kalır */
-#homePage .score-row.warn {
-    background: #fdecec;
-}
-
-/* ORANLAR menüsü kartları */
-#homePage .match-card,
-#homePage .an-card {
-    border: 1px solid var(--hp-line);
-    background: #253954;
-    box-shadow: var(--hp-glow);
-    color: var(--hp-text);
-}
-
-#homePage .match-head,
-#homePage .an-head {
-    color: var(--hp-muted);
-}
-
-#homePage .match-status.done {
-    color: var(--hp-text);
-}
-
-#homePage .match-status.upcoming {
-    color: var(--hp-muted);
-}
-
-#homePage .oc-league .flag {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, .25);
-}
-
-#homePage .oc-team {
-    color: white;
-}
-
-#homePage .oc-mid {
-    color: var(--hp-muted);
-}
-
-#homePage .oc-markets {
-    border-top-color: rgba(255, 255, 255, .1);
-}
-
-#homePage .oc-label {
-    color: #c7d2e3;
-}
-
-#homePage .odd {
-    background: var(--hp-white);
-}
-
-#homePage .odd span {
-    color: #3a4256;
-}
-
-#homePage .odd b {
-    color: #0f1626;
-}
-
-#homePage .odd.empty b {
-    color: #b5b9c3;
-}
-
-/* Seçilen oran sarı kalır */
-#homePage .odd.picked {
-    background: #ebb21c;
-}
-
-#homePage .odd.picked span,
-#homePage .odd.picked b {
-    color: white;
-}
-
-/* ANALİZ kartları */
-#homePage .an-card.open {
-    border-color: var(--hp-green-line);
-    box-shadow: 0 0 .7rem rgba(57, 228, 111, .3);
-}
-
-#homePage .an-team span:last-child {
-    color: white;
-}
-
-#homePage .an-pick {
-    border-color: var(--hp-line);
-    background: var(--hp-chip);
-}
-
-#homePage .an-pick small {
-    color: var(--hp-muted);
-}
-
-#homePage .an-pick b {
-    color: var(--hp-green);
-}
-
-#homePage .an-stars i {
-    color: #4c5c75;
-}
-
-#homePage .an-strip {
-    border-top-color: rgba(255, 255, 255, .1);
-}
-
-#homePage .an-chip {
-    background: rgba(255, 255, 255, .08);
-    color: var(--hp-text);
-}
-
-#homePage .an-chip span {
-    color: var(--hp-muted);
-}
-
-#homePage .an-hint {
-    color: #5fb4ff;
-}
-
-#homePage .an-expand {
-    border-top-color: rgba(255, 255, 255, .15);
-}
-
-#homePage .an-expand h4 {
-    color: white;
-}
-
-#homePage .an-reasons {
-    color: #d3dcea;
-}
-
-#homePage .an-sub {
-    background: rgba(255, 255, 255, .08);
-}
-
-#homePage .an-sub span {
-    color: var(--hp-muted);
-}
-
-#homePage .an-sub b {
-    color: white;
-}
-
-#homePage .an-deep {
-    border-color: var(--hp-green-line);
-    background: var(--hp-green-bg);
-    color: var(--hp-green);
 }
 
 </style>
