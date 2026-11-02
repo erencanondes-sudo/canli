@@ -2285,9 +2285,14 @@ body.has-layer .ac-kapa svg {
  * ÖZET: koyu zeminde açık renkli tek kart. Yarı başlıkları lacivert şerit,
  * dakika açık mavi hap; ev sahibi solda, deplasman sağda (ikisi de dakikaya yaslı).
  */
-/* Özet kartı sekme kutusu genişliğinde, hemen altında */
-#detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
+/* Bütün sekmelerin içeriği sekme kutusunun hemen altından başlar (Özet'teki gibi) */
+#detailSheet:not(.an-mode) .tab-page,
+.os-page {
     padding-top: 0;
+}
+
+/* Özet kartı sekme kutusu genişliğinde */
+#detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
     padding-left: .3rem;
     padding-right: .3rem;
 }
@@ -2402,7 +2407,7 @@ body.has-layer .ac-kapa svg {
  */
 .stat-line {
     margin-bottom: .6em;
-    padding: .45em .9em .6em;
+    padding: .35em .9em .5em;
     border: 1px solid rgba(70, 200, 255, .45);
     border-radius: .9rem;
     background: linear-gradient(180deg, #10213a, #0b1729);
@@ -2414,8 +2419,8 @@ body.has-layer .ac-kapa svg {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    margin-bottom: .35em;
-    font-size: 1.3125rem;
+    margin-bottom: .3em;
+    font-size: 1.25rem;
     font-weight: 800;
     line-height: 1.1;
     color: white;
@@ -2427,7 +2432,7 @@ body.has-layer .ac-kapa svg {
 
 .stat-top span:nth-child(2) {
     text-align: center;
-    font-size: .9375rem;
+    font-size: .875rem;
     font-weight: 700;
     color: #e3ebf7;
 }
