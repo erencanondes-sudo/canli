@@ -182,10 +182,11 @@ button {
     gap: .35em;
     min-width: 0;
 
-    /* Menü düğmesine göre ortalanmaz: reklamla arası her ekranda sabit 16px */
+    /* Reklamla arası her ekranda sabit 16px */
     align-self: flex-start;
-    margin-right: .35em;
-    font-size: min(1rem, 3.4vw);
+
+    /* Beş sekme dar ekranda da tek satıra sığsın */
+    font-size: min(.9375rem, 3.15vw);
 }
 
 #homeModeBox button {
@@ -1035,18 +1036,31 @@ button {
     color: #d93025;
 }
 
-/* Menü düğmesi: simge üstteki alanın sağ kenarıyla aynı hizada */
-/* Boyu sekmeler kadar: satırı uzatmaz, alttaki satırla arası 8px kalır */
+/* Menü düğmesi: Canlı Skor'un araç satırında, aramanın sağında; satırı uzatmaz */
 #menuBtn {
     flex: none;
     align-self: stretch;
-    width: 2rem;
+    width: 1.6rem;
     padding: 0;
     line-height: 1;
     background: none;
     color: #333;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     text-align: right;
+}
+
+/* Canlı Skor araç satırı: menü düğmesine yer açılsın diye öğeler biraz dar */
+#toolRow {
+    gap: .25em;
+}
+
+#toolRow .tb-live,
+#toolRow .tb-league {
+    padding: 0 .8em;
+}
+
+#toolRow .tb-time {
+    padding: 0 .6em;
 }
 
 /* SAĞ ÜST MENÜ */
@@ -1758,9 +1772,14 @@ body.has-layer .ac-kapa svg {
     min-height: 15em;
     padding: .75rem .5em 1em;
     color: white;
+
+    /* Gece stadyumu (kodla çizilmiş): köşelerde ışıklar, ortada lacivert, altta çim */
     background:
-        linear-gradient(180deg, rgba(8, 20, 40, .2), rgba(8, 20, 40, .65)),
-        repeating-linear-gradient(90deg, #2f7d43 0 10%, #2a7340 10% 20%);
+        radial-gradient(ellipse 16% 11% at 5% 22%, rgba(220, 238, 255, .95), rgba(110, 180, 255, .35) 45%, transparent 75%),
+        radial-gradient(ellipse 16% 11% at 95% 22%, rgba(220, 238, 255, .95), rgba(110, 180, 255, .35) 45%, transparent 75%),
+        radial-gradient(ellipse 70% 40% at 50% 60%, rgba(70, 150, 255, .22), transparent 70%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 8%, transparent 8% 16%),
+        linear-gradient(180deg, #050b1a 0%, #0a1934 40%, #10304e 58%, #17552a 74%, #0f4220 100%);
 }
 
 .sb-league {
@@ -1787,6 +1806,7 @@ body.has-layer .ac-kapa svg {
     text-align: center;
     font-size: .9375rem;
     font-weight: 700;
+    text-shadow: 0 1px .2rem rgba(0, 0, 0, .7);
 }
 
 .sb-team .crest {
@@ -1803,41 +1823,102 @@ body.has-layer .ac-kapa svg {
     white-space: nowrap;
 }
 
+/* Orta: saat / skor kutusu ve altında durum etiketi; iki yanında ince çizgi */
 #sbScore, .os-center {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 .6em;
     text-align: center;
 }
 
+#sbScore::before, #sbScore::after,
+.os-center::before, .os-center::after {
+    content: '';
+    position: absolute;
+    top: 8%;
+    height: 60%;
+    width: 1px;
+    background: rgba(255, 255, 255, .4);
+}
+
+#sbScore::before, .os-center::before { left: 0; }
+#sbScore::after, .os-center::after { right: 0; }
+
+/* Yeşil ışıklı kutu */
 #sbScoreText, .os-time {
-    font-size: 2.6em;
+    display: inline-flex;
+    align-items: center;
+    gap: .25em;
+    padding: .12em .4em;
+    border: .125rem solid #2fe06f;
+    border-radius: .45em;
+    background: rgba(3, 20, 12, .55);
+    box-shadow: 0 0 .75rem rgba(47, 224, 111, .55), inset 0 0 .5rem rgba(47, 224, 111, .25);
+    font-size: min(2.1em, 8.4vw);
     font-weight: 800;
-    letter-spacing: .04em;
-    line-height: 1;
+    letter-spacing: .02em;
+    line-height: 1.1;
+    white-space: nowrap;
 }
 
+#sbScoreText:empty, .os-time:empty {
+    display: none;
+}
+
+/* Oynanacak maçta saatin solunda saat simgesi */
+#sbScoreText::before, .os-time::before {
+    content: '';
+    display: none;
+    width: .6em;
+    height: .6em;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 21a9 9 0 1 0 0-18a9 9 0 1 0 0 18z M12 7v5l3.5 2%22/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 21a9 9 0 1 0 0-18a9 9 0 1 0 0 18z M12 7v5l3.5 2%22/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+#sbScore:has(> .upcoming) #sbScoreText::before,
+.os-center:has(> .upcoming) .os-time::before {
+    display: block;
+}
+
+/* Durum etiketi: oynanacak yeşil, canlı kırmızı, bitti gri */
 #sbStatus, .os-status {
-    margin-top: .35em;
-    font-size: .8125rem;
+    display: inline-block;
+    margin-top: .55em;
+    padding: .3em .9em;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .18);
+    font-size: .75rem;
     font-weight: 800;
+    letter-spacing: .02em;
+    color: white;
 }
 
-#sbStatus.live {
-    color: #ffb4ad;
+#sbStatus:empty, .os-status:empty {
+    display: none;
 }
 
-/* MAÇIN ORANLARI SAYFASI (Oranlar menüsünde karta basınca): üstte maç, altta bütün oranlar */
-.os-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 1rem 1.125rem calc(6rem + env(safe-area-inset-bottom, 0px));
-    background: white;
+#sbStatus.upcoming, .os-status.upcoming {
+    background: linear-gradient(180deg, #34d36a, #16a34a);
+    box-shadow: 0 0 .6rem rgba(52, 211, 106, .6);
+}
+
+#sbStatus.live, .os-status.live {
+    background: linear-gradient(180deg, #f0544b, #d32f2f);
+    box-shadow: 0 0 .6rem rgba(240, 84, 75, .6);
+}
+
+#sbStatus.done, .os-status.done {
+    background: rgba(255, 255, 255, .22);
 }
 
 /*
  * ALT BÖLÜM (sekmeler + içerik)
  * Skor alanının alt kısmının üzerine biner (yüksekliği sabit).
  */
-#detailPanel {
+#detailPanel, .os-panel {
     position: relative;
     z-index: 3;
     flex: 1;
@@ -1845,56 +1926,95 @@ body.has-layer .ac-kapa svg {
     display: flex;
     flex-direction: column;
     margin-top: calc(-1 * var(--lift, 0px));
-    background: white;
+    background: #0b1424;
 }
 
-#detailHead {
+#detailHead, .os-head {
     flex: none;
     padding-top: .4em;
     user-select: none;
     -webkit-user-select: none;
 }
 
-#detailTabs {
+/* Sekmeler: koyu, ışıklı çerçeveli tek kutu; seçili sekme yeşil */
+#detailTabs, .os-tabs {
     display: flex;
-    padding: 0 .625rem;
-    border-bottom: 1px solid #e5e5e5;
+    margin: .1rem .6rem .6rem;
+    border: 1px solid rgba(70, 200, 255, .5);
+    border-radius: .9rem;
+    background: linear-gradient(180deg, #112640, #0a1729);
+    box-shadow: 0 0 .7rem rgba(40, 170, 255, .28);
+    overflow: hidden;
 }
 
-#detailTabs button {
+#detailTabs button, .os-tabs button {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3em;
     background: none;
     border-radius: 0;
-    color: #666;
-    font-size: min(.875rem, 3.7vw);
-    padding: .75rem 2px;
+    color: #e3ebf7;
+    font-size: min(.875rem, 3.6vw);
+    font-weight: 600;
+    padding: .6rem 2px .5rem;
     border-bottom: .1875rem solid transparent;
+    white-space: nowrap;
 }
 
-#detailTabs button.active {
-    color: #1a73e8;
-    border-bottom-color: #1a73e8;
+/* Sekmeler arası ince ayraç */
+#detailTabs button + button, .os-tabs button + button {
+    box-shadow: inset 1px 0 0 rgba(120, 185, 255, .2);
 }
 
-#detailBody {
+#detailTabs button.active, .os-tabs button.active {
+    color: #3ff07c;
+    background: linear-gradient(180deg, rgba(34, 197, 94, .06), rgba(34, 197, 94, .32));
+    border-bottom-color: #39e46f;
+}
+
+/* Sekme simgeleri (Detaylı Analiz'de sekme adları değişince gizlenir) */
+#detailTabs button::before {
+    content: '';
+    width: 1.5em;
+    height: 1.5em;
+    background: currentColor;
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
+}
+
+#detailTabs [data-tab="summary"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 3h8l4 4v14H6z M14 3v4h4 M9 12h6 M9 16h6%22/%3E%3C/svg%3E"); }
+#detailTabs [data-tab="stats"]    { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20h16 M6 20v-6h3v6 M10.5 20V5h3v15 M15 20v-9h3v9%22/%3E%3C/svg%3E"); }
+#detailTabs [data-tab="lineup"]   { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5h18v14H3z M12 5v14 M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M3 9h3v6H3 M21 9h-3v6h3%22/%3E%3C/svg%3E"); }
+#detailTabs [data-tab="odds"]     { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6 M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4 M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4%22/%3E%3C/svg%3E"); }
+#detailTabs [data-tab="comments"] { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 5h16v11H9l-5 4z M8.5 10.5h.01 M12 10.5h.01 M15.5 10.5h.01%22/%3E%3C/svg%3E"); }
+
+#detailSheet.an-mode #detailTabs button::before {
+    display: none;
+}
+
+#detailBody, .os-body {
     flex: 1;
     min-height: 0;
     overflow: hidden;
 }
 
-#detailTrack {
+#detailTrack, .os-track {
     display: flex;
     width: 500%;
     height: 100%;
     transition: transform .28s ease;
 }
 
-#detailTrack.dragging {
+#detailTrack.dragging, .os-track.dragging {
     transition: none;
 }
 
-.tab-page {
+/* Sekme sayfaları beyaz; Oranlar sayfaları koyu (aşağıda) */
+.tab-page, .os-page {
+    background: white;
     flex: none;
     width: 20%;
     height: 100%;
@@ -2237,26 +2357,113 @@ body.has-layer .ac-kapa svg {
 .stat-bars .h { background: #1f6ff2; }
 .stat-bars .a { background: #f59e0b; }
 
-/* Oranlar sekmesi */
-.odds-title {
-    margin: 0 0 .5em;
-    font-size: .8125rem;
-    font-weight: 800;
-    color: #6b7080;
+/*
+ * ORANLAR (maç sayfasının Oranlar sekmesi ve Oranlar'dan açılan sayfa)
+ * Koyu zemin; her oran türü ayrı kart: solda renkli başlık ve simge, sağda beyaz oran kutuları.
+ */
+#detailSheet:not(.an-mode) .tab-page[data-page="odds"], .os-page {
+    background:
+        radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
+        linear-gradient(180deg, #0b1424 0%, #0c1a2d 60%, #0d2a1b 100%);
+}
+
+#detailSheet:not(.an-mode) .tab-page[data-page="odds"] .tab-empty, .os-page .tab-empty {
+    color: #b8c3d6;
 }
 
 .odds-block {
-    margin-bottom: 1.2em;
+    --c: #1e6bff;
+    --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 4h10v5a5 5 0 0 1-10 0z M7 6H4v1a3 3 0 0 0 3 3 M17 6h3v1a3 3 0 0 1-3 3 M12 14v3 M8 21h8 M9 17h6v4H9z%22/%3E%3C/svg%3E");
+
+    display: grid;
+    grid-template-columns: minmax(0, 36%) 1fr;
+    margin-bottom: .75em;
+    border: 1px solid var(--c);
+    border-radius: .9rem;
+    overflow: hidden;
+    background: rgba(9, 18, 34, .9);
+    box-shadow: 0 0 .65rem -.1rem var(--c);
+}
+
+/* Tür renkleri ve simgeleri */
+.ob-ms   { --c: #1e6bff; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 4h10v5a5 5 0 0 1-10 0z M7 6H4v1a3 3 0 0 0 3 3 M17 6h3v1a3 3 0 0 1-3 3 M12 14v3 M8 21h8 M9 17h6v4H9z%22/%3E%3C/svg%3E"); }
+.ob-cs   { --c: #8b2cf5; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 8h15 M15 4l4 4-4 4 M20 16H5 M9 12l-4 4 4 4%22/%3E%3C/svg%3E"); }
+.ob-iy   { --c: #f08a00; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 21a8 8 0 1 0 0-16a8 8 0 1 0 0 16z M12 9v4l2.5 2 M10 2h4 M12 2v3%22/%3E%3C/svg%3E"); }
+.ob-iyms { --c: #d61f8a; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5h18v14H3z M12 5v14 M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M3 9h3v6H3 M21 9h-3v6h3%22/%3E%3C/svg%3E"); }
+.ob-kg   { --c: #0fb5a6; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 19V6h18v13 M3 10.3h18 M3 14.6h18 M7.5 6v13 M12 6v13 M16.5 6v13%22/%3E%3C/svg%3E"); }
+.ob-au   { --c: #22a447; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+.ob-iau  { --c: #e0a400; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+.ob-tg   { --c: #3b5bdb; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 9h14 M5 15h14 M10 4L8 20 M16 4l-2 16%22/%3E%3C/svg%3E"); }
+.ob-tc   { --c: #c2410c; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 9h14 M5 15h14 M10 4L8 20 M16 4l-2 16%22/%3E%3C/svg%3E"); }
+.ob-hnd  { --c: #0284c7; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 4v16 M7 20h10 M5 7h14 M5 7l-3 6a3 3 0 0 0 6 0z M19 7l-3 6a3 3 0 0 0 6 0z%22/%3E%3C/svg%3E"); }
+.ob-skor { --c: #dc2626; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 6h18v12H3z M12 6v12 M6.5 10v4 M15.5 10h2.5v4h-2.5z%22/%3E%3C/svg%3E"); }
+.ob-kor  { --c: #16a34a; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+.ob-kart { --c: #ca8a04; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+.ob-ofs  { --c: #7c3aed; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+
+.odds-title {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    margin: 0;
+    padding: .6em .55em;
+    background: linear-gradient(100deg, var(--c), rgba(9, 18, 34, .6));
+    font-size: .75rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: white;
+}
+
+.odds-title::before {
+    content: '';
+    flex: none;
+    width: 1.9em;
+    height: 1.9em;
+    background: currentColor;
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
 }
 
 .odds-block .odds-row {
+    align-self: center;
+    margin: 0;
+    padding: .45em;
+    gap: .4em;
     font-size: .9375rem;
+}
+
+.odds-block .odd {
+    padding: .35em 0;
+    border-radius: .55rem;
+    background: linear-gradient(180deg, #ffffff, #e2e7ef);
+}
+
+.odds-block .odd span {
+    color: #3a4256;
+}
+
+.odds-block .odd b {
+    font-weight: 800;
+    color: #0f1626;
+}
+
+.odds-block .odd.empty b {
+    color: #b5b9c3;
+}
+
+.odds-block .odd.picked {
+    background: #ebb21c;
+}
+
+.odds-block .odd.picked span,
+.odds-block .odd.picked b {
+    color: white;
 }
 
 .odds-note {
     margin-top: 1.5em;
     font-size: .75rem;
-    color: #9aa0ab;
+    color: #8f9bb0;
 }
 
 /* Maç başlayınca: oranlar kapandı */
@@ -2264,7 +2471,7 @@ body.has-layer .ac-kapa svg {
     margin: 0 0 1em;
     font-size: .8125rem;
     font-weight: 700;
-    color: #d93025;
+    color: #ff8a80;
 }
 
 
@@ -2981,6 +3188,299 @@ body.has-layer .ac-kapa svg {
     50% { transform: scale(1.06); }
 }
 
+
+/* =====================================================
+   ANA SAYFA: KOYU GÖRÜNÜM (maç sayfasının Oranlar sekmesi temel alındı)
+   Koyu lacivert zemin, ışıklı çerçeveli düğme ve kartlar, renkli başlıklar,
+   beyaz skor / oran kutuları; seçili olan yeşil. Açılır menüler ve takvim beyaz kalır.
+===================================================== */
+#homePage {
+    --hp-text: #e3ebf7;
+    --hp-muted: #9fb0c8;
+    --hp-line: rgba(70, 200, 255, .45);
+    --hp-glow: 0 0 .6rem rgba(40, 170, 255, .22);
+    --hp-chip: linear-gradient(180deg, #24406a, #1a3154);
+    --hp-green: #3ff07c;
+    --hp-green-line: #39e46f;
+    --hp-green-bg: linear-gradient(180deg, rgba(34, 197, 94, .1), rgba(34, 197, 94, .38));
+    --hp-white: linear-gradient(180deg, #ffffff, #e2e7ef);
+
+    background:
+        radial-gradient(ellipse 90% 30% at 50% 100%, rgba(255, 255, 255, .14), transparent 70%),
+        radial-gradient(ellipse 90% 30% at 50% 50%, rgba(255, 255, 255, .14), transparent 70%),
+        linear-gradient(180deg, #1c2e4a 0%, #1f3555 60%, #223b5e 100%);
+    color: var(--hp-text);
+}
+
+/* Düğmeler: sekmeler, günler, araç satırı, Ligler, takvim, spor topları */
+#homePage #homeModeBox button,
+#homePage #dayBox button,
+#homePage #oddsDays button,
+#homePage #anDayBox button,
+#homePage #anLeagueBtn,
+#homePage .tb-live,
+#homePage .tb-league,
+#homePage .tb-time,
+#homePage .tb-popular,
+#homePage #calendarBtn,
+#homePage .sport-btn,
+#homePage .search-box {
+    border-color: var(--hp-line);
+    background: var(--hp-chip);
+
+    /* Hafif ışık */
+    box-shadow: 0 0 .3rem rgba(40, 170, 255, .14);
+    color: var(--hp-text);
+}
+
+#homePage #homeModeBox button.active,
+#homePage #dayBox button.active,
+#homePage #oddsDays button.active,
+#homePage #anDayBox button.active,
+#homePage #anLeagueBtn.active,
+#homePage .tb-league.active,
+#homePage .tb-time.active,
+#homePage .tb-popular.active {
+    border-color: var(--hp-green-line);
+    background: var(--hp-green-bg);
+    box-shadow: 0 0 .3rem rgba(57, 228, 111, .25);
+    color: var(--hp-green);
+}
+
+/* Canlı düğmesi açıkken kırmızı kalır */
+#homePage .tb-live.active {
+    border-color: #f0544b;
+    background: linear-gradient(180deg, #f0544b, #d32f2f);
+    box-shadow: 0 0 .6rem rgba(240, 84, 75, .5);
+    color: white;
+}
+
+#homePage .sport-btn {
+    opacity: .7;
+}
+
+#homePage .sport-btn.active {
+    border-color: var(--hp-green-line);
+    box-shadow: 0 0 .3rem rgba(57, 228, 111, .3);
+    opacity: 1;
+}
+
+#homePage #menuBtn,
+#homePage .day-arrow {
+    color: var(--hp-text);
+}
+
+/* Arama kutuları */
+#homePage .search-box:focus-within {
+    border-color: var(--hp-green-line);
+}
+
+#homePage .search-box input {
+    color: var(--hp-text);
+}
+
+#homePage .search-box input::placeholder {
+    color: var(--hp-text);
+}
+
+/* Yazılar */
+#homePage .home-empty {
+    color: #b8c3d6;
+}
+
+#homePage .week-title,
+#homePage .coupon-section,
+#homePage .score-date {
+    color: var(--hp-muted);
+}
+
+#homePage .score-date b {
+    color: var(--hp-text);
+}
+
+/* CANLI SKOR: lig kartları tek renk ve sade; maç satırları açık renk */
+#homePage .league-block {
+    /* Mat, ince görünen çizgi (soluk), parlama yok */
+    border: 1px solid rgba(160, 185, 215, .22);
+    box-shadow: 0 1px .375rem rgba(0, 0, 0, .18);
+}
+
+/* Lig adı satırı biraz alçak */
+#homePage .league-head {
+    padding-top: .45em;
+    padding-bottom: .45em;
+    background: linear-gradient(180deg, #24406a, #1a3154);
+}
+
+/* Maç satırı: açık gri ile çok açık mavi arası */
+#homePage .score-row {
+    /* Biraz alçak */
+    padding-top: .415em;
+    padding-bottom: .415em;
+    background: #f3f6fa;
+    border-bottom-color: #e2e8f0;
+}
+
+/* Takım adları biraz kalın (kazanan daha kalın) */
+#homePage .score-team {
+    font-weight: 500;
+}
+
+#homePage .score-team.won {
+    font-weight: 750;
+}
+
+#homePage .score-row:active {
+    background: #e7edf4;
+}
+
+/* Uyarıda satır hafif kırmızı kalır */
+#homePage .score-row.warn {
+    background: #fdecec;
+}
+
+/* ORANLAR menüsü kartları */
+#homePage .match-card,
+#homePage .an-card {
+    border: 1px solid var(--hp-line);
+    background: #16273f;
+    box-shadow: var(--hp-glow);
+    color: var(--hp-text);
+}
+
+#homePage .match-head,
+#homePage .an-head {
+    color: var(--hp-muted);
+}
+
+#homePage .match-status.done {
+    color: var(--hp-text);
+}
+
+#homePage .match-status.upcoming {
+    color: var(--hp-muted);
+}
+
+#homePage .oc-league .flag {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .25);
+}
+
+#homePage .oc-team {
+    color: white;
+}
+
+#homePage .oc-mid {
+    color: var(--hp-muted);
+}
+
+#homePage .oc-markets {
+    border-top-color: rgba(255, 255, 255, .1);
+}
+
+#homePage .oc-label {
+    color: #c7d2e3;
+}
+
+#homePage .odd {
+    background: var(--hp-white);
+}
+
+#homePage .odd span {
+    color: #3a4256;
+}
+
+#homePage .odd b {
+    color: #0f1626;
+}
+
+#homePage .odd.empty b {
+    color: #b5b9c3;
+}
+
+/* Seçilen oran sarı kalır */
+#homePage .odd.picked {
+    background: #ebb21c;
+}
+
+#homePage .odd.picked span,
+#homePage .odd.picked b {
+    color: white;
+}
+
+/* ANALİZ kartları */
+#homePage .an-card.open {
+    border-color: var(--hp-green-line);
+    box-shadow: 0 0 .7rem rgba(57, 228, 111, .3);
+}
+
+#homePage .an-team span:last-child {
+    color: white;
+}
+
+#homePage .an-pick {
+    border-color: var(--hp-line);
+    background: var(--hp-chip);
+}
+
+#homePage .an-pick small {
+    color: var(--hp-muted);
+}
+
+#homePage .an-pick b {
+    color: var(--hp-green);
+}
+
+#homePage .an-stars i {
+    color: #3a4a63;
+}
+
+#homePage .an-strip {
+    border-top-color: rgba(255, 255, 255, .1);
+}
+
+#homePage .an-chip {
+    background: rgba(255, 255, 255, .08);
+    color: var(--hp-text);
+}
+
+#homePage .an-chip span {
+    color: var(--hp-muted);
+}
+
+#homePage .an-hint {
+    color: #5fb4ff;
+}
+
+#homePage .an-expand {
+    border-top-color: rgba(255, 255, 255, .15);
+}
+
+#homePage .an-expand h4 {
+    color: white;
+}
+
+#homePage .an-reasons {
+    color: #d3dcea;
+}
+
+#homePage .an-sub {
+    background: rgba(255, 255, 255, .08);
+}
+
+#homePage .an-sub span {
+    color: var(--hp-muted);
+}
+
+#homePage .an-sub b {
+    color: white;
+}
+
+#homePage .an-deep {
+    border-color: var(--hp-green-line);
+    background: var(--hp-green-bg);
+    color: var(--hp-green);
+}
+
 </style>
 </head>
 <body data-tab="home">
@@ -3012,12 +3512,15 @@ body.has-layer .ac-kapa svg {
         <div id="homeTitleRow">
             <div id="homeModeBox">
                 <button data-mode="live" class="active">Canlı Skor</button>
+                <button id="modeSaved">Maçlarım</button>
                 <button data-mode="ai">Ai Kuponu</button>
                 <button data-mode="analysis">Analiz</button>
                 <button data-mode="odds">Oranlar</button>
             </div>
-            <button id="menuBtn" aria-label="Menü">☰</button>
         </div>
+
+        <!-- Menü düğmesi: açılışta Canlı Skor'un araç satırına, aramanın sağına taşınır -->
+        <button id="menuBtn" aria-label="Menü">☰</button>
 
         <div id="homePager">
         <div id="homeTrack" style="--page: 0">
@@ -3180,7 +3683,27 @@ body.has-layer .ac-kapa svg {
             <div class="sb-team" id="osAway"></div>
         </div>
     </div>
-    <div class="os-body"><div id="oddsPageBox"></div></div>
+    <div class="os-panel">
+        <div class="os-head">
+            <div class="os-tabs">
+                <button data-tab="all">Tümü</button>
+                <button data-tab="t2">Sekme 2</button>
+                <button data-tab="t3">Sekme 3</button>
+                <button data-tab="t4">Sekme 4</button>
+                <button data-tab="t5">Sekme 5</button>
+            </div>
+        </div>
+
+        <div class="os-body">
+        <div class="os-track">
+            <div class="os-page" data-page="all"><div id="oddsPageBox"></div></div>
+            <div class="os-page" data-page="t2"><p class="tab-empty">Yakında eklenecek.</p></div>
+            <div class="os-page" data-page="t3"><p class="tab-empty">Yakında eklenecek.</p></div>
+            <div class="os-page" data-page="t4"><p class="tab-empty">Yakında eklenecek.</p></div>
+            <div class="os-page" data-page="t5"><p class="tab-empty">Yakında eklenecek.</p></div>
+        </div>
+        </div>
+    </div>
 </div>
 </div>
 
@@ -3764,8 +4287,10 @@ async function startData() {
     }
 
     readLeagues();
-    if (anShown)
+    if (anShown) {
+        readAnVersion();
         anRedraw();
+    }
     watchNames();
     watchFast();
     openDay(TODAY);
@@ -4476,6 +5001,10 @@ function openDay(day) {
                 return;
             dayEvents.set(day, {});
             listenLog();
+        }).finally(() => {
+            /* Bugünün listesi ve Özet geldikten sonra analiz sürümüne bakılır */
+            if (day === TODAY)
+                readAnVersion();
         });
     }
 }
@@ -6292,8 +6821,61 @@ function anRedraw() {
     renderAnalysis();
 }
 
+/*
+ * ANALİZ SÜRÜMÜ (RTDB analiz_surum): yönetim sayfası her yüklemede yazar. Sayfa açılınca bugünün
+ * listesi ve Özet geldikten sonra (Analiz sekmesi daha önce açılırsa o an) bir kez okunur, dinlenmez.
+ * Okunan analiz dokümanları telefonda sürümüyle saklanır; sürüm aynıysa Firestore'dan okunmaz.
+ */
+const AN_STORE_KEY = 'canliSkorAnaliz';
+let anVersion;               /* undefined: okunmadı, null: yok (saklanmaz) */
+let anVersionAsked = false;
+let anStore = readJSON(AN_STORE_KEY, null) || { v: null, docs: {} };
+
+function readAnVersion() {
+    if (anVersionAsked || !rd)
+        return;
+    anVersionAsked = true;
+    const done = version => {
+        anVersion = version;
+        if (anShown)
+            anRedraw();
+    };
+    rt.get(rt.ref(rd, 'analiz_surum')).then(snap => done(snap.val() ?? null), () => done(null));
+}
+
+/* Telefondaki kopya (sürüm aynıysa) */
+function storedAnDoc(path) {
+    return anVersion && anStore.v === anVersion && path in anStore.docs ? anStore.docs[path] : undefined;
+}
+
+/* Okunan doküman saklanır; geçmiş günler ve 1 günden eski maçlar silinir */
+function saveAnDoc(path, data) {
+    if (!anVersion || data === undefined)
+        return;
+    if (anStore.v !== anVersion)
+        anStore = { v: anVersion, docs: {} };
+    anStore.docs[path] = data;
+    Object.keys(anStore.docs).forEach(key => {
+        const [collection, id] = key.split('/');
+        const doc = anStore.docs[key] || {};
+        if ((collection === 'analiz_gun' && id < TODAY) ||
+            (collection === 'analiz_futbol' && doc.ts && doc.ts * 1000 < Date.now() - 86400000))
+            delete anStore.docs[key];
+    });
+    writeJSON(AN_STORE_KEY, anStore);
+}
+
+/* Sekme açılmadıysa ya da sürüm okunmadıysa undefined (okunuyor) */
 function anDoc(path) {
-    return anShown ? cachedDoc(path, anRedraw) : undefined;
+    if (!anShown || anVersion === undefined)
+        return undefined;
+    const stored = storedAnDoc(path);
+    if (stored !== undefined)
+        return stored;
+    return cachedDoc(path, () => {
+        saveAnDoc(path, (DOC_CACHE.get(path) || {}).data);
+        anRedraw();
+    });
 }
 
 /* Dizin: { gunler: { gün: sayı }, ligler: { lig: sayı } } */
@@ -6895,13 +7477,21 @@ function openAnSheet(card) {
     status.textContent = 'ANALİZ';
     status.className = '';
 
+    const path = 'analiz_futbol/' + key;
+    const stored = storedAnDoc(path);
+    if (stored !== undefined)
+        anDetails.set(key, stored);
+
     fillAnPanes(anDetails.get(key));
 
     if (!anDetails.has(key) && db) {
         fs.getDoc(fs.doc(db, 'analiz_futbol', key)).then(snap => {
-            anDetails.set(key, snap.exists() ? snap.data() : {});
+            /* Yükleme zamanı saklanmaz (sitede kullanılmıyor) */
+            const { yuklendi, ...data } = snap.exists() ? snap.data() : {};
+            anDetails.set(key, data);
+            saveAnDoc(path, data);
             if (anSheetKey === key)
-                fillAnPanes(anDetails.get(key));
+                fillAnPanes(data);
         }, () => {});
     }
 
@@ -7183,6 +7773,7 @@ function setHomeModeView(mode) {
     /* Analiz verisi sekme ilk açılınca okunur */
     if (mode === 'analysis' && !anShown) {
         anShown = true;
+        readAnVersion();
         anRedraw();
     }
 
@@ -7221,7 +7812,7 @@ function setHomeMode(mode) {
         layerOpened('homeMode');
 }
 
-homeModeBox.querySelectorAll('button').forEach(button => {
+homeModeBox.querySelectorAll('button[data-mode]').forEach(button => {
     button.addEventListener('click', () => setHomeMode(button.dataset.mode));
 });
 
@@ -7336,6 +7927,9 @@ homeMain.addEventListener('touchcancel', endHomeSwipe, { passive: true });
 const homeMenu = document.getElementById('homeMenu');
 const menuBtn = document.getElementById('menuBtn');
 
+/* Menü düğmesi yalnızca Canlı Skor'da: araç satırının sonunda, aramanın sağında */
+document.getElementById('toolRow').appendChild(menuBtn);
+
 function closeHomeMenu() {
     homeMenu.classList.remove('open');
     layerClosed('homeMenu');
@@ -7365,12 +7959,18 @@ homeMenu.querySelectorAll('button[data-go]').forEach(button => {
     });
 });
 
-/* Kayıtlı Maçlarım (mavi top ana sayfada gizli olduğu için buradan açılır) */
-document.getElementById('menuSaved').addEventListener('click', () => {
-    closeHomeMenu();
+/* Kayıtlı Maçlarım: menüden ve üstteki "Maçlarım" sekmesinden açılır */
+function openSavedPage() {
     setMyPageInstant('saved');
     showTab('empty');
+}
+
+document.getElementById('menuSaved').addEventListener('click', () => {
+    closeHomeMenu();
+    openSavedPage();
 });
+
+document.getElementById('modeSaved').addEventListener('click', openSavedPage);
 
 document.getElementById('menuClose').addEventListener('click', closeHomeMenu);
 
@@ -8019,9 +8619,10 @@ function renderMatchOdds(match, box, load) {
     }
 
     /* cells: [ad, anahtar, oran] */
-    const block = (title, cells, columns) => {
+    /* kind: oran türü (renk ve simge için: ms, cs, iy...) */
+    const block = (title, cells, columns, kind) => {
         const wrap = document.createElement('div');
-        wrap.className = 'odds-block';
+        wrap.className = 'odds-block ob-' + kind;
         const t = document.createElement('p');
         t.className = 'odds-title';
         t.textContent = title;
@@ -8041,24 +8642,25 @@ function renderMatchOdds(match, box, load) {
             cells.push([lineText(line) + ' Alt', code + ':' + line + ':a', lines[line][0]]);
             cells.push([lineText(line) + ' Üst', code + ':' + line + ':u', lines[line][1]]);
         });
-        block(title, cells, 2);
+        block(title, cells, 2, code);
     };
 
-    if (data.ms) block('MAÇ SONUCU', three('ms', ['1', 'X', '2'], data.ms));
-    if (data.cs) block('ÇİFTE ŞANS', three('cs', ['1X', '12', 'X2'], data.cs));
-    if (data.iy) block('İLK YARI SONUCU', three('iy', ['1', 'X', '2'], data.iy));
-    if (data.iyms) block('İLK YARI / MAÇ SONUCU', three('iyms', IYMS, data.iyms), 3);
-    if (data.kg) block('KARŞILIKLI GOL', [['Var', 'kg:var', data.kg[0]], ['Yok', 'kg:yok', data.kg[1]]]);
+    if (data.ms) block('MAÇ SONUCU', three('ms', ['1', 'X', '2'], data.ms), 0, 'ms');
+    if (data.cs) block('ÇİFTE ŞANS', three('cs', ['1X', '12', 'X2'], data.cs), 0, 'cs');
+    if (data.iy) block('İLK YARI SONUCU', three('iy', ['1', 'X', '2'], data.iy), 0, 'iy');
+    if (data.iyms) block('İLK YARI / MAÇ SONUCU', three('iyms', IYMS, data.iyms), 3, 'iyms');
+    if (data.kg) block('KARŞILIKLI GOL', [['Var', 'kg:var', data.kg[0]], ['Yok', 'kg:yok', data.kg[1]]], 0, 'kg');
     overUnder('GOL ALT / ÜST', 'au', data.au);
     overUnder('İLK YARI GOL ALT / ÜST', 'iau', data.iau);
-    if (data.tg) block('TOPLAM GOL ARALIĞI', three('tg', ['0-1', '2-3', '4-5', '6+'], data.tg));
-    if (data.tc) block('TOPLAM GOL TEK / ÇİFT', [['Tek', 'tc:tek', data.tc[0]], ['Çift', 'tc:cift', data.tc[1]]]);
+    if (data.tg) block('TOPLAM GOL ARALIĞI', three('tg', ['0-1', '2-3', '4-5', '6+'], data.tg), 0, 'tg');
+    if (data.tc) block('TOPLAM GOL TEK / ÇİFT', [['Tek', 'tc:tek', data.tc[0]], ['Çift', 'tc:cift', data.tc[1]]], 0, 'tc');
     if (data.hnd)
         Object.keys(data.hnd).sort((a, b) => a - b).forEach(line => block(
             'HANDİKAPLI MAÇ SONUCU ' + (HND_LABELS[line] || line),
-            ['1', 'X', '2'].map((label, i) => [label, 'hnd:' + line + ':' + label, data.hnd[line][i]])
+            ['1', 'X', '2'].map((label, i) => [label, 'hnd:' + line + ':' + label, data.hnd[line][i]]),
+            0, 'hnd'
         ));
-    if (data.skor) block('SKOR', Object.keys(data.skor).sort(byScore).map(s => [s, 'skor:' + s, data.skor[s]]), 3);
+    if (data.skor) block('SKOR', Object.keys(data.skor).sort(byScore).map(s => [s, 'skor:' + s, data.skor[s]]), 3, 'skor');
     overUnder('KORNER ALT / ÜST', 'kor', data.kor);
     overUnder('KART ALT / ÜST', 'kart', data.kart);
     overUnder('OFSAYT ALT / ÜST', 'ofs', data.ofs);
@@ -8071,14 +8673,117 @@ function renderMatchOdds(match, box, load) {
 
 /*
  * MAÇIN ORANLARI SAYFASI: Oranlar menüsünde karta basınca açılır (maç sayfası açılmaz).
- * Görünümü şimdilik maç sayfasınınki gibi.
+ * Görünümü maç sayfasınınki gibi: üstte maç, altta parmakla kayan 5 sekme; ilk sekme (Tümü) bütün oranlar.
  */
 let oddsPageId = null;
+
+const osBody = oddsSheet.querySelector('.os-body');
+const osTrack = oddsSheet.querySelector('.os-track');
+const OS_TABS = Array.from(oddsSheet.querySelectorAll('.os-tabs button')).map(b => b.dataset.tab);
+let osTab = OS_TABS[0];
+
+function setOsTab(name, keepScroll) {
+    osTab = name;
+    oddsSheet.querySelectorAll('.os-tabs button').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === name);
+    });
+    placeOsTrack(0);
+    const page = oddsSheet.querySelector('.os-page[data-page="' + name + '"]');
+    if (page && !keepScroll)
+        page.scrollTop = 0;
+}
+
+function placeOsTrack(dragPx) {
+    osTrack.style.transform =
+        'translateX(calc(' + (-OS_TABS.indexOf(osTab) * 20) + '% + ' + dragPx + 'px))';
+}
+
+oddsSheet.querySelectorAll('.os-tabs button').forEach(button => {
+    button.addEventListener('click', () => setOsTab(button.dataset.tab));
+});
+
+/* Sekmeler arası parmakla kaydırma (maç sayfasındakiyle aynı) */
+let osSwipe = null;
+
+osBody.addEventListener('touchstart', event => {
+    osSwipe = event.touches.length === 1 ? {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+        time: Date.now(),
+        dx: 0,
+        horizontal: null
+    } : null;
+}, { passive: true });
+
+osBody.addEventListener('touchmove', event => {
+
+    if (!osSwipe)
+        return;
+
+    const dx = event.touches[0].clientX - osSwipe.x;
+    const dy = event.touches[0].clientY - osSwipe.y;
+
+    if (osSwipe.horizontal === null) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
+            return;
+        osSwipe.horizontal = Math.abs(dx) > Math.abs(dy);
+        if (osSwipe.horizontal)
+            osTrack.classList.add('dragging');
+    }
+
+    if (!osSwipe.horizontal)
+        return;
+
+    const index = OS_TABS.indexOf(osTab);
+    const atEdge = (index === 0 && dx > 0) || (index === OS_TABS.length - 1 && dx < 0);
+
+    osSwipe.dx = dx;
+    placeOsTrack(atEdge ? dx * 0.25 : dx);
+
+}, { passive: true });
+
+function endOsSwipe() {
+
+    if (!osSwipe)
+        return;
+
+    const swipe = osSwipe;
+
+    osSwipe = null;
+    osTrack.classList.remove('dragging');
+
+    if (!swipe.horizontal)
+        return;
+
+    const width = osBody.clientWidth || 1;
+    const distance = Math.abs(swipe.dx);
+    const speed = distance / Math.max(1, Date.now() - swipe.time);
+
+    const enough =
+        distance > width * TAB_SWIPE_RATIO ||
+        (distance > width * TAB_FLICK_RATIO && speed > 0.3);
+
+    const next = OS_TABS.indexOf(osTab) + (swipe.dx < 0 ? 1 : -1);
+
+    if (enough && next >= 0 && next < OS_TABS.length)
+        setOsTab(OS_TABS[next], true);
+    else
+        placeOsTrack(0);
+}
+
+osBody.addEventListener('touchend', endOsSwipe, { passive: true });
+osBody.addEventListener('touchcancel', endOsSwipe, { passive: true });
 
 function openOddsPage(id) {
     oddsPageId = id;
     fillOddsPage();
-    oddsSheet.querySelector('.os-body').scrollTop = 0;
+
+    /* Her açılışta Tümü sekmesi, en üstten (kayma görünmeden) */
+    osTrack.classList.add('dragging');
+    setOsTab(OS_TABS[0]);
+    osTrack.getBoundingClientRect();
+    osTrack.classList.remove('dragging');
+
     oddsSheet.classList.add('open');
     layerOpened('oddsPage');
     syncBall();
@@ -8095,8 +8800,10 @@ function fillOddsPage() {
     sbTeam(document.getElementById('osAway'), match.away);
     document.getElementById('osTime').textContent =
         match.score && match.status !== 'upcoming' ? match.score[0] + ' - ' + match.score[1] : formatTime(match.date);
-    document.getElementById('osStatus').textContent =
+    const osStatus = document.getElementById('osStatus');
+    osStatus.textContent =
         match.status === 'live' ? 'CANLI' : match.status === 'done' ? 'MAÇ SONU' : 'OYNANACAK';
+    osStatus.className = 'os-status ' + match.status;
 
     renderMatchOdds(match, document.getElementById('oddsPageBox'), true);
 }
@@ -8167,7 +8874,10 @@ function fillDetail(match) {
         match.status === 'live' ? ('CANLI · ' + minuteText(match)).replace(/ · $/, '') :
         match.status === 'done' ? 'MAÇ SONU' :
         OTHER_LABELS[match.code] ? 'OYNANMAYACAK' : 'OYNANACAK';
-    status.className = match.status === 'live' ? 'live' : '';
+    status.className =
+        match.status === 'live' ? 'live' :
+        match.status === 'done' ? 'done' :
+        OTHER_LABELS[match.code] ? '' : 'upcoming';
 
     renderSummary(match);
     renderStats(match);
