@@ -62,7 +62,7 @@ function kisaOlay(e) {
 const TUR_KODU = {
     'Final': 'F', 'Semi-finals': 'YF', 'Quarter-finals': 'CF',
     'Round of 16': 'S16', 'Round of 32': 'S32', 'Round of 64': 'S64',
-    'Group Stage': 'G', 'Play-offs': 'PO'
+    'Group Stage': 'G', 'Play-offs': 'PO', 'Knockout Round Play-offs': 'PO'
 };
 
 /* Hafta: "Regular Season - 9" → 9; "3rd Round" → 3T; kupa turu → kısa kod; bilinmeyen olduğu gibi (virgülsüz) */
@@ -72,6 +72,11 @@ function hafta(r) {
     if (m) return m[1];
     m = /^(\d+)(st|nd|rd|th) Round$/.exec(r);
     if (m) return m[1] + 'T';
+    /* Avrupa kupaları: lig aşaması hafta gibi, ön elemeler "2Ö" */
+    m = /^League Stage - (\d+)$/.exec(r);
+    if (m) return m[1];
+    m = /^(\d+)(st|nd|rd|th) Qualifying Round$/.exec(r);
+    if (m) return m[1] + 'Ö';
     return TUR_KODU[r] || String(r).replace(/,/g, ' ');
 }
 

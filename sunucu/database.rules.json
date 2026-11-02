@@ -25,6 +25,11 @@
     "lig": {
       ".read": true
     },
+    "analiz_surum": {
+      ".read": true,
+      ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
+      ".validate": "newData.isNumber()"
+    },
     "hizli": {
       ".read": true,
       "$no": {

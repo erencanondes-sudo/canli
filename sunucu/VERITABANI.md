@@ -14,6 +14,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | RTDB `takim/{takım no}` | Takım adı (bütün takımlar) | Sunucu | Site (yalnızca telefonda sözlük yoksa) | Yeni takım görülünce | takım başına ~20 bayt |
 | RTDB `takim_ek/{sürüm}` | O sürümde eklenen ya da değişen takımlar `{ no: ad }`. 30 gün saklanır | Sunucu | Site | Yeni takım görülünce | birkaç yüz bayt |
 | RTDB `takim_surum` | Takım listesinin sürümü (zaman, saniye) | Sunucu | Site (canlı) | Yeni takım görülünce | birkaç bayt |
+| RTDB `analiz_surum` | Analiz sürümü (son yüklemenin anı, saniye) | Yönetici (yonetim.html) | Site, açılışta bugünün listesi ve Özet geldikten sonra bir kez (dinlenmez) | Analiz yüklenince | ~15 bayt |
 | RTDB `lig/{lig no}` | Lig kadro / istatistik veriyor mu (1 / 0) | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 100 bayt |
 | RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
 | RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
@@ -56,7 +57,7 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - `hizli`, `hizli_u` canlı dinlenir (dallarda yalnızca oynanan maçlar durur).
 - Oranlar menüsü açılınca seçili günün `oran_gun` dokümanı, lig seçilince o ligin `oran_lig` dokümanı bir kez okunur. Maç sayfasında Oranlar sekmesine gelince `oran_mac/{no}` bir kez okunur. Okunan oran dokümanı 1 saatten eskiyse yeniden okunur.
 - Kayıtlı Oranlarım telefonda saklanır (Firestore'a yazılmaz).
-- Analiz sekmesi ilk açılınca `analiz_dizin/futbol` ve bugünün `analiz_gun` dokümanı okunur; başka gün seçilince o günün `analiz_gun`, lig seçilince `analiz_lig`, Detaylı Analiz'e basınca `analiz_futbol/{no}` bir kez okunur. NBA henüz sitede gösterilmiyor.
+- Analiz sekmesi ilk açılınca `analiz_dizin/futbol` ve bugünün `analiz_gun` dokümanı okunur; başka gün seçilince o günün `analiz_gun`, lig seçilince `analiz_lig`, Detaylı Analiz'e basınca `analiz_futbol/{no}` bir kez okunur. Okunan analiz dokümanları telefonda `analiz_surum` ile saklanır; sürüm aynıysa Firestore'dan yeniden okunmaz (geçmiş günler ve 1 günden eski maçlar telefondan silinir). NBA henüz sitede gösterilmiyor.
 
 ## Hızlı kaynak (`hizli`, `hizli_u`)
 

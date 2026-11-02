@@ -9,6 +9,10 @@ module.exports = {
 
     /* Ligler (sitedeki sırayla aynı) */
     LIGLER: [
+        /* Avrupa kupaları */
+        { no: 2, ad: 'Şampiyonlar Ligi' },
+        { no: 3, ad: 'Avrupa Ligi' },
+        { no: 848, ad: 'Konferans Ligi' },
         /* 1. ligler */
         { no: 140, ad: 'La Liga' },
         { no: 203, ad: 'Süper Lig' },
@@ -30,6 +34,8 @@ module.exports = {
         { no: 71, ad: 'Série A' },
         { no: 128, ad: 'Liga Profesional' },
         { no: 253, ad: 'MLS' },
+        { no: 307, ad: 'Saudi Pro League' },
+        { no: 305, ad: 'Stars League' },
         /* 2. ligler */
         { no: 141, ad: 'Segunda División' },
         { no: 204, ad: '1. Lig' },
