@@ -1767,12 +1767,11 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Skor alanı */
+/* Yükseklik içerik kadar: altında boş alan kalmaz, sekmeler hemen altta */
 #scoreBoard, .os-board {
     position: relative;
     flex: none;
-    height: 38%;
-    min-height: 15em;
-    padding: .75rem .5em 1em;
+    padding: .6rem .5em .9rem;
     color: white;
 
     /* Gece stadyumu (kodla çizilmiş): köşelerde ışıklar, ortada lacivert, altta çim */
@@ -1781,12 +1780,12 @@ body.has-layer .ac-kapa svg {
         radial-gradient(ellipse 16% 11% at 95% 22%, rgba(220, 238, 255, .95), rgba(110, 180, 255, .35) 45%, transparent 75%),
         radial-gradient(ellipse 70% 40% at 50% 60%, rgba(70, 150, 255, .22), transparent 70%),
         repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 8%, transparent 8% 16%),
-        linear-gradient(180deg, #050b1a 0%, #0a1934 40%, #10304e 58%, #17552a 74%, #0f4220 100%);
+        linear-gradient(180deg, #050b1a 0%, #0a1934 40%, #10304e 70%, #0c2440 100%);
 }
 
 .sb-league {
     text-align: center;
-    font-size: .8125rem;
+    font-size: .6875rem;
     font-weight: 600;
     opacity: .85;
 }
@@ -1796,7 +1795,7 @@ body.has-layer .ac-kapa svg {
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: .3em;
-    margin-top: 1em;
+    margin-top: .85em;
 }
 
 .sb-team {
@@ -1806,16 +1805,17 @@ body.has-layer .ac-kapa svg {
     gap: .45em;
     min-width: 0;
     text-align: center;
-    font-size: .9375rem;
+    font-size: .8rem;
     font-weight: 700;
     text-shadow: 0 1px .2rem rgba(0, 0, 0, .7);
 }
 
-.sb-team .crest {
-    font-size: .9em;
-    width: 3.6em;
-    height: 3.6em;
-    box-shadow: 0 0 0 .1875rem rgba(255,255,255,.85);
+/* Üst bölümdeki armalar: kalkan (SVG şablon, takım renklerinde) */
+.sb-crest {
+    display: block;
+    width: 3.9em;
+    height: auto;
+    overflow: visible;
 }
 
 .sb-team span {
@@ -1848,13 +1848,17 @@ body.has-layer .ac-kapa svg {
 #sbScore::before, .os-center::before { left: 0; }
 #sbScore::after, .os-center::after { right: 0; }
 
-/* Saat / skor */
+/* Saat / skor: açık mavi ışıklı çerçeveli koyu kutu */
 #sbScoreText, .os-time {
     display: inline-flex;
     align-items: center;
     gap: .25em;
-    padding: .12em .4em;
-    font-size: min(2.1em, 8.4vw);
+    padding: .12em .45em;
+    border: .125rem solid #8fd3ff;
+    border-radius: .4em;
+    background: rgba(5, 14, 32, .6);
+    box-shadow: 0 0 .6rem rgba(110, 195, 255, .55), inset 0 0 .4rem rgba(110, 195, 255, .2);
+    font-size: min(1.8em, 7.2vw);
     font-weight: 800;
     letter-spacing: .02em;
     line-height: 1.1;
@@ -1884,11 +1888,11 @@ body.has-layer .ac-kapa svg {
 /* Durum etiketi: oynanacak yeşil, canlı kırmızı, bitti gri */
 #sbStatus, .os-status {
     display: inline-block;
-    margin-top: .55em;
+    margin-top: .45em;
     padding: .3em .9em;
     border-radius: 999px;
     background: rgba(255, 255, 255, .18);
-    font-size: .75rem;
+    font-size: .64rem;
     font-weight: 800;
     letter-spacing: .02em;
     color: white;
@@ -1969,10 +1973,12 @@ body.has-layer .ac-kapa svg {
     box-shadow: inset 1px 0 0 rgba(120, 185, 255, .2);
 }
 
+/* Seçili sekme: parlak mavi */
 #detailTabs button.active, .os-tabs button.active {
-    color: #3ff07c;
-    background: linear-gradient(180deg, rgba(34, 197, 94, .06), rgba(34, 197, 94, .32));
-    border-bottom-color: #39e46f;
+    color: white;
+    background: linear-gradient(180deg, #1f5fd6, #12409a);
+    box-shadow: inset 0 0 0 1px rgba(130, 205, 255, .85), 0 0 .6rem rgba(40, 140, 255, .55);
+    border-bottom-color: #6cc2ff;
 }
 
 /* Sekme simgeleri (Detaylı Analiz'de sekme adları değişince gizlenir) */
@@ -2047,19 +2053,21 @@ body.has-layer .ac-kapa svg {
 .lineup-switch button {
     flex: 1;
     padding: .55em .4em;
-    border: .0625rem solid #e2e4ea;
+    border: .0625rem solid rgba(255, 255, 255, .08);
     border-radius: 2em;
-    background: #fff;
+    background: linear-gradient(180deg, #2a3446, #1c2433);
     font: inherit;
-    font-size: .8125rem;
+    font-size: .875rem;
     font-weight: 700;
-    color: #555;
+    color: #98a4b8;
     cursor: pointer;
 }
 
+/* Seçili: sekmelerdeki gibi parlak mavi */
 .lineup-switch button.on {
-    border-color: #1d2340;
-    background: #1d2340;
+    border-color: #6cc2ff;
+    background: linear-gradient(180deg, #1f5fd6, #12409a);
+    box-shadow: 0 0 .6rem rgba(40, 140, 255, .55);
     color: #fff;
 }
 
@@ -2080,11 +2088,11 @@ body.has-layer .ac-kapa svg {
 .pitch-team {
     display: flex;
     align-items: center;
-    gap: .4em;
-    padding: .45em .1em;
-    font-size: .875rem;
+    gap: .5em;
+    padding: .5em .1em;
+    font-size: 1rem;
     font-weight: 800;
-    color: #1d2340;
+    color: white;
     min-width: 0;
 }
 
@@ -2096,23 +2104,33 @@ body.has-layer .ac-kapa svg {
 }
 
 .pitch-team small {
+    flex: none;
     margin-left: auto;
-    font-size: .8em;
-    font-weight: 700;
-    color: #8a8f9c;
+    white-space: nowrap;
+    padding: .2em .6em;
+    border: 1px solid rgba(120, 180, 255, .3);
+    border-radius: .5em;
+    background: #13233d;
+    font-size: .875em;
+    font-weight: 800;
+    color: white;
 }
 
 .pitch {
     position: relative;
     aspect-ratio: 68 / 105;
-    border-radius: .6em;
+    border: .125rem solid rgba(120, 230, 120, .55);
+    border-radius: .9em;
     overflow: hidden;
-    background: repeating-linear-gradient(#2f8f46 0 10%, #2a8340 10% 20%);
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255, 255, 255, .06), transparent 70%),
+        repeating-linear-gradient(#2f9a3e 0 7%, #2a8c38 7% 14%);
+    box-shadow: 0 0 .8rem rgba(80, 220, 100, .3);
 }
 
 .pitch i {
     position: absolute;
-    border: .1rem solid rgba(255, 255, 255, .55);
+    border: .1rem solid rgba(255, 255, 255, .5);
 }
 
 .pitch .p-out { inset: 2.5%; }
@@ -2134,15 +2152,21 @@ body.has-layer .ac-kapa svg {
 
 .pp-shirt {
     position: relative;
-    width: 2.2rem;
-    height: 2.2rem;
+    /* Dar ekranda saha küçüldükçe biraz küçülür */
+    width: min(2.05rem, 9vw);
+    height: min(2.05rem, 9vw);
     display: grid;
     place-items: center;
-    border: .12rem solid rgba(255, 255, 255, .85);
     border-radius: 50%;
-    font-size: .8125rem;
+    font-size: min(.875rem, 3.9vw);
     font-weight: 800;
-    box-shadow: 0 .1rem .3rem rgba(0, 0, 0, .3);
+    text-shadow: 0 1px .15rem rgba(0, 0, 0, .45);
+    box-shadow:
+        inset 0 .35rem .45rem rgba(255, 255, 255, .32),
+        inset 0 -.25rem .35rem rgba(0, 0, 0, .22),
+        0 0 0 .12rem rgba(255, 255, 255, .35),
+        0 .15rem .4rem rgba(0, 0, 0, .45);
+    filter: saturate(1.25);
 }
 
 .pp-name {
@@ -2151,10 +2175,10 @@ body.has-layer .ac-kapa svg {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: .6875rem;
+    font-size: min(.7rem, 3.2vw);
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 .05rem .2rem rgba(0, 0, 0, .6);
+    text-shadow: 0 1px .2rem rgba(0, 0, 0, .8);
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
@@ -2291,6 +2315,12 @@ body.has-layer .ac-kapa svg {
     padding-top: 0;
 }
 
+/* İstatistik ve Oranlar biraz aşağıdan (eski 1rem ile 0 arası) */
+#detailSheet:not(.an-mode) .tab-page[data-page="stats"],
+#detailSheet:not(.an-mode) .tab-page[data-page="odds"] {
+    padding-top: .5rem;
+}
+
 /* Özet kartı sekme kutusu genişliğinde */
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
     padding-left: .3rem;
@@ -2407,7 +2437,7 @@ body.has-layer .ac-kapa svg {
  */
 .stat-line {
     margin-bottom: .6em;
-    padding: .35em .9em .5em;
+    padding: .3em .9em .4em;
     border: 1px solid rgba(70, 200, 255, .45);
     border-radius: .9rem;
     background: linear-gradient(180deg, #10213a, #0b1729);
@@ -2419,8 +2449,8 @@ body.has-layer .ac-kapa svg {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    margin-bottom: .3em;
-    font-size: 1.25rem;
+    margin-bottom: .25em;
+    font-size: 1.125rem;
     font-weight: 800;
     line-height: 1.1;
     color: white;
@@ -2432,8 +2462,8 @@ body.has-layer .ac-kapa svg {
 
 .stat-top span:nth-child(2) {
     text-align: center;
-    font-size: .875rem;
-    font-weight: 700;
+    font-size: .8125rem;
+    font-weight: 800;
     color: #e3ebf7;
 }
 
@@ -2457,6 +2487,7 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"],
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"],
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"],
+#detailSheet:not(.an-mode) .tab-page[data-page="lineup"],
 .os-page {
     background:
         radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
@@ -2466,13 +2497,13 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] .tab-empty,
+#detailSheet:not(.an-mode) .tab-page[data-page="lineup"] .tab-empty,
 .os-page .tab-empty {
     color: #b8c3d6;
 }
 
 .odds-block {
     --c: #1e6bff;
-    --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 4h10v5a5 5 0 0 1-10 0z M7 6H4v1a3 3 0 0 0 3 3 M17 6h3v1a3 3 0 0 1-3 3 M12 14v3 M8 21h8 M9 17h6v4H9z%22/%3E%3C/svg%3E");
 
     display: grid;
     grid-template-columns: minmax(0, 36%) 1fr;
@@ -2484,21 +2515,21 @@ body.has-layer .ac-kapa svg {
     box-shadow: 0 0 .65rem -.1rem var(--c);
 }
 
-/* Tür renkleri ve simgeleri */
-.ob-ms   { --c: #1e6bff; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 4h10v5a5 5 0 0 1-10 0z M7 6H4v1a3 3 0 0 0 3 3 M17 6h3v1a3 3 0 0 1-3 3 M12 14v3 M8 21h8 M9 17h6v4H9z%22/%3E%3C/svg%3E"); }
-.ob-cs   { --c: #8b2cf5; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 8h15 M15 4l4 4-4 4 M20 16H5 M9 12l-4 4 4 4%22/%3E%3C/svg%3E"); }
-.ob-iy   { --c: #f08a00; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 21a8 8 0 1 0 0-16a8 8 0 1 0 0 16z M12 9v4l2.5 2 M10 2h4 M12 2v3%22/%3E%3C/svg%3E"); }
-.ob-iyms { --c: #d61f8a; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5h18v14H3z M12 5v14 M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M3 9h3v6H3 M21 9h-3v6h3%22/%3E%3C/svg%3E"); }
-.ob-kg   { --c: #0fb5a6; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 19V6h18v13 M3 10.3h18 M3 14.6h18 M7.5 6v13 M12 6v13 M16.5 6v13%22/%3E%3C/svg%3E"); }
-.ob-au   { --c: #22a447; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
-.ob-iau  { --c: #e0a400; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
-.ob-tg   { --c: #3b5bdb; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 9h14 M5 15h14 M10 4L8 20 M16 4l-2 16%22/%3E%3C/svg%3E"); }
-.ob-tc   { --c: #c2410c; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 9h14 M5 15h14 M10 4L8 20 M16 4l-2 16%22/%3E%3C/svg%3E"); }
-.ob-hnd  { --c: #0284c7; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 4v16 M7 20h10 M5 7h14 M5 7l-3 6a3 3 0 0 0 6 0z M19 7l-3 6a3 3 0 0 0 6 0z%22/%3E%3C/svg%3E"); }
-.ob-skor { --c: #dc2626; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 6h18v12H3z M12 6v12 M6.5 10v4 M15.5 10h2.5v4h-2.5z%22/%3E%3C/svg%3E"); }
-.ob-kor  { --c: #16a34a; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
-.ob-kart { --c: #ca8a04; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
-.ob-ofs  { --c: #7c3aed; --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 20V5 M4 9l4-4 4 4 M16 4v15 M12 15l4 4 4-4%22/%3E%3C/svg%3E"); }
+/* Tür renkleri */
+.ob-ms   { --c: #1e6bff; }
+.ob-cs   { --c: #8b2cf5; }
+.ob-iy   { --c: #f08a00; }
+.ob-iyms { --c: #d61f8a; }
+.ob-kg   { --c: #0fb5a6; }
+.ob-au   { --c: #22a447; }
+.ob-iau  { --c: #e0a400; }
+.ob-tg   { --c: #3b5bdb; }
+.ob-tc   { --c: #c2410c; }
+.ob-hnd  { --c: #0284c7; }
+.ob-skor { --c: #dc2626; }
+.ob-kor  { --c: #16a34a; }
+.ob-kart { --c: #ca8a04; }
+.ob-ofs  { --c: #7c3aed; }
 
 .odds-title {
     display: flex;
@@ -2513,26 +2544,18 @@ body.has-layer .ac-kapa svg {
     color: white;
 }
 
-.odds-title::before {
-    content: '';
-    flex: none;
-    width: 1.9em;
-    height: 1.9em;
-    background: currentColor;
-    -webkit-mask: var(--icon) center / contain no-repeat;
-    mask: var(--icon) center / contain no-repeat;
-}
-
 .odds-block .odds-row {
     align-self: center;
     margin: 0;
-    padding: .45em;
-    gap: .4em;
+    padding: .3em;
+    gap: .3em;
     font-size: .9375rem;
 }
 
 .odds-block .odd {
-    padding: .35em 0;
+    /* Alçak: üst / alt boşluk az, satır aralığı dar */
+    padding: .12em 0;
+    line-height: 1.15;
     border-radius: .55rem;
     background: linear-gradient(180deg, #ffffff, #e2e7ef);
 }
@@ -2542,6 +2565,7 @@ body.has-layer .ac-kapa svg {
 }
 
 .odds-block .odd b {
+    font-size: .8rem;
     font-weight: 800;
     color: #0f1626;
 }
@@ -2580,14 +2604,6 @@ body.has-layer .ac-kapa svg {
     background: currentColor;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-/* Maç başlayınca: oranlar kapandı */
-.odds-closed {
-    margin: 0 0 1em;
-    font-size: .8125rem;
-    font-weight: 700;
-    color: #ff8a80;
 }
 
 
@@ -3555,6 +3571,38 @@ body.has-layer .ac-kapa svg {
     </div>
 </div>
 </div>
+
+<!-- KALKAN ARMA: ortak renk geçişleri ve gölge (üst bölümdeki armalar kullanır) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+        <linearGradient id="crMetal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f7f8fa"/>
+            <stop offset=".18" stop-color="#aeb3ba"/>
+            <stop offset=".34" stop-color="#ffffff"/>
+            <stop offset=".58" stop-color="#858b93"/>
+            <stop offset=".78" stop-color="#e8eaed"/>
+            <stop offset="1" stop-color="#777d85"/>
+        </linearGradient>
+        <!-- Takım renginin üstü biraz açık, altı koyu -->
+        <linearGradient id="crShade" x1=".35" y1="0" x2=".55" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+            <stop offset=".28" stop-color="#fff" stop-opacity="0"/>
+            <stop offset=".72" stop-color="#000" stop-opacity=".06"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".3"/>
+        </linearGradient>
+        <linearGradient id="crShine" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity=".32"/>
+            <stop offset=".45" stop-color="#fff" stop-opacity=".04"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".12"/>
+        </linearGradient>
+        <filter id="crShadow" x="-20%" y="-20%" width="140%" height="145%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+            <feOffset dy="3" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope=".45"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+    </defs>
+</svg>
 
 <!-- MAÇ SAYFASI -->
 <div id="detailSheet">
@@ -7875,9 +7923,45 @@ const LINK_PREFIX = '#mac=';
 let detailId = null;
 let detailTab = 'summary';
 
+/*
+ * Kalkan arma (SVG şablon): iç çizgi takımın ikinci rengi, yüz takımın ana rengi,
+ * ortada takımın kısa adı hep beyaz (açık renkli yüzde okunsun diye ince koyu kenarlı).
+ */
+const CREST_FACE = 'M256 66C315 66 369 80 418 114L418 226C418 315 379 394 319 451C294 475 270 493 256 501' +
+    'C242 493 218 475 193 451C133 394 94 315 94 226L94 114C143 80 197 66 256 66Z';
+
+function shieldCrest(team) {
+    const wrap = document.createElement('span');
+    wrap.innerHTML =
+        /* Kalkan dikeyde %85'e kısaltılır (genişlik ve yazı aynı) */
+        '<svg class="sb-crest" viewBox="0 0 512 480" aria-hidden="true"><g filter="url(#crShadow)">' +
+        '<g transform="scale(1 .85)">' +
+        '<path fill="url(#crMetal)" d="M256 20C320 20 382 35 443 76C454 83 461 96 461 111L461 229' +
+            'C461 337 413 432 344 496C313 525 282 546 256 557C230 546 199 525 168 496C99 432 51 337 51 229' +
+            'L51 111C51 96 58 83 69 76C130 35 192 20 256 20Z"/>' +
+        '<path class="cr-ring" d="M256 39C317 39 376 53 432 91C440 96 444 104 444 116L444 228' +
+            'C444 328 400 415 333 477C304 504 276 523 256 533C236 523 208 504 179 477C112 415 68 328 68 228' +
+            'L68 116C68 104 72 96 80 91C136 53 195 39 256 39Z"/>' +
+        '<path class="cr-face" d="' + CREST_FACE + '"/>' +
+        '<path fill="url(#crShade)" d="' + CREST_FACE + '"/>' +
+        '<path fill="url(#crShine)" d="' + CREST_FACE + '"/>' +
+        '<path fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="3" ' +
+            'd="M96 115C147 82 201 68 256 68C311 68 365 82 416 115"/>' +
+        '</g>' +
+        '<text x="256" y="268" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" ' +
+            'font-size="116" font-weight="700" letter-spacing="-5" fill="#fff" ' +
+            'stroke="#000" stroke-opacity=".35" stroke-width="8" paint-order="stroke"></text>' +
+        '</g></svg>';
+    const svg = wrap.firstChild;
+    svg.querySelector('.cr-ring').setAttribute('fill', team.fg);
+    svg.querySelector('.cr-face').setAttribute('fill', team.bg);
+    svg.querySelector('text').textContent = team.short;
+    return svg;
+}
+
 function sbTeam(el, team) {
     el.textContent = '';
-    el.appendChild(crest(team));
+    el.appendChild(shieldCrest(team));
     const name = document.createElement('span');
     name.textContent = team.name;
     el.appendChild(name);
@@ -8474,15 +8558,9 @@ function renderMatchOdds(match, box, load) {
 
     /* Maç başlayınca kaydedilemez */
     const open = match.status === 'upcoming' && match.date > Date.now();
-    if (!open) {
-        const closed = document.createElement('p');
-        closed.className = 'odds-closed';
-        closed.textContent = 'Maç başladı, oranlar kapandı.';
-        box.appendChild(closed);
-    }
 
     /* cells: [ad, anahtar, oran] */
-    /* kind: oran türü (renk ve simge için: ms, cs, iy...) */
+    /* kind: oran türü (renk için: ms, cs, iy...) */
     const block = (title, cells, columns, kind) => {
         const wrap = document.createElement('div');
         wrap.className = 'odds-block ob-' + kind;
