@@ -1949,15 +1949,17 @@ body.has-layer .ac-kapa svg {
     flex: 1;
     min-width: 0;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: .3em;
+    justify-content: center;
+    gap: .2em;
     background: none;
     border-radius: 0;
     color: #e3ebf7;
-    font-size: min(.875rem, 3.6vw);
+
+    /* Simge ve yazı yan yana sığsın diye biraz küçük */
+    font-size: min(.8125rem, 3.25vw);
     font-weight: 600;
-    padding: .6rem 2px .5rem;
+    padding: .6rem 1px .5rem;
     border-bottom: .1875rem solid transparent;
     white-space: nowrap;
 }
@@ -1974,14 +1976,27 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Sekme simgeleri (Detaylı Analiz'de sekme adları değişince gizlenir) */
+/* Simge yazının solunda */
 #detailTabs button::before {
     content: '';
-    width: 1.5em;
-    height: 1.5em;
+    flex: none;
+    width: 1.15em;
+    height: 1.15em;
     background: currentColor;
     -webkit-mask: var(--icon) center / contain no-repeat;
     mask: var(--icon) center / contain no-repeat;
 }
+
+/*
+ * Sekme genişlikleri (1 birim = 1px): Özet −4, Kadro −2, Oranlar −2, İstatistik +4, Yorumlar +4.
+ * Hepsi aynı taban genişlikten başlar, kalan yer eşit paylaşılır; fark aynen korunur.
+ */
+#detailTabs button { flex: 1 1 .625rem; }
+#detailTabs [data-tab="summary"]  { flex-basis: .375rem; }
+#detailTabs [data-tab="lineup"],
+#detailTabs [data-tab="odds"]     { flex-basis: .5rem; }
+#detailTabs [data-tab="stats"],
+#detailTabs [data-tab="comments"] { flex-basis: .875rem; }
 
 #detailTabs [data-tab="summary"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 3h8l4 4v14H6z M14 3v4h4 M9 12h6 M9 16h6%22/%3E%3C/svg%3E"); }
 #detailTabs [data-tab="stats"]    { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20h16 M6 20v-6h3v6 M10.5 20V5h3v15 M15 20v-9h3v9%22/%3E%3C/svg%3E"); }
@@ -2268,7 +2283,7 @@ body.has-layer .ac-kapa svg {
 
 /*
  * ÖZET: koyu zeminde açık renkli tek kart. Yarı başlıkları lacivert şerit,
- * dakika açık mavi hap; ev sahibi solda, deplasman sağda (ikisi de sola yaslı).
+ * dakika açık mavi hap; ev sahibi solda, deplasman sağda (ikisi de dakikaya yaslı).
  */
 /* Özet kartı sekme kutusu genişliğinde, hemen altında */
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
@@ -2277,11 +2292,10 @@ body.has-layer .ac-kapa svg {
     padding-right: .3rem;
 }
 
-/* Çerçeve yarı şeritleriyle aynı lacivert; köşeler az yuvarlak */
+/* Çerçeve yarı şeritleriyle aynı lacivert; köşeler düz */
 #summaryBox:has(.event, .half-line) {
     overflow: hidden;
     border: 1px solid #1f3c6e;
-    border-radius: .5rem;
     background: #f4f7fb;
 }
 
@@ -2299,6 +2313,11 @@ body.has-layer .ac-kapa svg {
 .event:last-child,
 .event:has(+ .half-line) {
     border-bottom: 0;
+}
+
+/* Ev sahibi tarafı ortadaki dakikaya yaslı */
+.event .home {
+    text-align: right;
 }
 
 .event .minute {
@@ -2336,8 +2355,12 @@ body.has-layer .ac-kapa svg {
  */
 .event-label.event-sub {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: .15em;
+}
+
+.event > div:last-child .event-sub {
+    align-items: flex-start;
 }
 
 .sub-line {
@@ -2535,6 +2558,23 @@ body.has-layer .ac-kapa svg {
     margin-top: 1.5em;
     font-size: .75rem;
     color: #8f9bb0;
+}
+
+/* İstatistik altındaki "Son güncelleme": solunda yenileme simgesi */
+.stat-updated {
+    display: flex;
+    align-items: center;
+    gap: .4em;
+}
+
+.stat-updated::before {
+    content: '';
+    flex: none;
+    width: 1.25em;
+    height: 1.25em;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 /* Maç başlayınca: oranlar kapandı */
@@ -7999,7 +8039,7 @@ function renderStats(match) {
     /* Verinin son değiştiği saat (sunucunun yazdığı an) */
     if (match.updated) {
         const note = document.createElement('p');
-        note.className = 'odds-note';
+        note.className = 'odds-note stat-updated';
         note.textContent = 'Son güncelleme: ' + formatTime(match.updated);
         box.appendChild(note);
     }
