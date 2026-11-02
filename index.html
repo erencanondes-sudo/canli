@@ -27,6 +27,13 @@
 
     /* Dokunulan yerde telefonun mavi vurgusu çıkmasın */
     -webkit-tap-highlight-color: transparent;
+
+    /* Kaydırma çubuğu hiçbir yerde görünmez (kaydırma çalışır) */
+    scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
 }
 
 /*
@@ -268,14 +275,9 @@ button {
     display: flex;
     gap: var(--day-gap);
     overflow-x: auto;
-    scrollbar-width: none;
     scroll-snap-type: x mandatory;
     container-type: inline-size;
     font-size: .6875rem;
-}
-
-#dayBox::-webkit-scrollbar, #oddsDays::-webkit-scrollbar {
-    display: none;
 }
 
 /* İki satır: üstte gün (Cmt), altta tarih (17.10) */
@@ -1846,16 +1848,12 @@ body.has-layer .ac-kapa svg {
 #sbScore::before, .os-center::before { left: 0; }
 #sbScore::after, .os-center::after { right: 0; }
 
-/* Yeşil ışıklı kutu */
+/* Saat / skor */
 #sbScoreText, .os-time {
     display: inline-flex;
     align-items: center;
     gap: .25em;
     padding: .12em .4em;
-    border: .125rem solid #2fe06f;
-    border-radius: .45em;
-    background: rgba(3, 20, 12, .55);
-    box-shadow: 0 0 .75rem rgba(47, 224, 111, .55), inset 0 0 .5rem rgba(47, 224, 111, .25);
     font-size: min(2.1em, 8.4vw);
     font-weight: 800;
     letter-spacing: .02em;
@@ -1939,9 +1937,9 @@ body.has-layer .ac-kapa svg {
 /* Sekmeler: koyu, ışıklı çerçeveli tek kutu; seçili sekme yeşil */
 #detailTabs, .os-tabs {
     display: flex;
-    margin: .1rem .6rem .6rem;
+    margin: .1rem .3rem .6rem;
     border: 1px solid rgba(70, 200, 255, .5);
-    border-radius: .9rem;
+    border-radius: .5rem;
     background: linear-gradient(180deg, #112640, #0a1729);
     box-shadow: 0 0 .7rem rgba(40, 170, 255, .28);
     overflow: hidden;
@@ -2268,24 +2266,48 @@ body.has-layer .ac-kapa svg {
     color: #777;
 }
 
-/* Özet: maçın olayları, ev sahibi solda, deplasman sağda */
+/*
+ * ÖZET: koyu zeminde açık renkli tek kart. Yarı başlıkları lacivert şerit,
+ * dakika açık mavi hap; ev sahibi solda, deplasman sağda (ikisi de sola yaslı).
+ */
+/* Özet kartı sekme kutusu genişliğinde, hemen altında */
+#detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
+    padding-top: 0;
+    padding-left: .3rem;
+    padding-right: .3rem;
+}
+
+/* Çerçeve yarı şeritleriyle aynı lacivert; köşeler az yuvarlak */
+#summaryBox:has(.event, .half-line) {
+    overflow: hidden;
+    border: 1px solid #1f3c6e;
+    border-radius: .5rem;
+    background: #f4f7fb;
+}
+
 .event {
     display: grid;
-    grid-template-columns: 1fr 3em 1fr;
+    grid-template-columns: 1fr 3.2em 1fr;
     align-items: center;
-    padding: .55em 0;
-    border-bottom: 1px solid #f0f1f4;
+    column-gap: .6em;
+    padding: .5em .75em;
+    border-bottom: 1px solid #dde5f0;
     font-size: .875rem;
 }
 
-.event .minute {
-    text-align: center;
-    font-weight: 800;
-    color: #6b7080;
+/* Son satırın ve yarı şeridinin hemen üstündeki satırın alt çizgisi yok */
+.event:last-child,
+.event:has(+ .half-line) {
+    border-bottom: 0;
 }
 
-.event .home {
-    text-align: right;
+.event .minute {
+    padding: .15em 0;
+    border-radius: 999px;
+    background: #d6e2f3;
+    text-align: center;
+    font-weight: 800;
+    color: #1d2340;
 }
 
 .event-label {
@@ -2308,6 +2330,26 @@ body.has-layer .ac-kapa svg {
     color: #9aa0ab;
 }
 
+/*
+ * Oyuncu değişikliği: üstte giren oyuncu (yeşil ok), altında çıkan oyuncu (kırmızı ok).
+ * Ev sahibinde ok adın solunda, deplasmanda sağında.
+ */
+.event-label.event-sub {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .15em;
+}
+
+.sub-line {
+    display: inline-flex;
+    align-items: center;
+    gap: .35em;
+}
+
+.event > div:last-child .sub-line {
+    flex-direction: row-reverse;
+}
+
 .event-label .sub-icon {
     vertical-align: -.12em;
 }
@@ -2316,58 +2358,87 @@ body.has-layer .ac-kapa svg {
     background: #d93025;
 }
 
+/* İLK YARI / İKİNCİ YARI / MAÇ SONU: lacivert şerit */
 .half-line {
-    margin: .7em 0 .2em;
+    padding: .45em;
+    background: linear-gradient(180deg, #24447a, #1a3462);
     text-align: center;
-    font-size: .75rem;
-    font-weight: 800;
-    color: #9aa0ab;
-}
-
-/* İstatistik çubukları */
-.stat-line {
-    margin-bottom: 1em;
-}
-
-.stat-top {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: .35em;
     font-size: .875rem;
-    font-weight: 700;
-    color: #1d2340;
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: white;
+}
+
+.event + .half-line {
+    margin-top: .35em;
+}
+
+/*
+ * İstatistik: koyu zeminde her satır ışıklı çerçeveli bir kart.
+ * Üstte ev sahibi değeri | ad | deplasman değeri, altta mavi ve turuncu çubuklar.
+ */
+.stat-line {
+    margin-bottom: .6em;
+    padding: .45em .9em .6em;
+    border: 1px solid rgba(70, 200, 255, .45);
+    border-radius: .9rem;
+    background: linear-gradient(180deg, #10213a, #0b1729);
+    box-shadow: 0 0 .6rem rgba(40, 170, 255, .2);
+}
+
+/* Ad her zaman kartın tam ortasında: iki yandaki sütun eşit genişlikte */
+.stat-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin-bottom: .35em;
+    font-size: 1.3125rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: white;
+}
+
+.stat-top span:nth-child(3) {
+    text-align: right;
 }
 
 .stat-top span:nth-child(2) {
-    font-weight: 600;
-    color: #6b7080;
+    text-align: center;
+    font-size: .9375rem;
+    font-weight: 700;
+    color: #e3ebf7;
 }
 
 .stat-bars {
     display: flex;
-    gap: .25rem;
-    height: .4375rem;
+    gap: .35rem;
+    height: .55rem;
 }
 
 .stat-bars div {
-    border-radius: .25rem;
-    background: #e3e6ec;
+    border-radius: 999px;
 }
 
-.stat-bars .h { background: #1f6ff2; }
-.stat-bars .a { background: #f59e0b; }
+.stat-bars .h { background: linear-gradient(180deg, #4a8dff, #1f6ff2); }
+.stat-bars .a { background: linear-gradient(180deg, #ffb53d, #f59e0b); }
 
 /*
  * ORANLAR (maç sayfasının Oranlar sekmesi ve Oranlar'dan açılan sayfa)
  * Koyu zemin; her oran türü ayrı kart: solda renkli başlık ve simge, sağda beyaz oran kutuları.
  */
-#detailSheet:not(.an-mode) .tab-page[data-page="odds"], .os-page {
+#detailSheet:not(.an-mode) .tab-page[data-page="odds"],
+#detailSheet:not(.an-mode) .tab-page[data-page="stats"],
+#detailSheet:not(.an-mode) .tab-page[data-page="summary"],
+.os-page {
     background:
         radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
         linear-gradient(180deg, #0b1424 0%, #0c1a2d 60%, #0d2a1b 100%);
 }
 
-#detailSheet:not(.an-mode) .tab-page[data-page="odds"] .tab-empty, .os-page .tab-empty {
+#detailSheet:not(.an-mode) .tab-page[data-page="odds"] .tab-empty,
+#detailSheet:not(.an-mode) .tab-page[data-page="stats"] .tab-empty,
+#detailSheet:not(.an-mode) .tab-page[data-page="summary"] .tab-empty,
+.os-page .tab-empty {
     color: #b8c3d6;
 }
 
@@ -2497,11 +2568,6 @@ body.has-layer .ac-kapa svg {
     display: flex;
     gap: .3em;
     overflow-x: auto;
-    scrollbar-width: none;
-}
-
-#anDayBox::-webkit-scrollbar {
-    display: none;
 }
 
 #anDayBox button {
@@ -7842,12 +7908,18 @@ function renderSummary(match) {
             label.textContent = '⚽ ' + (event.player || 'Gol') +
                 (event.detail === 'p' ? ' (P)' : event.detail === 'kk' ? ' (KK)' : '');
         } else if (event.type === 'sub') {
-            label.innerHTML = SUB_ICON;
-            label.appendChild(document.createTextNode(' ' + event.player + ' '));
-            const out = document.createElement('small');
-            out.className = 'event-out';
-            out.textContent = event.out;
-            label.appendChild(out);
+            label.classList.add('event-sub');
+            [[SUB_IN_ICON, 'span', event.player], [SUB_OUT_ICON, 'small', event.out]].forEach(([icon, tag, name]) => {
+                const line = document.createElement('span');
+                line.className = 'sub-line';
+                line.innerHTML = icon;
+                const text = document.createElement(tag);
+                if (tag === 'small')
+                    text.className = 'event-out';
+                text.textContent = name;
+                line.appendChild(text);
+                label.appendChild(line);
+            });
         } else {
             const icon = document.createElement('span');
             icon.className = 'card-icon' + (event.type === 'red' ? ' red' : '');
@@ -7892,9 +7964,9 @@ function renderStats(match) {
     const [h, a] = match.stats.map(list => list.map(value => value || 0));
 
     [
-        ['Topla oynama', h[9] + '%', a[9] + '%', h[9], a[9]],
+        ['Topla Oynama', '%' + h[9], '%' + a[9], h[9], a[9]],
         ['Şut', h[2], a[2]],
-        ['İsabetli şut', h[0], a[0]],
+        ['İsabetli Şut', h[0], a[0]],
         ['Korner', h[7], a[7]],
         ['Faul', h[6], a[6]],
         ['Kart', h[10] + h[11], a[10] + a[11]]
@@ -7972,6 +8044,14 @@ function shirtColors(match) {
 }
 
 /* Değişiklik ikonu: yeşil yukarı, kırmızı aşağı ok */
+/* Özet'teki değişiklik satırı: giren oyuncu yeşil yukarı ok, çıkan oyuncu kırmızı aşağı ok */
+const SUB_IN_ICON =
+    '<svg class="sub-icon" viewBox="0 0 16 16" fill="none" stroke-width="2.2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M8 14V3M4 7l4-4 4 4" stroke="#22b35e"/></svg>';
+const SUB_OUT_ICON =
+    '<svg class="sub-icon" viewBox="0 0 16 16" fill="none" stroke-width="2.2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M8 2v11M4 9l4 4 4-4" stroke="#e5483b"/></svg>';
+
 const SUB_ICON =
     '<svg class="sub-icon" viewBox="0 0 16 16" fill="none" stroke-width="2.2" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true">' +
