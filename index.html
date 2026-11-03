@@ -902,6 +902,249 @@ button {
     color: #b8bcc6;
 }
 
+/*
+ * MESAJLAR (maç sayfası, Yorumlar): üstte yazma alanı, altında en yeni üstte mesajlar
+ */
+.cm-compose {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    padding-top: .3rem;
+}
+
+#cmInput {
+    flex: 1;
+    min-width: 0;
+    padding: .6em .75em;
+    border: .0625rem solid #d5d8de;
+    border-radius: .75rem;
+    font: inherit;
+    font-size: .9375rem;
+    color: #1d2340;
+}
+
+#cmCount {
+    flex: none;
+    font-size: .75rem;
+    color: #9aa0ab;
+}
+
+#cmSend {
+    flex: none;
+    padding: .6em .9em;
+    border: none;
+    border-radius: .75rem;
+    background: #1d2340;
+    color: white;
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 800;
+}
+
+#cmNote {
+    min-height: 1em;
+    margin: .35em 0 .2em;
+    font-size: .8125rem;
+    color: #d93025;
+}
+
+.cm-item {
+    padding: .65em 0;
+    border-bottom: .0625rem solid #eef0f4;
+}
+
+.cm-head {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    font-size: .8125rem;
+}
+
+.cm-name {
+    color: #1d2340;
+}
+
+.cm-time {
+    color: #9aa0ab;
+}
+
+.cm-more {
+    margin-left: auto;
+    padding: 0 .4em;
+    border: none;
+    background: none;
+    font-size: 1.1em;
+    font-weight: 800;
+    color: #9aa0ab;
+}
+
+.cm-text {
+    margin: .25em 0 .35em;
+    font-size: .9375rem;
+    line-height: 1.35;
+    color: #222;
+    overflow-wrap: anywhere;
+}
+
+.cm-bar, .cm-menu {
+    display: flex;
+    gap: .5em;
+}
+
+.cm-bar button, .cm-menu button {
+    padding: .25em .7em;
+    border: .0625rem solid #e2e4ea;
+    border-radius: 2em;
+    background: white;
+    font: inherit;
+    font-size: .8125rem;
+    font-weight: 700;
+    color: #555a66;
+}
+
+.cm-bar button.on {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
+}
+
+.cm-menu {
+    margin-top: .45em;
+}
+
+#cmMore {
+    display: block;
+    width: 100%;
+    margin-top: .8em;
+    padding: .65em;
+    border: .0625rem solid #d5d8de;
+    border-radius: .75rem;
+    background: white;
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 700;
+    color: #1d2340;
+}
+
+#cmMore[hidden], #cmLimit[hidden] {
+    display: none;
+}
+
+#cmLimit {
+    margin: .8em 0 0;
+    text-align: center;
+    font-size: .75rem;
+    color: #9aa0ab;
+}
+
+/* Rumuz penceresi (uyarı penceresi gibi) */
+#profileBox {
+    position: fixed;
+    inset: 0;
+    z-index: 46;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6vw;
+    background: rgba(0, 0, 0, .25);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .18s ease, visibility 0s linear .18s;
+}
+
+#profileBox.open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .18s ease, visibility 0s;
+}
+
+#profileCard {
+    width: 100%;
+    max-width: 24em;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.1em 1.1em 1em;
+    border-radius: 1rem;
+    background: white;
+    box-shadow: 0 .625rem 2.5rem rgba(0, 0, 0, .25);
+    font-size: .9375rem;
+    color: #1d2340;
+}
+
+.pf-title {
+    margin: 0 0 .5em;
+    font-weight: 800;
+}
+
+#profileName {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: .6em .75em;
+    border: .0625rem solid #d5d8de;
+    border-radius: .75rem;
+    font: inherit;
+    color: #1d2340;
+}
+
+.pf-hint {
+    margin: .35em 0 .9em;
+    font-size: .8125rem;
+    color: #8a8f9c;
+}
+
+#profileRules ul {
+    margin: 0 0 .7em;
+    padding-left: 1.2em;
+    font-size: .8125rem;
+    line-height: 1.4;
+    color: #444;
+}
+
+#profileRules[hidden] {
+    display: none;
+}
+
+.pf-accept {
+    display: flex;
+    align-items: center;
+    gap: .45em;
+    font-size: .875rem;
+    font-weight: 600;
+}
+
+#profileError {
+    min-height: 1em;
+    margin: .6em 0;
+    font-size: .8125rem;
+    color: #d93025;
+}
+
+.pf-actions {
+    display: flex;
+    gap: .6em;
+}
+
+.pf-actions button {
+    flex: 1;
+    padding: .7em;
+    border-radius: .75rem;
+    font: inherit;
+    font-weight: 800;
+}
+
+#profileNo {
+    border: .0625rem solid #d5d8de;
+    background: white;
+    color: #555a66;
+}
+
+#profileYes {
+    border: none;
+    background: #1d2340;
+    color: white;
+}
+
 /* Uyarı penceresi: ekranın ortasında, arkası karartılmaz */
 #confirmBox {
     position: fixed;
@@ -3358,6 +3601,10 @@ body.has-layer .ac-kapa svg {
         <button data-go="analysis">Analiz</button>
         <button data-go="odds">Oranlar</button>
         <button id="menuSaved">Kayıtlı Maçlarım</button>
+        <button id="menuLogin">Giriş yap</button>
+        <button id="menuProfile" hidden></button>
+        <button id="menuLogout" hidden>Çıkış yap</button>
+        <button id="menuDelete" hidden>Hesabımı sil</button>
         <button id="menuClose">Kapat</button>
     </nav>
 
@@ -3529,6 +3776,33 @@ body.has-layer .ac-kapa svg {
     </div>
 </div>
 
+<!-- RUMUZ PENCERESİ: ilk girişte rumuz ve kurallar, sonra rumuz değiştirme -->
+<div id="profileBox" role="dialog" aria-modal="true">
+    <div id="profileCard">
+        <p class="pf-title">Rumuz</p>
+        <input id="profileName" type="text" maxlength="15" placeholder="Rumuzun" autocomplete="off">
+        <p class="pf-hint">3–15 karakter: harf, rakam ve alt çizgi. Haftada bir değiştirilebilir.</p>
+        <div id="profileRules">
+            <p class="pf-title">Mesaj kuralları</p>
+            <ul>
+                <li>Küfür, hakaret, aşağılama ve nefret söylemi yasaktır.</li>
+                <li>Telefon, adres gibi kişisel bilgi paylaşmak yasaktır.</li>
+                <li>Bahis sitesi, reklam ve bağlantı paylaşmak yasaktır.</li>
+                <li>Aynı mesajı tekrar tekrar yazmak yasaktır.</li>
+                <li>Kurallara uymayan mesajlar silinir, kuralları çiğneyenlerin yazma hakkı kaldırılabilir.</li>
+                <li>Uygunsuz bir mesajı "Şikayet et" ile bildirebilir, bir kişiyi "Engelle" ile gizleyebilirsin.</li>
+                <li>Yazdığın mesajlardan sen sorumlusun.</li>
+            </ul>
+            <label class="pf-accept"><input id="profileCheck" type="checkbox"> Kuralları okudum, kabul ediyorum</label>
+        </div>
+        <p id="profileError"></p>
+        <div class="pf-actions">
+            <button id="profileNo" type="button">Vazgeç</button>
+            <button id="profileYes" type="button">Kaydet</button>
+        </div>
+    </div>
+</div>
+
 <!-- KAYITLI ORANLAR TOPU (sonuçlanmamış kayıtlı oran varsa görünür) -->
 <button id="couponBall" type="button" aria-label="Kayıtlı oranları aç">
     <span class="cb-count"></span>
@@ -3639,7 +3913,17 @@ body.has-layer .ac-kapa svg {
             <div class="tab-page" data-page="lineup"><div id="lineupBox"></div><div class="an-pane"></div></div>
             <div class="tab-page" data-page="odds"><div id="oddsBox"></div><div class="an-pane"></div></div>
             <div class="tab-page" data-page="comments">
-                <p class="tab-empty">Yorumlar yakında eklenecek.</p>
+                <div id="commentsBox">
+                    <div class="cm-compose">
+                        <input id="cmInput" type="text" maxlength="50" placeholder="Mesaj yaz…" autocomplete="off" enterkeyhint="send">
+                        <span id="cmCount">0/50</span>
+                        <button id="cmSend" type="button">Gönder</button>
+                    </div>
+                    <p id="cmNote"></p>
+                    <div id="cmList"></div>
+                    <button id="cmMore" type="button" hidden>Daha fazla göster</button>
+                    <p id="cmLimit" hidden>En fazla son 100 mesaj gösterilir.</p>
+                </div>
                 <div class="an-pane"></div>
             </div>
         </div>
@@ -4206,6 +4490,9 @@ async function startData() {
     }
 
     readLeagues();
+    /* Daha önce Google ile giriş yapıldıysa hesap bilgisi arka planda yüklenir */
+    if (readJSON(ACCOUNT_KEY, null))
+        authLoad();
     if (anShown) {
         readAnVersion();
         anRedraw();
@@ -7442,6 +7729,558 @@ startData();
 
 
 /* =================================================
+   MESAJLAR (maç sayfası, Yorumlar): sunucu/VERITABANI.md → "Mesajlar"
+   -------------------------------------------------
+   Okuma herkese açık: Yorumlar sekmesi açılınca maçın son 10 mesajı canlı dinlenir,
+   "Daha fazla göster" ile 10'ar artar (en fazla 100). Yazmak, oy vermek ve şikayet için
+   Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir).
+   Sınırlar (Realtime Database kuralları da denetler): mesaj 50 karakter, günde 20 mesaj,
+   bir mesajda oy en fazla 2 kez değiştirilir, rumuz haftada bir değişir.
+   Beğeni sayıları ve küfür kontrolü sunucuda (kuyruk).
+================================================= */
+const CM_PAGE = 10;
+const CM_MAX = 100;
+const CM_DAILY = 20;
+const ACCOUNT_KEY = 'canliSkorHesap';   /* giriş yapıldı mı (menü ve hesabın arka planda yüklenmesi için) */
+const BLOCK_KEY = 'canliSkorEngel';     /* engellenen kişiler (yalnızca bu telefonda) */
+const VOTE_KEY = 'canliSkorOy';         /* verilen oylar ("maç/mesaj" → 1, -1, 0) */
+
+const cm = { match: null, limit: CM_PAGE, off: null, list: null, open: null };
+let blocked = new Set(readJSON(BLOCK_KEY, []));
+let myVotes = readJSON(VOTE_KEY, {});
+let me = null;                    /* { uid, r: rumuz (yoksa null), k } Google ile giriş yapmış kullanıcı */
+let meReady = Promise.resolve();
+
+const cmInput = document.getElementById('cmInput');
+const cmNote = text => { document.getElementById('cmNote').textContent = text || ''; };
+
+/* ---------- Küfür ve bağlantı filtresi (kufur.json, yazarken bir kez iner; sunucu da aynısını kullanır) ---------- */
+let filterReady = null;
+let FILTER = null;
+const FILTER_DIGITS = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's' };
+
+function plainText(text) {
+    return String(text || '').toLocaleLowerCase('tr')
+        .replace(/[0134578@$]/g, ch => FILTER_DIGITS[ch])
+        .replace(/[^a-zçğıöşü\s]/g, '')
+        .replace(/(.)\1+/g, '$1');
+}
+
+function loadFilter() {
+    if (!filterReady)
+        filterReady = fetch('kufur.json').then(r => r.json()).then(list => {
+            FILTER = {
+                roots: list.kok.map(plainText),
+                words: new Set(list.kelime.map(plainText)),
+                allow: new Set(list.izin.map(plainText)),
+                links: list.baglanti
+            };
+        }).catch(() => { filterReady = null; });
+    return filterReady;
+}
+
+function unfit(text) {
+    if (!FILTER)
+        return false;
+    const raw = String(text || '').toLocaleLowerCase('tr');
+    if (FILTER.links.some(link => raw.includes(link)))
+        return true;
+    return plainText(text).split(/\s+/).some(word =>
+        word && !FILTER.allow.has(word) && (FILTER.words.has(word) || FILTER.roots.some(root => word.startsWith(root))));
+}
+
+/* ---------- Giriş (Google) ---------- */
+let authReady = null;
+
+function authLoad() {
+    if (!authReady)
+        authReady = (async () => {
+            const lib = await import('https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/firebase-auth.js');
+            const auth = lib.getAuth(fbApp);
+            await auth.authStateReady();
+            lib.onAuthStateChanged(auth, user => accountChanged(user));
+            await accountChanged(auth.currentUser);
+            return { lib, auth };
+        })();
+    return authReady;
+}
+
+/* Hesap değişince (giriş, çıkış) rumuz okunur, menü ve mesajlar yenilenir */
+let accountUid = undefined;
+
+function accountChanged(user) {
+    const uid = user && !user.isAnonymous ? user.uid : null;
+    if (uid === accountUid)
+        return meReady;
+    accountUid = uid;
+    meReady = (async () => {
+        if (!uid) {
+            me = null;
+            try { localStorage.removeItem(ACCOUNT_KEY); } catch (error) {}
+        } else {
+            const profile = (await rt.get(rt.ref(rd, 'kullanici/' + uid)).catch(() => null));
+            const value = profile && profile.val() || {};
+            me = { uid: uid, r: value.r || null, k: value.k || null };
+            writeJSON(ACCOUNT_KEY, { r: me.r });
+        }
+        renderAccountMenu();
+        renderComments();
+    })();
+    return meReady;
+}
+
+/* Google ile giriş. Görünmez giriş (bildirimler) varsa ona bağlanır, aynı kişi sayılır. Başarılıysa true */
+async function googleLogin() {
+    const { lib, auth } = await authLoad();
+    const provider = new lib.GoogleAuthProvider();
+    try {
+        if (auth.currentUser && auth.currentUser.isAnonymous) {
+            try {
+                await lib.linkWithPopup(auth.currentUser, provider);
+            } catch (error) {
+                if (error.code !== 'auth/credential-already-in-use')
+                    throw error;
+                await lib.signInWithCredential(auth, lib.GoogleAuthProvider.credentialFromError(error));
+            }
+        } else {
+            await lib.signInWithPopup(auth, provider);
+        }
+        await accountChanged(auth.currentUser);
+        return true;
+    } catch (error) {
+        if (!/popup-closed|cancelled-popup/.test(error.code || ''))
+            cmNote('Giriş yapılamadı.');
+        return false;
+    }
+}
+
+/* Yazmak, oy ve şikayet için: giriş yoksa Google girişi, rumuz yoksa rumuz penceresi, sonra iş yapılır */
+async function requireWriter(action) {
+    if (!fbApp || !rd)
+        return;
+    const { auth } = await authLoad();
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+        if (!(await googleLogin()))
+            return;
+    }
+    await meReady;
+    if (!me)
+        return;
+    if (!me.r) {
+        openProfile(action);
+        return;
+    }
+    action();
+}
+
+/* ---------- Rumuz penceresi ---------- */
+const profileBox = document.getElementById('profileBox');
+let profileNext = null;
+
+function openProfile(next) {
+    profileNext = next || null;
+    const first = !me || !me.r;
+    document.getElementById('profileName').value = first ? '' : me.r;
+    document.getElementById('profileRules').hidden = !first;
+    document.getElementById('profileCheck').checked = false;
+    document.getElementById('profileError').textContent = '';
+    profileBox.classList.add('open');
+    layerOpened('profile');
+    loadFilter();
+}
+
+function hideProfile() {
+    profileBox.classList.remove('open');
+    profileNext = null;
+}
+
+function closeProfile() {
+    hideProfile();
+    layerClosed('profile');
+}
+
+document.getElementById('profileNo').addEventListener('click', closeProfile);
+
+document.getElementById('profileYes').addEventListener('click', async () => {
+
+    const error = text => { document.getElementById('profileError').textContent = text; };
+    const name = document.getElementById('profileName').value.trim();
+    const first = !me.r;
+
+    if (!/^[A-Za-z0-9_çğıöşüÇĞİÖŞÜ]{3,15}$/.test(name))
+        return error('Rumuz 3–15 karakter olmalı: harf, rakam ve alt çizgi.');
+    if (first && !document.getElementById('profileCheck').checked)
+        return error('Devam etmek için kuralları kabul etmelisin.');
+    await loadFilter();
+    if (unfit(name))
+        return error('Bu rumuz kullanılamaz.');
+
+    const next = profileNext;
+    if (name === me.r) {
+        closeProfile();
+        return;
+    }
+
+    try {
+        const key = name.toLowerCase();
+        const oldKey = me.r ? me.r.toLowerCase() : null;
+        const owner = (await rt.get(rt.ref(rd, 'rumuz/' + key))).val();
+        if (owner && owner !== me.uid)
+            return error('Bu rumuz alınmış.');
+
+        if (me.r) {
+            const last = (await rt.get(rt.ref(rd, 'rumuz_zaman/' + me.uid))).val();
+            if (last && serverNow() - last < 7 * 86400000)
+                return error('Rumuz haftada bir değiştirilebilir. Sonraki değişiklik: ' +
+                    formatDate(new Date(last + 7 * 86400000)) + '.');
+        }
+
+        const update = {
+            ['kullanici/' + me.uid]: { r: name, k: me.k || rt.serverTimestamp() },
+            ['rumuz_zaman/' + me.uid]: rt.serverTimestamp()
+        };
+        if (key !== oldKey) {
+            update['rumuz/' + key] = me.uid;
+            if (oldKey)
+                update['rumuz/' + oldKey] = null;
+        }
+        await rt.update(rt.ref(rd), update);
+
+        me.r = name;
+        me.k = me.k || serverNow();
+        writeJSON(ACCOUNT_KEY, { r: name });
+        renderAccountMenu();
+        closeProfile();
+        if (next)
+            next();
+    } catch (e) {
+        error('Kaydedilemedi. Rumuz alınmış ya da değiştirme süren dolmamış olabilir.');
+    }
+});
+
+/* ---------- Menü: giriş, rumuz, çıkış, hesabı silme ---------- */
+function renderAccountMenu() {
+    const known = me || readJSON(ACCOUNT_KEY, null);
+    document.getElementById('menuLogin').hidden = !!known;
+    ['menuProfile', 'menuLogout', 'menuDelete'].forEach(id => { document.getElementById(id).hidden = !known; });
+    document.getElementById('menuProfile').textContent = known && known.r ? 'Rumuz: ' + known.r : 'Rumuz seç';
+}
+
+document.getElementById('menuLogin').addEventListener('click', () => {
+    closeHomeMenu();
+    requireWriter(() => {});
+});
+
+document.getElementById('menuProfile').addEventListener('click', () => {
+    closeHomeMenu();
+    requireWriter(() => openProfile());
+});
+
+document.getElementById('menuLogout').addEventListener('click', () => {
+    closeHomeMenu();
+    askConfirm('Çıkış yapılsın mı?', 'Çıkış yap', async () => {
+        const { lib, auth } = await authLoad();
+        await lib.signOut(auth);
+        bildirimHazir = null;
+    });
+});
+
+document.getElementById('menuDelete').addEventListener('click', () => {
+    closeHomeMenu();
+    askConfirm('Hesabın, rumuzun ve bütün mesajların silinsin mi? Bu geri alınamaz.', 'Hesabımı sil', deleteAccount);
+});
+
+/* Önce mesajlar, rumuz ve hesap bilgisi silinir, sonra Google hesabıyla bağlantı (giriş kaydı) */
+async function deleteAccount() {
+    try {
+        const { lib, auth } = await authLoad();
+        await meReady;
+        if (!me || !auth.currentUser)
+            return;
+        const uid = me.uid;
+
+        const mine = (await rt.get(rt.ref(rd, 'mesajlarim/' + uid))).val() || {};
+        const removals = [];
+        Object.entries(mine).forEach(([match, ids]) => Object.keys(ids).forEach(id => {
+            removals.push(rt.remove(rt.ref(rd, 'mesaj/' + match + '/' + id)));
+        }));
+        await Promise.allSettled(removals);
+
+        const update = { ['mesajlarim/' + uid]: null, ['kullanici/' + uid]: null };
+        if (me.r)
+            update['rumuz/' + me.r.toLowerCase()] = null;
+        await rt.update(rt.ref(rd), update);
+
+        try {
+            await lib.deleteUser(auth.currentUser);
+        } catch (error) {
+            if (error.code !== 'auth/requires-recent-login')
+                throw error;
+            await lib.reauthenticateWithPopup(auth.currentUser, new lib.GoogleAuthProvider());
+            await lib.deleteUser(auth.currentUser);
+        }
+
+        myVotes = {};
+        writeJSON(VOTE_KEY, myVotes);
+        bildirimHazir = null;
+        await accountChanged(null);
+    } catch (error) {
+        askConfirm('Hesap silinemedi. Lütfen yeniden dene.', 'Tamam', () => {});
+    }
+}
+
+/* ---------- Mesajları dinleme ---------- */
+function startComments(id) {
+    if (cm.match === id && cm.off)
+        return;
+    stopComments();
+    cm.match = id;
+    cm.limit = CM_PAGE;
+    cmNote('');
+    listenComments();
+    renderComments();
+}
+
+function listenComments() {
+    if (cm.off)
+        cm.off();
+    cm.off = null;
+    if (!rd || !cm.match)
+        return;
+    const query = rt.query(rt.ref(rd, 'mesaj/' + cm.match), rt.limitToLast(cm.limit));
+    cm.off = rt.onValue(query, snap => {
+        const list = [];
+        snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
+        cm.list = list.reverse();
+        renderComments();
+    }, () => {
+        cm.list = [];
+        renderComments();
+    });
+}
+
+function stopComments() {
+    if (cm.off)
+        cm.off();
+    cm.off = null;
+    cm.match = null;
+    cm.list = null;
+    cm.open = null;
+}
+
+/* Mesajın zamanı: bugünse saat, değilse gün.ay saat */
+function commentTime(ms) {
+    const date = new Date(ms);
+    const time = formatTime(date);
+    return dayKey(date) === dayKey(new Date()) ? time :
+        String(date.getDate()).padStart(2, '0') + '.' + String(date.getMonth() + 1).padStart(2, '0') + ' ' + time;
+}
+
+function renderComments() {
+
+    const box = document.getElementById('cmList');
+    box.textContent = '';
+
+    if (!cm.match)
+        return;
+
+    if (!cm.list) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'Yükleniyor…';
+        box.appendChild(p);
+    } else {
+        const list = cm.list.filter(m => !blocked.has(m.u));
+        if (!list.length) {
+            const p = document.createElement('p');
+            p.className = 'tab-empty';
+            p.textContent = 'Henüz mesaj yok. İlk mesajı sen yaz.';
+            box.appendChild(p);
+        }
+        list.forEach(m => box.appendChild(commentItem(m)));
+    }
+
+    const full = cm.list && cm.list.length >= cm.limit;
+    document.getElementById('cmMore').hidden = !full || cm.limit >= CM_MAX;
+    document.getElementById('cmLimit').hidden = !(full && cm.limit >= CM_MAX);
+}
+
+function commentItem(m) {
+
+    const item = document.createElement('div');
+    item.className = 'cm-item';
+    item.innerHTML =
+        '<div class="cm-head"><b class="cm-name"></b><span class="cm-time"></span>' +
+            '<button class="cm-more" type="button" aria-label="Diğer">⋯</button></div>' +
+        '<p class="cm-text"></p>' +
+        '<div class="cm-bar"><button class="cm-like" type="button"></button><button class="cm-dislike" type="button"></button></div>';
+
+    item.querySelector('.cm-name').textContent = m.r || '';
+    item.querySelector('.cm-time').textContent = m.z ? commentTime(m.z) : '';
+    item.querySelector('.cm-text').textContent = m.t || '';
+
+    const myVote = myVotes[cm.match + '/' + m.id] || 0;
+    const like = item.querySelector('.cm-like');
+    const dislike = item.querySelector('.cm-dislike');
+    like.textContent = '👍 ' + (m.b || 0);
+    dislike.textContent = '👎 ' + (m.d || 0);
+    like.classList.toggle('on', myVote === 1);
+    dislike.classList.toggle('on', myVote === -1);
+    like.addEventListener('click', () => voteComment(m, 1));
+    dislike.addEventListener('click', () => voteComment(m, -1));
+
+    /* ⋯ : şikayet et, engelle, kendi mesajıysa sil */
+    item.querySelector('.cm-more').addEventListener('click', () => {
+        cm.open = cm.open === m.id ? null : m.id;
+        renderComments();
+    });
+
+    if (cm.open === m.id) {
+        const menu = document.createElement('div');
+        menu.className = 'cm-menu';
+        const add = (text, action) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = text;
+            button.addEventListener('click', action);
+            menu.appendChild(button);
+        };
+        if (me && m.u === me.uid) {
+            add('Sil', () => askConfirm('Mesajın silinsin mi?', 'Sil', () => deleteComment(m)));
+        } else {
+            add('Şikayet et', () => reportComment(m));
+            add('Engelle', () => askConfirm((m.r || 'Bu kişi') + ' engellensin mi? Mesajları sana gösterilmez.', 'Engelle', () => {
+                blocked.add(m.u);
+                writeJSON(BLOCK_KEY, Array.from(blocked));
+                cm.open = null;
+                renderComments();
+            }));
+        }
+        item.appendChild(menu);
+    }
+
+    return item;
+}
+
+/* ---------- Yazma, oy, silme, şikayet ---------- */
+async function sendComment() {
+    const text = cmInput.value.trim();
+    if (!text)
+        return;
+    requireWriter(async () => {
+        try {
+            await loadFilter();
+            if (unfit(text))
+                return cmNote('Mesajın uygunsuz bir ifade ya da bağlantı içeriyor.');
+
+            const uid = me.uid;
+            const match = String(cm.match);
+            const day = Math.floor((serverNow() + 3 * 3600000) / 86400000);
+            const count = (await rt.get(rt.ref(rd, 'sayac/' + uid))).val() || {};
+            const n = count.g === day ? (count.n || 0) + 1 : 1;
+            if (n > CM_DAILY)
+                return cmNote('Bugün en fazla ' + CM_DAILY + ' mesaj yazabilirsin.');
+
+            const id = rt.push(rt.ref(rd, 'mesaj/' + match)).key;
+            const queue = rt.push(rt.ref(rd, 'kuyruk')).key;
+            await rt.update(rt.ref(rd), {
+                ['mesaj/' + match + '/' + id]: { u: uid, r: me.r, t: text, z: rt.serverTimestamp(), g: day },
+                ['sayac/' + uid]: { g: day, n: n },
+                ['mesajlarim/' + uid + '/' + match + '/' + id]: true,
+                ['kuyruk/' + queue]: { m: match, i: id, u: uid }
+            });
+
+            cmInput.value = '';
+            updateCount();
+            cmNote('');
+        } catch (error) {
+            cmNote('Mesaj gönderilemedi.');
+        }
+    });
+}
+
+/* Aynı oya tekrar basınca geri alınır. Bir mesajda oy en fazla 2 kez değiştirilir */
+function voteComment(m, value) {
+    requireWriter(async () => {
+        try {
+            const match = String(cm.match);
+            const path = 'oy/' + match + '/' + m.id + '/' + me.uid;
+            const current = (await rt.get(rt.ref(rd, path))).val();
+            const v = current && current.v === value ? 0 : value;
+            const n = current ? current.n + 1 : 0;
+            if (n > 2)
+                return cmNote('Bir mesajdaki oyunu en fazla 2 kez değiştirebilirsin.');
+
+            const queue = rt.push(rt.ref(rd, 'kuyruk')).key;
+            await rt.update(rt.ref(rd), {
+                [path]: { v: v, n: n },
+                ['kuyruk/' + queue]: { m: match, i: m.id, u: me.uid }
+            });
+            myVotes[match + '/' + m.id] = v;
+            writeJSON(VOTE_KEY, myVotes);
+            cmNote('');
+            renderComments();
+        } catch (error) {
+            cmNote('Oy verilemedi.');
+        }
+    });
+}
+
+async function deleteComment(m) {
+    try {
+        const match = String(cm.match);
+        await rt.update(rt.ref(rd), {
+            ['mesaj/' + match + '/' + m.id]: null,
+            ['mesajlarim/' + me.uid + '/' + match + '/' + m.id]: null
+        });
+        cm.open = null;
+    } catch (error) {
+        cmNote('Mesaj silinemedi.');
+    }
+}
+
+function reportComment(m) {
+    requireWriter(async () => {
+        try {
+            await rt.set(rt.ref(rd, 'sikayet/' + cm.match + '_' + m.id + '/' + me.uid), rt.serverTimestamp());
+        } catch (error) {}
+        cm.open = null;
+        cmNote('');
+        renderComments();
+        askConfirm('Şikayetin alındı. Teşekkürler.', 'Tamam', () => {});
+    });
+}
+
+/* ---------- Yazma alanı ---------- */
+function updateCount() {
+    document.getElementById('cmCount').textContent = cmInput.value.length + '/50';
+}
+
+/* Giriş yapmamış ya da rumuzu olmayan kullanıcı yazma alanına dokununca girişe yönlendirilir */
+cmInput.addEventListener('focus', () => {
+    loadFilter();
+    if (me && me.r)
+        return;
+    cmInput.blur();
+    requireWriter(() => cmInput.focus());
+});
+
+cmInput.addEventListener('input', updateCount);
+cmInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter')
+        sendComment();
+});
+document.getElementById('cmSend').addEventListener('click', sendComment);
+
+document.getElementById('cmMore').addEventListener('click', () => {
+    cm.limit = Math.min(CM_MAX, cm.limit + CM_PAGE);
+    listenComments();
+});
+
+renderAccountMenu();
+
+
+/* =================================================
    GERİ TUŞU
    -------------------------------------------------
    Açılan her katman (sayfa, menü...) geçmişe bir kayıt
@@ -7459,6 +8298,7 @@ const LAYER_HIDERS = {
     homeMenu: () => homeMenu.classList.remove('open'),
     detail: hideDetail,
     oddsPage: hideOddsPage,
+    profile: hideProfile,
     confirm: hideConfirm,
     calendar: hideCalendar
 };
@@ -7591,6 +8431,7 @@ function showTab(name) {
 function ballAction() {
 
     if (confirmBox.classList.contains('open') ||
+        profileBox.classList.contains('open') ||
         calendarPop.classList.contains('open') ||
         openLeagueMenu ||
         homeMenu.classList.contains('open') ||
@@ -7618,6 +8459,7 @@ acKapa.addEventListener('click', () => {
 
         /* En üstteki kapanır */
         if (confirmBox.classList.contains('open')) closeConfirm();
+        else if (profileBox.classList.contains('open')) closeProfile();
         else if (calendarPop.classList.contains('open')) closeCalendar();
         else if (openLeagueMenu) closeLeagueMenu();
         else if (homeMenu.classList.contains('open')) closeHomeMenu();
@@ -8800,6 +9642,10 @@ function openDetail(id, tab = 'summary') {
 
     const match = findMatch(id);
 
+    /* Başka maçın mesajları dinleniyorsa bırakılır */
+    if (cm.match !== id)
+        stopComments();
+
     detailId = id;
     setDetailMode(false);
 
@@ -8892,6 +9738,7 @@ function hideDetail() {
     detailId = null;
     detailWaiting = false;
     unwatchDetail();
+    stopComments();
 }
 
 function closeDetail() {
@@ -8913,6 +9760,10 @@ function setDetailTab(name, keepScroll) {
     const match = name === 'odds' && detailId ? findMatch(detailId) : null;
     if (match)
         renderDetailOdds(match);
+
+    /* Yorumlar sekmesine gelince maçın mesajları dinlenir */
+    if (name === 'comments' && detailId)
+        startComments(detailId);
 
     placeDetailTrack(0);
 

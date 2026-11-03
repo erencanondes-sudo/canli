@@ -127,4 +127,4 @@ async function eskiSil(yol, sinir) {
     }
 }
 
-module.exports = { yaz, yazSikistir, oku, unut, dalYaz, dalHali, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };
+module.exports = { rtdb, yaz, yazSikistir, oku, unut, dalYaz, dalHali, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };

@@ -15,6 +15,7 @@ const B = require('./bicim');
 const db = require('./veritabani');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
+const mesaj = require('./mesaj');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -413,6 +414,8 @@ async function tur() {
         /* Fikstürü bu açılışta çekilmemiş gün yazılmaz (yarım liste eski satırları silmesin) */
         const hazir = tumu.filter(gun => zaman.fikstur[gun] && zaman.fikstur[sonrakiGun(gun)]);
         await takimYaz();
+        /* Mesaj yazılabilen maçlar (yeni görülenler) */
+        await mesaj.acikYaz(maclar.keys());
         for (const gun of hazir) await gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
 
@@ -443,6 +446,7 @@ async function tur() {
 if (require.main === module) {
     console.log('Sunucu başladı: ' + A.LIGLER.map(l => l.ad).join(', '));
     bildirim.zilDinle();
+    mesaj.dinle();
     bildirim.hizliDinle(canliSaatte);
     tur();
 }

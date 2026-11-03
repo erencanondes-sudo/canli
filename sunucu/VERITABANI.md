@@ -218,6 +218,30 @@ Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda 
 
 ---
 
+## Mesajlar (Realtime Database)
+
+Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için Google ile giriş ve rumuz gerekir. Sınırları kurallar (`database.rules.json`) denetler.
+
+| Yer | Ne | Kim yazar | Kim okur |
+|---|---|---|---|
+| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 50 karakter), z: zaman (ms), g: gün no, b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı, "Daha fazla göster" ile 10'ar (en fazla 100) |
+| `sayac/{kimlik}` | `{ g: gün no, n: o gün yazılan mesaj }`. Gün no = (zaman + 3 saat) / 1 gün. En fazla 20; mesajla aynı anda 1 artar, silinemez | Kullanıcı | Kullanıcının kendisi |
+| `oy/{maç}/{mesaj}/{kimlik}` | `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik | Kullanıcı | Kullanıcının kendisi, sunucu (sayım) |
+| `kuyruk/{...}` | `{ m: maç, i: mesaj, u: kimlik }`: yeni mesaj ve oy. Sunucu işleyip siler | Kullanıcı | Sunucu |
+| `mesajlarim/{kimlik}/{maç}/{mesaj}` | Kişinin mesajları (hesap silinince mesajları silmek için) | Kullanıcı (sunucu: uygunsuz mesaj silinince) | Kullanıcının kendisi |
+| `kullanici/{kimlik}` | `{ r: rumuz, k: kuralların kabul zamanı }` | Kullanıcı | Kullanıcının kendisi |
+| `rumuz/{küçük harfle rumuz}` | Rumuzun sahibi (benzersizlik). 3–15 karakter: harf (Türkçe dahil), rakam, alt çizgi | Kullanıcı | Herkes (alınmış mı) |
+| `rumuz_zaman/{kimlik}` | Son rumuz değişikliği (ms); haftada bir. Hesap silinse de kalır | Kullanıcı | Kullanıcının kendisi |
+| `acik/{maç no}` | Mesaj yazılabilen maçlar: sunucunun gördüğü her maç, silinmez | Sunucu | Yalnızca kurallar |
+| `sikayet/{maç}_{mesaj}/{kimlik}` | Şikayet zamanı (her kişi bir kez) | Kullanıcı | Sen (ileride yönetim sayfası) |
+
+- Küfür ve bağlantı filtresi: depodaki `kufur.json` (kök, tam kelime, bağlantı, izinli kelimeler). Site yazarken bir kez indirir; sunucu kuyruktaki her mesajı (metin ve rumuz) kontrol eder, uygunsuzsa siler.
+- Engellenen kişiler yalnızca o telefonda saklanır (mesajları gizlenir).
+- Hesap silinince: mesajlar, `mesajlarim`, `kullanici`, rumuz ve giriş kaydı silinir; oylar ve `sayac`, `rumuz_zaman` kalır.
+- Henüz yok: 100'den eski mesajları silme, mesajların saklanma süresi, yönetim sayfasında şikayetler.
+
+---
+
 ## `sistem/durum`
 
 | Alan | Açıklama |

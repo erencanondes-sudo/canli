@@ -25,6 +25,86 @@
     "lig": {
       ".read": true
     },
+    "mesaj": {
+      "$mac": {
+        ".read": true,
+        "$mid": {
+          ".write": "auth != null && ((!data.exists() && newData.exists() && root.child('acik/' + $mac).exists() && root.child('kullanici/' + auth.uid + '/r').exists()) || (data.exists() && !newData.exists() && data.child('u').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['u', 'r', 't', 'z', 'g']) && newData.child('g').val() === newData.parent().parent().parent().child('sayac/' + auth.uid + '/g').val() && (newData.parent().parent().parent().child('sayac/' + auth.uid + '/n').val() !== root.child('sayac/' + auth.uid + '/n').val() || newData.parent().parent().parent().child('sayac/' + auth.uid + '/g').val() !== root.child('sayac/' + auth.uid + '/g').val())",
+          "u": { ".validate": "newData.val() === auth.uid" },
+          "r": { ".validate": "newData.val() === root.child('kullanici/' + auth.uid + '/r').val()" },
+          "t": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 50" },
+          "z": { ".validate": "newData.val() === now" },
+          "g": { ".validate": "newData.isNumber()" },
+          "$diger": { ".validate": false }
+        }
+      }
+    },
+    "sayac": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['g', 'n']) && newData.child('g').isNumber() && newData.child('g').val() * 86400000 <= now + 10800000 && (newData.child('g').val() + 1) * 86400000 > now + 10800000 && newData.child('n').isNumber() && newData.child('n').val() <= 20 && ((data.child('g').val() === newData.child('g').val() && newData.child('n').val() === data.child('n').val() + 1) || (data.child('g').val() !== newData.child('g').val() && newData.child('n').val() === 1))"
+      }
+    },
+    "oy": {
+      "$mac": {
+        "$mid": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('mesaj/' + $mac + '/' + $mid).exists()",
+            ".validate": "newData.hasChildren(['v', 'n']) && ((!data.exists() && newData.child('n').val() === 0) || (data.exists() && newData.child('n').val() === data.child('n').val() + 1 && newData.child('n').val() <= 2))",
+            "v": { ".validate": "newData.val() === 1 || newData.val() === -1 || newData.val() === 0" },
+            "n": { ".validate": "newData.isNumber()" },
+            "$diger": { ".validate": false }
+          }
+        }
+      }
+    },
+    "kuyruk": {
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['m', 'i', 'u']) && newData.child('u').val() === auth.uid && newData.child('m').isString() && newData.child('m').val().length <= 12 && newData.child('i').isString() && newData.child('i').val().length <= 24"
+      }
+    },
+    "mesajlarim": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "kullanici": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['r', 'k'])",
+        "r": { ".validate": "newData.isString() && newData.val().matches(/^[a-zA-Z0-9_çğıöşüÇĞİÖŞÜ]{3,15}$/) && (data.val() === newData.val() || newData.parent().parent().parent().child('rumuz_zaman/' + auth.uid).val() === now) && newData.parent().parent().parent().child('rumuz/' + newData.val().toLowerCase()).val() === auth.uid" },
+        "k": { ".validate": "newData.isNumber()" },
+        "$diger": { ".validate": false }
+      }
+    },
+    "rumuz": {
+      "$rumuz": {
+        ".read": true,
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists() && (!newData.parent().parent().child('kullanici/' + auth.uid + '/r').exists() || newData.parent().parent().child('kullanici/' + auth.uid + '/r').val().toLowerCase() !== $rumuz)))",
+        ".validate": "newData.parent().parent().child('kullanici/' + auth.uid + '/r').val().toLowerCase() === $rumuz"
+      }
+    },
+    "rumuz_zaman": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.val() === now && (!data.exists() || now - data.val() >= 604800000)"
+      }
+    },
+    "sikayet": {
+      "$mesaj": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists()",
+          ".validate": "newData.val() === now"
+        }
+      }
+    },
     "analiz_surum": {
       ".read": true,
       ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",

@@ -1,0 +1,19 @@
+{
+  "aciklama": "Mesaj ve rumuz filtresi (site ve sunucu kullanır). kok: bu harflerle başlayan kelime, kelime: tam kelime, baglanti: metnin içinde geçerse, izin: yanlışlıkla yakalanan kelimeler. Harfler küçük; tekrar eden harfler tek sayılır.",
+  "kok": [
+    "amcık", "amcik", "amcığ", "amına", "amina", "amını", "amini",
+    "orospu", "orosbu", "oruspu", "orspu",
+    "siktir", "sikerim", "sikeyim", "sikim", "sikik", "sikiyim", "sikicem", "sikecem", "sikmek", "sikiş",
+    "yarrak", "yarrağ", "dalyarak", "yavşak", "yavsak", "pezevenk", "pezeveng",
+    "kahpe", "kaltak", "şerefsiz", "serefsiz", "haysiyetsiz", "ibne", "taşak", "tasak",
+    "sürtük", "surtuk", "fahişe", "fahise", "kevaşe", "kevase",
+    "götveren", "gotveren", "götoş", "gotos", "godoş", "godos", "gavat", "gerizekalı", "gerizekali",
+    "fuck", "shit", "bitch", "cunt", "whore", "nigg", "fagg", "motherf"
+  ],
+  "kelime": [
+    "amk", "amq", "aq", "mk", "sik", "sg", "skm", "sktr", "oç", "oc", "piç", "pic",
+    "göt", "got", "yarak", "puşt", "pust", "casino", "freebet"
+  ],
+  "baglanti": ["http", "www.", ".com", ".net", ".org", ".io", ".xyz", ".bet", "t.me", "bit.ly", "wa.me"],
+  "izin": ["sikke", "siklet", "siklon"]
+}
