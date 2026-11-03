@@ -220,7 +220,7 @@ Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda 
 
 ## Mesajlar (Realtime Database)
 
-Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için Google ile giriş ve rumuz gerekir. Sınırları kurallar (`database.rules.json`) denetler.
+Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için Google ile giriş ve rumuz gerekir. Sınırları kurallar (`database.rules.json`) denetler; mesajlarla ilgili bütün yazmalar yalnızca Google ile girişte (görünmez giriş yazamaz).
 
 | Yer | Ne | Kim yazar | Kim okur |
 |---|---|---|---|
