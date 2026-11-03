@@ -1016,14 +1016,19 @@ button {
     overflow-wrap: anywhere;
 }
 
-/* Alt satır: Yanıtla | beğen, beğenme, şikayet bayrağı (simgeler çizgili, seçilince içi dolu) */
+/* Alt satır: Yanıtla | beğen, beğenme, şikayet bayrağı (simgeler çizgili, seçilince içi dolu); mesajdan ince çizgiyle ayrılır */
 .cm-bar {
     display: flex;
     align-items: center;
     gap: 1.1em;
-    font-size: .875rem;
+    padding-top: .45em;
+    border-top: .0625rem solid #eef0f4;
+    font-size: .75rem;
     color: #555a66;
 }
+
+.cm-like { margin-left: .6em; }
+.cm-dislike { margin-left: .6em; }
 
 .cm-bar button {
     display: inline-flex;
@@ -3653,15 +3658,6 @@ body.has-layer .ac-kapa svg {
     padding-bottom: .415em;
 }
 
-/* Takım adları biraz kalın (kazanan daha kalın) */
-#homePage .score-team {
-    font-weight: 450;
-}
-
-#homePage .score-team.won {
-    font-weight: 725;
-}
-
 </style>
 </head>
 <body data-tab="home">
@@ -4295,10 +4291,10 @@ function nameColor(name) {
     return { bg: 'hsl(' + hue + ', 55%, ' + light + '%)', fg: '#ffffff' };
 }
 
-/* Ekranda takım adı en fazla 13 harf: uzunsa 12 harf ve nokta ("Borussia Mönc.") */
+/* Ekranda takım adı en fazla 11 harf: uzunsa 10 harf ve nokta ("Borussia M.") */
 function teamLabel(name) {
     const letters = Array.from(name);
-    return letters.length > 13 ? letters.slice(0, 12).join('') + '.' : name;
+    return letters.length > 11 ? letters.slice(0, 10).join('') + '.' : name;
 }
 
 /* Takımın adından görünümü: ekrandaki ad (mid), rozet kısaltması ve renkleri (analizlerde de kullanılır) */
