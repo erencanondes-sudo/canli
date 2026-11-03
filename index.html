@@ -988,7 +988,7 @@ button {
 
 .cm-head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: .5em;
     font-size: .8125rem;
 }
@@ -998,8 +998,10 @@ button {
     color: #1d2340;
 }
 
+/* Saat sağda, üç noktanın solunda (alt kenarları aynı hizada) */
 .cm-time {
-    font-size: .625rem;
+    margin-left: auto;
+    font-size: .5625rem;
     color: #9aa0ab;
 }
 
@@ -1009,7 +1011,6 @@ button {
 }
 
 .cm-more {
-    margin-left: auto;
     padding: 0 .4em;
     border: none;
     background: none;
@@ -1031,15 +1032,15 @@ button {
 .cm-bar {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 1.1em;
-    padding-top: .3em;
-    border-top: .0625rem solid #eef0f4;
+    padding-top: .15em;
     font-size: .625rem;
     color: #555a66;
 }
 
-/* Ayırıcı Yanıtla ile beğen arasında ortada */
-.cm-sep { margin: 0 .9em; }
+/* Ayırıcılar: Yanıtla | beğen, beğenme | bayrak (ortada) */
+.cm-sep { margin: 0 .3em; }
 .cm-dislike { margin-left: .4em; }
 
 .cm-bar button {
@@ -1084,7 +1085,7 @@ button {
 /* Beğen / beğenme gri; seçilince içi dolu yeşil / kırmızı */
 .cm-like.on svg { color: #2e9e48; }
 .cm-dislike.on svg { color: #d93025; }
-.cm-flag { margin-left: auto; color: #8a8f9c; }
+.cm-flag { color: #8a8f9c; }
 
 .cm-menu {
     display: flex;
@@ -8296,6 +8297,7 @@ function commentItem(m) {
             '<span class="cm-sep"></span>' +
             '<button class="cm-like" type="button" aria-label="Beğen">' + CM_ICONS.like + '<span></span></button>' +
             '<button class="cm-dislike" type="button" aria-label="Beğenme">' + CM_ICONS.dislike + '<span></span></button>' +
+            '<span class="cm-sep cm-sep-flag"></span>' +
             '<button class="cm-flag" type="button" aria-label="Şikayet et">' + CM_ICONS.flag + '</button>' +
         '</div>';
 
@@ -8333,7 +8335,7 @@ function commentItem(m) {
         cmInput.focus();
     });
     if (own)
-        item.querySelector('.cm-sep').hidden = true;
+        item.querySelectorAll('.cm-sep').forEach(sep => { sep.hidden = true; });
 
     /* Beğen / beğenme: sayı 0 ise yazmaz; kendi mesajına oy verilemez */
     const like = item.querySelector('.cm-like');
