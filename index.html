@@ -999,7 +999,13 @@ button {
 }
 
 .cm-time {
+    font-size: .625rem;
     color: #9aa0ab;
+}
+
+/* Mesajdaki @rumuz etiketi kalın değil */
+.cm-tag {
+    font-weight: normal;
 }
 
 .cm-more {
@@ -8295,7 +8301,20 @@ function commentItem(m) {
 
     item.querySelector('.cm-name').textContent = m.r || '';
     item.querySelector('.cm-time').textContent = m.z ? commentTime(m.z) : '';
-    item.querySelector('.cm-text').textContent = m.t || '';
+    /* Metin; içindeki @rumuz etiketleri ayrı (kalın değil) */
+    const textBox = item.querySelector('.cm-text');
+    String(m.t || '').split(/(@[A-Za-z0-9_çğıöşüÇĞİÖŞÜ]{3,15})/).forEach((part, i) => {
+        if (!part)
+            return;
+        if (i % 2) {
+            const tag = document.createElement('span');
+            tag.className = 'cm-tag';
+            tag.textContent = part;
+            textBox.appendChild(tag);
+        } else {
+            textBox.appendChild(document.createTextNode(part));
+        }
+    });
 
     const key = cm.match + '/' + m.id;
     const own = !!me && m.u === me.uid;
