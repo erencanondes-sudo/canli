@@ -920,7 +920,7 @@ button {
     flex: 1;
     min-width: 0;
     padding: .6em .75em;
-    border: .0625rem solid rgba(90, 160, 255, .7);
+    border: .0625rem solid #d5d8de;
     border-radius: .75rem;
     font: inherit;
     font-size: .9375rem;
@@ -983,14 +983,17 @@ button {
     color: #d93025;
 }
 
-/* Her mesaj Özet gibi bir kart: üstte lacivert şeritte rumuz ve saat, altında açık zeminde mesaj ve alt satır */
+/*
+ * Her mesaj ana sayfadaki lig kartı gibi: beyaz zemin, çerçevesiz, hafif gölge;
+ * üstte lacivert şeritte rumuz ve saat, altında mesaj ve alt satır
+ */
 .cm-item {
     margin-bottom: .55em;
     padding: 0 0 .35em;
     overflow: hidden;
-    border: .0625rem solid #1f3c6e;
-    border-radius: .75rem;
-    background: #f4f7fb;
+    border-radius: .6rem;
+    background: white;
+    box-shadow: 0 1px .375rem rgba(0, 0, 0, .10);
 }
 
 .cm-head {
@@ -1045,7 +1048,7 @@ button {
     gap: 1.1em;
     padding-top: .3em;
     margin: 0 .75rem;
-    border-top: .0625rem solid #dde5f0;
+    border-top: .0625rem solid #eef0f4;
     font-size: .625rem;
     color: #4a5874;
 }
@@ -1090,7 +1093,7 @@ button {
 .cm-sep {
     width: .0625rem;
     height: 1.1em;
-    background: #c9d3e2;
+    background: #d5d8de;
 }
 
 /* Beğen / beğenme gri; seçilince içi dolu yeşil / kırmızı */
@@ -2677,10 +2680,11 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Çerçeve yarı şeritleriyle aynı lacivert; köşeler düz */
+/* Satır zemini: ana sayfa zemini (#f4f5f7) ile maç satırı (beyaz) arası */
 #summaryBox:has(.event, .half-line) {
     overflow: hidden;
     border: 1px solid #1f3c6e;
-    background: #f4f7fb;
+    background: #fafafb;
 }
 
 .event {
@@ -2735,20 +2739,17 @@ body.has-layer .ac-kapa svg {
 
 /*
  * Oyuncu değişikliği: üstte giren oyuncu (yeşil ok), altında çıkan oyuncu (kırmızı ok).
- * Ev sahibinde ok adın solunda, deplasmanda sağında.
+ * İki ok alt alta aynı hizada, adlar oklara yaslı; blok uzun ada göre genişler.
+ * Ev sahibinde ok adın solunda (blok dakikaya yaslı), deplasmanda sağında.
  */
 .event-label.event-sub {
     flex-direction: column;
-    align-items: flex-end;
+    align-items: stretch;
     gap: .15em;
 }
 
-.event > div:last-child .event-sub {
-    align-items: flex-start;
-}
-
 .sub-line {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: .35em;
 }
@@ -2793,7 +2794,7 @@ body.has-layer .ac-kapa svg {
 #statsBox:has(.stat-line) {
     overflow: hidden;
     border: 1px solid #1f3c6e;
-    background: #f4f7fb;
+    background: #fafafb;
 }
 
 .stat-head {
