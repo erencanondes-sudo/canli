@@ -157,9 +157,16 @@ function gonderMesaj(no, baslik, metin) {
     }).catch(e => console.error('Bildirim gönderilemedi (' + no + '): ' + e.message));
 }
 
-/* ---------- Zil kayıtları ---------- */
+/* ---------- Zil kayıtları ----------
+ * zil/{cihaz no}: { token, maclar, sahip, kisi?, tur? } her cihazın kendi kaydı (bir kişinin birden çok cihazı olabilir).
+ * kisi: o cihazda Google ile giriş yapmış kişinin kimliği (yanıt bildirimleri bu kişinin bütün cihazlarına gider).
+ * Eski kayıtlar zil/{kimlik} (kişi bilgisi yok) maç zili için çalışmaya devam eder.
+ * Aynı cihaz anahtarı birden çok kayıtta olabilir (eskiden yeniye geçerken): bir konuya abonelik,
+ * o anahtar ve maç hiçbir kayıtta kalmayınca kaldırılır.
+ */
 
-const kayitli = new Map();   /* cihaz → { token, maclar: Set } */
+const kayitli = new Map();   /* cihaz → { token, maclar: Set, kisi } */
+const kullanim = new Map();  /* "token|maç" → kaç kayıtta */
 
 function gecerli(veri) {
     const token = veri && typeof veri.token === 'string' && veri.token.length < 400 ? veri.token : null;
@@ -167,7 +174,8 @@ function gecerli(veri) {
         (veri && Array.isArray(veri.maclar) ? veri.maclar : [])
             .map(String).filter(m => /^\d{1,10}$/.test(m)).slice(-100)
     );
-    return { token, maclar };
+    const kisi = veri && typeof veri.kisi === 'string' && veri.kisi.length <= 128 ? veri.kisi : null;
+    return { token, maclar, kisi };
 }
 
 /* Konu → cihaz listesi şeklinde toplayıp FCM'e tek seferde gönderir */
@@ -195,22 +203,30 @@ async function abonelik(islem, ciftler) {
 async function zilDegisti(cihaz, veri) {
 
     const once = kayitli.get(cihaz);
-    const yeni = gecerli(veri);
+    const yeni = veri ? gecerli(veri) : null;
+    const ciftler = k => k && k.token ? [...k.maclar].map(m => k.token + '|' + m) : [];
+    const eski = new Set(ciftler(once));
+    const simdi = new Set(ciftler(yeni));
     const ekle = [];
     const cikar = [];
 
-    if (once) {
-        once.maclar.forEach(m => {
-            if (once.token !== yeni.token || !yeni.maclar.has(m)) cikar.push([once.token, m]);
-        });
-    }
-    if (yeni.token) {
-        yeni.maclar.forEach(m => {
-            if (!once || once.token !== yeni.token || !once.maclar.has(m)) ekle.push([yeni.token, m]);
-        });
-    }
+    eski.forEach(c => {
+        if (simdi.has(c)) return;
+        const n = (kullanim.get(c) || 1) - 1;
+        if (n > 0) kullanim.set(c, n);
+        else {
+            kullanim.delete(c);
+            cikar.push(c.split('|'));
+        }
+    });
+    simdi.forEach(c => {
+        if (eski.has(c)) return;
+        const n = (kullanim.get(c) || 0) + 1;
+        kullanim.set(c, n);
+        if (n === 1) ekle.push(c.split('|'));
+    });
 
-    if (veri) kayitli.set(cihaz, yeni);
+    if (yeni) kayitli.set(cihaz, yeni);
     else kayitli.delete(cihaz);
 
     if (cikar.length) await abonelik('cikar', cikar);
@@ -227,4 +243,37 @@ function zilDinle() {
     }, e => console.error('Zil kayıtları dinlenemedi: ' + e.message));
 }
 
-module.exports = { kontrol, zilDinle, hizliDinle };
+/*
+ * Bir kişiye bildirim (mesajda @rumuz): kişinin giriş yaptığı bütün cihazlarına (site ve uygulama).
+ * Geçersizleşmiş cihaz anahtarının kaydı silinir. En az bir cihaz varsa true
+ */
+function kisiyeGonder(kisi, baslik, metin, link) {
+    const hedefler = new Map();   /* token → cihaz */
+    for (const [cihaz, k] of kayitli) if (k.kisi === kisi && k.token) hedefler.set(k.token, cihaz);
+    if (!hedefler.size) return false;
+
+    let mesajci;
+    try {
+        mesajci = getMessaging();
+    } catch (e) {
+        console.error('Yanıt bildirimi gönderilemedi: ' + e.message);
+        return false;
+    }
+    for (const [token, cihaz] of hedefler) {
+        mesajci.send({
+            token: token,
+            webpush: {
+                notification: { title: baslik, body: metin, icon: A.SITE_ADRES + 'cs-icon-192.png' },
+                fcmOptions: { link: link }
+            }
+        }).catch(e => {
+            if (/registration-token-not-registered|invalid-registration-token|invalid-argument/.test(e.code || ''))
+                getFirestore().doc('zil/' + cihaz).delete().catch(() => {});
+            else
+                console.error('Yanıt bildirimi gönderilemedi: ' + e.message);
+        });
+    }
+    return true;
+}
+
+module.exports = { kontrol, zilDinle, hizliDinle, kisiyeGonder };

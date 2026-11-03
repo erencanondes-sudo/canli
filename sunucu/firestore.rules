@@ -50,17 +50,24 @@ service cloud.firestore {
         && request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
     }
 
-    /* Zil kayıtları: herkes yalnızca kendi kaydını yazar (görünmez giriş), kimse okuyamaz */
-    match /zil/{kimlik} {
+    /*
+     * Zil kayıtları: her cihazın kendi kaydı (zil/{cihaz no}, cihaz no telefonda saklanır), kimse okuyamaz.
+     * sahip: yazan girişin kimliği (görünmez ya da Google); kisi: Google ile giriş yapan kişinin kimliği (yanıt bildirimi için).
+     * Eski biçim zil/{kimlik} yalnızca sahibi tarafından silinebilir.
+     */
+    match /zil/{cihaz} {
       allow read: if false;
       allow create, update: if request.auth != null
-        && request.auth.uid == kimlik
-        && request.resource.data.keys().hasOnly(['token', 'maclar', 'guncellendi'])
+        && request.resource.data.keys().hasOnly(['token', 'maclar', 'guncellendi', 'sahip', 'kisi', 'tur'])
+        && request.resource.data.sahip == request.auth.uid
+        && (!('kisi' in request.resource.data) || request.resource.data.kisi == request.auth.uid)
+        && (!('tur' in request.resource.data) || request.resource.data.tur in ['site', 'uygulama'])
         && request.resource.data.token is string
         && request.resource.data.token.size() < 400
         && request.resource.data.maclar is list
         && request.resource.data.maclar.size() <= 100;
-      allow delete: if false;
+      allow delete: if request.auth != null
+        && (cihaz == request.auth.uid || resource.data.sahip == request.auth.uid);
     }
 
     /* Geri kalan her şey (sistem/durum dahil) kapalı */

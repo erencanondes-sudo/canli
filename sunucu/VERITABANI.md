@@ -32,7 +32,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `analiz_lig/{lig}`, `analiz_nba_lig/{lig}` | O ligin kartları (lig adındaki `/` yerine `-`) | Yönetici | Analiz sekmesi, lig seçilince (bir kez) | Dosya yüklenince | ~1–2 KB (sıkıştırılmış) |
 | Firestore `analiz_dizin/futbol`, `analiz_dizin/nba` | `{ gunler: { gün: sayı }, ligler: { lig: sayı } }` (`z`) | Yönetici | Analiz sekmesi açılınca (bir kez) | Dosya yüklenince | < 1 KB |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
-| Firestore `zil/{gizli kimlik}` | Bir cihazın zil açtığı maçlar (bildirim için) | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca | ~300 bayt |
+| Firestore `zil/{cihaz no}` | Bir cihazın kaydı: `{ token, maclar (zil açılan maçlar), sahip (yazan girişin kimliği), kisi (Google ile giriş yapan kişi, varsa), tur: site / uygulama }`. Cihaz no telefonda saklanır; bir kişinin birden çok cihazı olabilir. Eski biçim `zil/{kimlik}` yenisi yazılınca silinir | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca, giriş / çıkışta | ~300 bayt |
 
 **Gün tanımı (sunucu ve site aynı):** maçın günü = başlama saati − 7 saat (00:00–06:59 başlayan maç önceki günün listesindedir); "bugün" = şu an − 4 saat (gün 04:00'te değişir). 04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır; site 04:00–07:00 arası önceki günün canlı satırlarını ve olay günlüğünü de dinler. Canlı skor 12:30–07:00 arası çekilir.
 
@@ -224,20 +224,22 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için 
 
 | Yer | Ne | Kim yazar | Kim okur |
 |---|---|---|---|
-| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 50 karakter), z: zaman (ms), g: gün no, b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı, "Daha fazla göster" ile 10'ar (en fazla 100) |
+| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), g: gün no, y: yanıtlanan mesaj (Yanıtla ile), b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı, "Daha fazla göster" ile 10'ar (en fazla 100) |
 | `sayac/{kimlik}` | `{ g: gün no, n: o gün yazılan mesaj }`. Gün no = (zaman + 3 saat) / 1 gün. En fazla 20; mesajla aynı anda 1 artar, silinemez | Kullanıcı | Kullanıcının kendisi |
-| `oy/{maç}/{mesaj}/{kimlik}` | `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik | Kullanıcı | Kullanıcının kendisi, sunucu (sayım) |
+| `oy/{maç}/{mesaj}/{kimlik}` | `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi mesajına oy verilemez | Kullanıcı | Kullanıcının kendisi, sunucu (sayım) |
 | `kuyruk/{...}` | `{ m: maç, i: mesaj, u: kimlik }`: yeni mesaj ve oy. Sunucu işleyip siler | Kullanıcı | Sunucu |
 | `mesajlarim/{kimlik}/{maç}/{mesaj}` | Kişinin mesajları (hesap silinince mesajları silmek için) | Kullanıcı (sunucu: uygunsuz mesaj silinince) | Kullanıcının kendisi |
-| `kullanici/{kimlik}` | `{ r: rumuz, k: kuralların kabul zamanı }` | Kullanıcı | Kullanıcının kendisi |
+| `kullanici/{kimlik}` | `{ r: rumuz, k: kuralların kabul zamanı, b: true = yanıt bildirimleri kapalı }` | Kullanıcı | Kullanıcının kendisi |
 | `rumuz/{küçük harfle rumuz}` | Rumuzun sahibi (benzersizlik). 3–15 karakter: harf (Türkçe dahil), rakam, alt çizgi | Kullanıcı | Herkes (alınmış mı) |
 | `rumuz_zaman/{kimlik}` | Son rumuz değişikliği (ms); haftada bir. Hesap silinse de kalır | Kullanıcı | Kullanıcının kendisi |
 | `acik/{maç no}` | Mesaj yazılabilen maçlar: sunucunun gördüğü her maç, silinmez | Sunucu | Yalnızca kurallar |
+| `engel/{kimlik}/{engellenen}` | true. Engellenenin mesajları gizlenir, ondan yanıt bildirimi gelmez. Girişte okunur, telefondaki listeyle birleşir | Kullanıcı | Kullanıcının kendisi, sunucu |
+| `sessiz/{kimlik}/{maç}_{mesaj}` | true: kişinin kendi mesajına gelen yanıtlardan bildirim almaz | Kullanıcı | Kullanıcının kendisi, sunucu |
 | `sikayet/{maç}_{mesaj}/{kimlik}` | Şikayet zamanı (her kişi bir kez) | Kullanıcı | Sen (ileride yönetim sayfası) |
 
 - Küfür ve bağlantı filtresi: depodaki `kufur.json` (kök, tam kelime, bağlantı, izinli kelimeler). Site yazarken bir kez indirir; sunucu kuyruktaki her mesajı (metin ve rumuz) kontrol eder, uygunsuzsa siler.
-- Engellenen kişiler yalnızca o telefonda saklanır (mesajları gizlenir).
-- Hesap silinince: mesajlar, `mesajlarim`, `kullanici`, rumuz ve giriş kaydı silinir; oylar ve `sayac`, `rumuz_zaman` kalır.
+- Yanıt bildirimi: yeni mesajda `@rumuz` (en fazla 2) geçerse sunucu o kişiye bildirim gönderir (bildirim izni vermiş ve zil kaydı olan cihaza; bağlantı `#mac={no}&yorum` Yorumlar'ı açar). Gitmez: kendine, yanıt bildirimlerini kapatana, göndereni engelleyene, yanıtlanan mesajı için bildirimi kapatana, aynı gönderenden 10 dakika içinde ikinci kez. İzin ilk mesajdan sonra bir kez sorulur.
+- Hesap silinince: mesajlar, `mesajlarim`, `kullanici`, `engel`, `sessiz`, rumuz ve giriş kaydı silinir; oylar ve `sayac`, `rumuz_zaman` kalır.
 - Henüz yok: 100'den eski mesajları silme, mesajların saklanma süresi, yönetim sayfasında şikayetler.
 
 ---
@@ -257,15 +259,18 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için 
 
 ---
 
-## `zil/{gizli kimlik}`
+## `zil/{cihaz no}`
 
-Kullanıcı bir maçın zilini açınca (ve bildirim izni verdiyse) site yazar. Gizli kimlik, görünmez girişin (anonim) verdiği kimliktir; üyelik gerekmez.
+Kullanıcı bir maçın zilini açınca, Google ile giriş / çıkış yapınca (bildirim izni verdiyse) site yazar. Cihaz no her cihazın telefonda saklanan rastgele numarasıdır; bir kişi birden çok cihazdan girse her cihazın kaydı ayrıdır (birbirinin üzerine yazmaz).
 
 | Alan | Açıklama |
 |---|---|
 | `token` | Cihazın bildirim kimliği (Firebase verir) |
 | `maclar` | Zili açık maçların numaraları, en fazla 100 |
+| `sahip` | Kaydı yazan girişin kimliği (görünmez ya da Google) |
+| `kisi` | O cihazda Google ile giriş yapan kişinin kimliği (yoksa alan yok). Yanıt bildirimleri kişinin bütün cihazlarına gider |
+| `tur` | `site` (ileride uygulama: `uygulama`) |
 | `guncellendi` | Son yazma zamanı |
 
-Sunucu bu kayıtları dinler ve cihazı her maçın bildirim konusuna (`mac-{maç no}`) abone eder. Bildirimler:
+Sunucu bu kayıtları dinler ve cihazı her maçın bildirim konusuna (`mac-{maç no}`) abone eder (aynı cihaz anahtarı birden çok kayıtta olabilir; abonelik, anahtar ve maç hiçbir kayıtta kalmayınca kaldırılır). Geçersizleşen cihaz anahtarının kaydı yanıt bildirimi gönderilirken silinir. Bildirimler:
 gol, VAR gol iptali, kırmızı kart, maç başladı, devre arası, maç sonu. Yalnızca canlı saatlerde (12:30–01:00) gönderilir.

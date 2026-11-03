@@ -4,10 +4,16 @@
  *   acik/{maç no}  : görülen her maç bir kez yazılır, silinmez (yalnızca bu maçlara mesaj yazılabilir)
  *   kuyruk/{...}   : yeni mesaj ve oylar. Her satır için mesaj küfür / bağlantı listesine göre kontrol edilir
  *                    (uygunsuzsa silinir), beğeni (b) ve beğenmeme (d) sayıları oy/'dan sayılıp yazılır, satır silinir.
+ *   Yeni mesajda @rumuz (en fazla 2) geçiyorsa o kişilere bildirim gider; gitmez: kendine, yanıt bildirimlerini
+ *   kapatana (kullanici/{kimlik}/b), göndereni engelleyene ya da göndericinin engellediğine (engel, iki yönlü),
+ *   yanıtlanan mesajı için bildirimi kapatana
+ *   (sessiz), aynı gönderenden 10 dakika içinde ikinci kez. Bildirim kişinin giriş yaptığı bütün cihazlarına gider.
  * Satırlar sırayla işlenir; API isteği harcamaz.
  */
 
 const { rtdb } = require('./veritabani');
+const A = require('./ayarlar');
+const bildirim = require('./bildirim');
 const LISTE = require('../kufur.json');
 
 /* Küçük harf, rakamla yazılmış harfler (0 → o, 1 → i...), harf dışı işaretler atılır, tekrar eden harf tek */
@@ -45,6 +51,40 @@ async function acikYaz(nolar) {
     anahtarlar.forEach(a => acikYazildi.add(Number(a.slice(5))));
 }
 
+/* ---------- @rumuz bildirimi ---------- */
+
+const RUMUZ = /@([A-Za-z0-9_çğıöşüÇĞİÖŞÜ]{3,15})/g;
+const bildirildi = new Set();     /* bildirimi yapılmış mesajlar ("maç/mesaj") */
+const sonBildirim = new Map();    /* "gönderen>alan" → son bildirim anı */
+const YENI = 10 * 60000;          /* yalnızca 10 dakikadan yeni mesajlar (kuyruk oylarla da dolar) */
+
+async function rumuzBildir(m, i, v) {
+    const anahtar = m + '/' + i;
+    if (bildirildi.has(anahtar) || !v.z || Date.now() - v.z > YENI) return;
+    bildirildi.add(anahtar);
+
+    const adlar = [...new Set([...String(v.t || '').matchAll(RUMUZ)].map(x => x[1].toLowerCase()))].slice(0, 2);
+    for (const ad of adlar) {
+        const kime = (await rtdb.ref('rumuz/' + ad).get()).val();
+        if (!kime || kime === v.u) continue;
+
+        const cift = v.u + '>' + kime;
+        if (Date.now() - (sonBildirim.get(cift) || 0) < 10 * 60000) continue;
+
+        const [kapali, engel, engel2, sessiz] = await Promise.all([
+            rtdb.ref('kullanici/' + kime + '/b').get(),
+            rtdb.ref('engel/' + kime + '/' + v.u).get(),
+            rtdb.ref('engel/' + v.u + '/' + kime).get(),
+            GUVENLI.test(v.y || '') ? rtdb.ref('sessiz/' + kime + '/' + m + '_' + v.y).get() : Promise.resolve(null)
+        ]);
+        if (kapali.val() === true || engel.exists() || engel2.exists() || (sessiz && sessiz.exists())) continue;
+
+        if (bildirim.kisiyeGonder(kime, v.r + ' sana yazdı', v.t, A.SITE_ADRES + '#mac=' + m + '&yorum'))
+            sonBildirim.set(cift, Date.now());
+    }
+    if (bildirildi.size > 5000) bildirildi.clear();
+}
+
 /* ---------- Kuyruk ---------- */
 
 let sira = Promise.resolve();
@@ -70,6 +110,7 @@ async function isle(snap) {
                 });
                 if ((v.b || 0) !== b || (v.d || 0) !== d)
                     await rtdb.ref(yol).update({ b: b || null, d: d || null });
+                await rumuzBildir(m, i, v);
             }
         }
     }

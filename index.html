@@ -1016,12 +1016,65 @@ button {
     overflow-wrap: anywhere;
 }
 
-.cm-bar, .cm-menu {
+/* Alt satır: Yanıtla | beğen, beğenme, şikayet bayrağı (simgeler çizgili, seçilince içi dolu) */
+.cm-bar {
     display: flex;
-    gap: .5em;
+    align-items: center;
+    gap: 1.1em;
+    font-size: .875rem;
+    color: #555a66;
 }
 
-.cm-bar button, .cm-menu button {
+.cm-bar button {
+    display: inline-flex;
+    align-items: center;
+    gap: .35em;
+    padding: .2em 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+}
+
+.cm-bar [hidden] {
+    display: none;
+}
+
+.cm-bar button:disabled {
+    cursor: default;
+}
+
+.cm-bar svg {
+    width: 1.25em;
+    height: 1.25em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cm-bar .on svg {
+    fill: currentColor;
+}
+
+.cm-sep {
+    width: .0625rem;
+    height: 1.1em;
+    background: #d5d8de;
+}
+
+.cm-like svg { color: #2e9e48; }
+.cm-dislike svg { color: #d93025; }
+.cm-flag { margin-left: auto; color: #8a8f9c; }
+
+.cm-menu {
+    display: flex;
+    gap: .5em;
+    margin-top: .45em;
+}
+
+.cm-menu button {
     padding: .25em .7em;
     border: .0625rem solid #e2e4ea;
     border-radius: 2em;
@@ -1030,16 +1083,6 @@ button {
     font-size: .8125rem;
     font-weight: 700;
     color: #555a66;
-}
-
-.cm-bar button.on {
-    border-color: #1d2340;
-    background: #1d2340;
-    color: white;
-}
-
-.cm-menu {
-    margin-top: .45em;
 }
 
 #cmMore {
@@ -3633,6 +3676,7 @@ body.has-layer .ac-kapa svg {
         <button id="menuSaved">Kayıtlı Maçlarım</button>
         <button id="menuLogin">Giriş yap</button>
         <button id="menuProfile" hidden></button>
+        <button id="menuNotify" hidden></button>
         <button id="menuLogout" hidden>Çıkış yap</button>
         <button id="menuDelete" hidden>Hesabımı sil</button>
         <button id="menuClose">Kapat</button>
@@ -3945,8 +3989,8 @@ body.has-layer .ac-kapa svg {
             <div class="tab-page" data-page="comments">
                 <div id="commentsBox">
                     <div class="cm-compose">
-                        <input id="cmInput" type="text" maxlength="50" placeholder="Mesaj yaz…" autocomplete="off" enterkeyhint="send">
-                        <span id="cmCount">0/50</span>
+                        <input id="cmInput" type="text" maxlength="100" placeholder="Mesaj yaz…" autocomplete="off" enterkeyhint="send">
+                        <span id="cmCount">0/100</span>
                         <button id="cmSend" type="button">Gönder</button>
                     </div>
                     <p id="cmNote"></p>
@@ -4623,28 +4667,51 @@ function bildirimHazirla() {
                 });
             });
 
-            return { uid: user.uid, token: token };
+            return { uid: user.uid, token: token, person: user.isAnonymous ? null : user.uid };
         })();
     }
 
     return bildirimHazir;
 }
 
+/*
+ * Zil kaydı: her cihazın kendi kaydı zil/{cihaz no} (cihaz no telefonda saklanır). Google ile giriş
+ * yapılmışsa kişinin kimliği de yazılır: yanıt bildirimleri kişinin bütün cihazlarına gider.
+ * Eski biçimdeki kayıt (zil/{kimlik}) yenisi yazıldıktan sonra bir kez silinir.
+ */
+const DEVICE_KEY = 'canliSkorCihaz';
+
+function deviceId() {
+    let id = readJSON(DEVICE_KEY, null);
+    if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '');
+        writeJSON(DEVICE_KEY, id);
+    }
+    return id;
+}
+
 async function zilYaz() {
     try {
-        const { uid, token } = await bildirimHazirla();
+        const { uid, token, person } = await bildirimHazirla();
         const list = Array.from(savedIds).filter(id => /^\d+$/.test(id)).slice(-100);
-        const key = token + '|' + list.join(',');
+        const device = deviceId();
+        const key = device + '|' + uid + '|' + (person || '') + '|' + token + '|' + list.join(',');
 
         /* Değişen bir şey yoksa yazılmaz */
         if (readJSON(ZIL_SON_KEY, '') === key)
             return;
 
-        await fs.setDoc(fs.doc(db, 'zil', uid), {
-            token: token,
-            maclar: list,
-            guncellendi: fs.serverTimestamp()
-        });
+        const record = { token: token, maclar: list, sahip: uid, tur: 'site', guncellendi: fs.serverTimestamp() };
+        if (person)
+            record.kisi = person;
+        await fs.setDoc(fs.doc(db, 'zil', device), record);
+
+        /* Eski biçimdeki kayıt (bu girişin kimliğiyle) bir kez silinir */
+        const oldKey = 'canliSkorZilEski|' + uid;
+        if (device !== uid && !readJSON(oldKey, false)) {
+            fs.deleteDoc(fs.doc(db, 'zil', uid)).catch(() => {});
+            writeJSON(oldKey, true);
+        }
 
         writeJSON(ZIL_SON_KEY, key);
     } catch (error) {
@@ -7768,7 +7835,7 @@ startData();
    Okuma herkese açık: Yorumlar sekmesi açılınca maçın son 10 mesajı canlı dinlenir,
    "Daha fazla göster" ile 10'ar artar (en fazla 100). Yazmak, oy vermek ve şikayet için
    Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir).
-   Sınırlar (Realtime Database kuralları da denetler): mesaj 50 karakter, günde 20 mesaj,
+   Sınırlar (Realtime Database kuralları da denetler): mesaj 100 karakter, günde 20 mesaj,
    bir mesajda oy en fazla 2 kez değiştirilir, rumuz haftada bir değişir.
    Beğeni sayıları ve küfür kontrolü sunucuda (kuyruk).
 ================================================= */
@@ -7778,10 +7845,22 @@ const CM_DAILY = 20;
 const ACCOUNT_KEY = 'canliSkorHesap';   /* giriş yapıldı mı (menü ve hesabın arka planda yüklenmesi için) */
 const BLOCK_KEY = 'canliSkorEngel';     /* engellenen kişiler (yalnızca bu telefonda) */
 const VOTE_KEY = 'canliSkorOy';         /* verilen oylar ("maç/mesaj" → 1, -1, 0) */
+const REPORT_KEY = 'canliSkorSikayet';  /* şikayet edilen mesajlar ("maç/mesaj"), bayrak dolu görünür */
+const ASKED_KEY = 'canliSkorYanitSoruldu';   /* ilk mesajdan sonra bildirim izni soruldu mu */
 
-const cm = { match: null, limit: CM_PAGE, off: null, list: null, open: null };
+/* Mesaj satırı simgeleri (çizgili; seçilince içi dolar) */
+const CM_ICONS = {
+    reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    like: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>',
+    dislike: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>'
+};
+
+const cm = { match: null, limit: CM_PAGE, off: null, list: null, open: null, replyTo: null };
 let blocked = new Set(readJSON(BLOCK_KEY, []));
 let myVotes = readJSON(VOTE_KEY, {});
+let myReports = new Set(readJSON(REPORT_KEY, []));
+let mySilenced = new Set();     /* bildirimi kapatılan kendi mesajları ("maç_mesaj"), girişte okunur */
 let me = null;                    /* { uid, r: rumuz (yoksa null), k } Google ile giriş yapmış kullanıcı */
 let meReady = Promise.resolve();
 
@@ -7852,12 +7931,28 @@ function accountChanged(user) {
             me = null;
             try { localStorage.removeItem(ACCOUNT_KEY); } catch (error) {}
         } else {
-            const profile = (await rt.get(rt.ref(rd, 'kullanici/' + uid)).catch(() => null));
-            const value = profile && profile.val() || {};
-            me = { uid: uid, r: value.r || null, k: value.k || null };
+            const [profile, blocks, silenced] = await Promise.all(['kullanici/', 'engel/', 'sessiz/'].map(path =>
+                rt.get(rt.ref(rd, path + uid)).then(snap => snap.val(), () => null)));
+            const value = profile || {};
+            me = { uid: uid, r: value.r || null, k: value.k || null, b: value.b === true };
             writeJSON(ACCOUNT_KEY, { r: me.r });
             document.getElementById('cmLogin').hidden = true;
+
+            /* Engelleme listesi: veritabanındakiler ve bu telefondakiler birleşir */
+            const saved = Object.keys(blocks || {});
+            const local = Array.from(blocked).filter(id => !saved.includes(id));
+            saved.forEach(id => blocked.add(id));
+            writeJSON(BLOCK_KEY, Array.from(blocked));
+            if (local.length)
+                rt.update(rt.ref(rd, 'engel/' + uid), Object.fromEntries(local.map(id => [id, true]))).catch(() => {});
+
+            mySilenced = new Set(Object.keys(silenced || {}));
         }
+
+        /* Bildirim kaydı yeni kişiyle yazılsın (izin verilmişse; çıkışta kişi bilgisi kalkar) */
+        bildirimHazir = null;
+        if (bildirimVar() && Notification.permission === 'granted')
+            zilYazSonra();
         renderAccountMenu();
         renderComments();
     })();
@@ -8019,9 +8114,24 @@ document.getElementById('profileYes').addEventListener('click', async () => {
 function renderAccountMenu() {
     const known = me || readJSON(ACCOUNT_KEY, null);
     document.getElementById('menuLogin').hidden = !!known;
-    ['menuProfile', 'menuLogout', 'menuDelete'].forEach(id => { document.getElementById(id).hidden = !known; });
+    ['menuProfile', 'menuNotify', 'menuLogout', 'menuDelete'].forEach(id => { document.getElementById(id).hidden = !known; });
     document.getElementById('menuProfile').textContent = known && known.r ? 'Rumuz: ' + known.r : 'Rumuz seç';
+    document.getElementById('menuNotify').textContent = 'Yanıt bildirimleri: ' + (me && me.b ? 'Kapalı' : 'Açık');
 }
+
+/* Yanıt bildirimleri (kullanici/{kimlik}/b: true = kapalı) */
+document.getElementById('menuNotify').addEventListener('click', () => {
+    closeHomeMenu();
+    requireWriter(async () => {
+        const off = !me.b;
+        try {
+            await rt.set(rt.ref(rd, 'kullanici/' + me.uid + '/b'), off ? true : null);
+            me.b = off;
+            renderAccountMenu();
+            askConfirm('Yanıt bildirimleri ' + (off ? 'kapatıldı.' : 'açıldı.'), 'Tamam', () => {});
+        } catch (error) {}
+    }, true);
+});
 
 document.getElementById('menuLogin').addEventListener('click', () => {
     closeHomeMenu();
@@ -8063,7 +8173,7 @@ async function deleteAccount() {
         }));
         await Promise.allSettled(removals);
 
-        const update = { ['mesajlarim/' + uid]: null, ['kullanici/' + uid]: null };
+        const update = { ['mesajlarim/' + uid]: null, ['kullanici/' + uid]: null, ['engel/' + uid]: null, ['sessiz/' + uid]: null };
         if (me.r)
             update['rumuz/' + me.r.toLowerCase()] = null;
         await rt.update(rt.ref(rd), update);
@@ -8172,23 +8282,61 @@ function commentItem(m) {
         '<div class="cm-head"><b class="cm-name"></b><span class="cm-time"></span>' +
             '<button class="cm-more" type="button" aria-label="Diğer">⋯</button></div>' +
         '<p class="cm-text"></p>' +
-        '<div class="cm-bar"><button class="cm-like" type="button"></button><button class="cm-dislike" type="button"></button></div>';
+        '<div class="cm-bar">' +
+            '<button class="cm-reply" type="button">' + CM_ICONS.reply + '<span>Yanıtla</span></button>' +
+            '<span class="cm-sep"></span>' +
+            '<button class="cm-like" type="button" aria-label="Beğen">' + CM_ICONS.like + '<span></span></button>' +
+            '<button class="cm-dislike" type="button" aria-label="Beğenme">' + CM_ICONS.dislike + '<span></span></button>' +
+            '<button class="cm-flag" type="button" aria-label="Şikayet et">' + CM_ICONS.flag + '</button>' +
+        '</div>';
 
     item.querySelector('.cm-name').textContent = m.r || '';
     item.querySelector('.cm-time').textContent = m.z ? commentTime(m.z) : '';
     item.querySelector('.cm-text').textContent = m.t || '';
 
-    const myVote = myVotes[cm.match + '/' + m.id] || 0;
+    const key = cm.match + '/' + m.id;
+    const own = !!me && m.u === me.uid;
+    const myVote = myVotes[key] || 0;
+
+    /* Yanıtla: yazma alanının başına "@rumuz " (kendi mesajında yok) */
+    const reply = item.querySelector('.cm-reply');
+    if (own)
+        reply.hidden = true;
+    reply.addEventListener('click', () => {
+        const tag = '@' + (m.r || '') + ' ';
+        if (!cmInput.value.startsWith(tag))
+            cmInput.value = (tag + cmInput.value).slice(0, 100);
+        cm.replyTo = { id: m.id, tag: tag };
+        updateCount();
+        cmInput.focus();
+    });
+    if (own)
+        item.querySelector('.cm-sep').hidden = true;
+
+    /* Beğen / beğenme: sayı 0 ise yazmaz; kendi mesajına oy verilemez */
     const like = item.querySelector('.cm-like');
     const dislike = item.querySelector('.cm-dislike');
-    like.textContent = '👍 ' + (m.b || 0);
-    dislike.textContent = '👎 ' + (m.d || 0);
+    like.querySelector('span').textContent = m.b || '';
+    dislike.querySelector('span').textContent = m.d || '';
     like.classList.toggle('on', myVote === 1);
     dislike.classList.toggle('on', myVote === -1);
+    like.disabled = own;
+    dislike.disabled = own;
     like.addEventListener('click', () => voteComment(m, 1));
     dislike.addEventListener('click', () => voteComment(m, -1));
 
-    /* ⋯ : şikayet et, engelle, kendi mesajıysa sil */
+    /* Şikayet bayrağı: sorulur; şikayet edilince dolu görünür. Kendi mesajında yok */
+    const flag = item.querySelector('.cm-flag');
+    if (own)
+        flag.hidden = true;
+    flag.classList.toggle('on', myReports.has(key));
+    flag.addEventListener('click', () => {
+        if (myReports.has(key))
+            return;
+        askConfirm('Bu mesaj şikayet edilsin mi?', 'Şikayet et', () => reportComment(m));
+    });
+
+    /* ⋯ : başkasının mesajında engelle, kendi mesajında sil */
     item.querySelector('.cm-more').addEventListener('click', () => {
         cm.open = cm.open === m.id ? null : m.id;
         renderComments();
@@ -8204,13 +8352,27 @@ function commentItem(m) {
             button.addEventListener('click', action);
             menu.appendChild(button);
         };
-        if (me && m.u === me.uid) {
+        if (own) {
+            const silentKey = cm.match + '_' + m.id;
+            const silent = mySilenced.has(silentKey);
+            add(silent ? 'Bu mesaj için bildirimleri aç' : 'Bu mesaj için bildirim alma', async () => {
+                try {
+                    await rt.set(rt.ref(rd, 'sessiz/' + me.uid + '/' + silentKey), silent ? null : true);
+                    if (silent)
+                        mySilenced.delete(silentKey);
+                    else
+                        mySilenced.add(silentKey);
+                } catch (error) {}
+                cm.open = null;
+                renderComments();
+            });
             add('Sil', () => askConfirm('Mesajın silinsin mi?', 'Sil', () => deleteComment(m)));
         } else {
-            add('Şikayet et', () => reportComment(m));
             add('Engelle', () => askConfirm((m.r || 'Bu kişi') + ' engellensin mi? Mesajları sana gösterilmez.', 'Engelle', () => {
                 blocked.add(m.u);
                 writeJSON(BLOCK_KEY, Array.from(blocked));
+                if (me)
+                    rt.set(rt.ref(rd, 'engel/' + me.uid + '/' + m.u), true).catch(() => {});
                 cm.open = null;
                 renderComments();
             }));
@@ -8242,25 +8404,46 @@ async function sendComment() {
 
             const id = rt.push(rt.ref(rd, 'mesaj/' + match)).key;
             const queue = rt.push(rt.ref(rd, 'kuyruk')).key;
+            const message = { u: uid, r: me.r, t: text, z: rt.serverTimestamp(), g: day };
+            /* Yanıtla ile başladıysa yanıtlanan mesaj (o mesaj için bildirimi kapatan etiketlense de bildirim almaz) */
+            if (cm.replyTo && text.startsWith(cm.replyTo.tag.trim()))
+                message.y = cm.replyTo.id;
             await rt.update(rt.ref(rd), {
-                ['mesaj/' + match + '/' + id]: { u: uid, r: me.r, t: text, z: rt.serverTimestamp(), g: day },
+                ['mesaj/' + match + '/' + id]: message,
                 ['sayac/' + uid]: { g: day, n: n },
                 ['mesajlarim/' + uid + '/' + match + '/' + id]: true,
                 ['kuyruk/' + queue]: { m: match, i: id, u: uid }
             });
 
             cmInput.value = '';
+            cm.replyTo = null;
             updateCount();
             cmNote('');
+            askReplyNotifications();
         } catch (error) {
             cmNote('Mesaj gönderilemedi.');
         }
     });
 }
 
+/* İlk mesajdan sonra bir kez: yanıt bildirimi için izin */
+function askReplyNotifications() {
+    if (!bildirimVar() || Notification.permission !== 'default' || readJSON(ASKED_KEY, false))
+        return;
+    writeJSON(ASKED_KEY, true);
+    askConfirm('Sana yanıt verilince (@rumuz) bildirim almak ister misin?', 'Evet', () => {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted')
+                zilYazSonra();
+        });
+    });
+}
+
 /* Aynı oya tekrar basınca geri alınır. Bir mesajda oy en fazla 2 kez değiştirilir */
 function voteComment(m, value) {
     requireWriter(async () => {
+        if (m.u === me.uid)
+            return;
         try {
             const match = String(cm.match);
             const path = 'oy/' + match + '/' + m.id + '/' + me.uid;
@@ -8303,16 +8486,17 @@ function reportComment(m) {
         try {
             await rt.set(rt.ref(rd, 'sikayet/' + cm.match + '_' + m.id + '/' + me.uid), rt.serverTimestamp());
         } catch (error) {}
+        myReports.add(cm.match + '/' + m.id);
+        writeJSON(REPORT_KEY, Array.from(myReports));
         cm.open = null;
         cmNote('');
         renderComments();
-        askConfirm('Şikayetin alındı. Teşekkürler.', 'Tamam', () => {});
     });
 }
 
 /* ---------- Yazma alanı ---------- */
 function updateCount() {
-    document.getElementById('cmCount').textContent = cmInput.value.length + '/50';
+    document.getElementById('cmCount').textContent = cmInput.value.length + '/100';
 }
 
 /* Giriş yapmamış ya da rumuzu olmayan kullanıcı yazma alanına dokununca girişe yönlendirilir */
@@ -9948,28 +10132,36 @@ document.addEventListener('keydown', event => {
         closeDetail();
 });
 
+/* "1234&yorum" → ["1234", "comments"] (yanıt bildirimi Yorumlar sekmesini açar) */
+function parseMatchLink(text) {
+    const [id, extra] = String(text).split('&');
+    return [decodeURIComponent(id || ''), extra === 'yorum' ? 'comments' : 'summary'];
+}
+
 /* Paylaşılan bağlantıyla açılış: #mac=... */
 (function openLinkedMatch() {
 
     if (!location.hash.startsWith(LINK_PREFIX))
         return;
 
-    const id = decodeURIComponent(location.hash.slice(LINK_PREFIX.length));
+    const [id, tab] = parseMatchLink(location.hash.slice(LINK_PREFIX.length));
 
     try {
         history.replaceState(null, '', location.href.split('#')[0]);
     } catch (error) {}
 
     /* Maç sayfası hemen açılır; veri gelince dolar */
-    openDetail(id);
+    openDetail(id, tab);
 })();
 
 /* Uygulama açıkken gösterilen bildirime basılınca maç açılır (firebase-messaging-sw.js gönderir) */
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', event => {
-        const id = event.data && event.data.mac ? String(event.data.mac) : null;
+        const [id, tab] = parseMatchLink(event.data && event.data.mac ? String(event.data.mac) : '');
         if (id && !(detailId === id && detailSheet.classList.contains('open')))
-            openDetail(id);
+            openDetail(id, tab);
+        else if (id && tab === 'comments')
+            setDetailTab('comments');
     });
 }
 
