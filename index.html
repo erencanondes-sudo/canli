@@ -1903,8 +1903,8 @@ body:has(#oddsSheet.open) .alt-menu {
 }
 
 /*
- * Mavi top: görünen top 62px, dokunma alanı ise çevresiyle birlikte 84px
- * (top küçüldü, basılabilen yer eskisinden büyük).
+ * Mavi top: görünen top ~43px (eskisinin %70'i), dokunma alanı çevresiyle birlikte 84px (değişmedi).
+ * Top küçülünce yukarıda kalmasın diye alt kenarı eskisiyle aynı yerde.
  */
 .ac-kapa {
     position: relative;
@@ -1924,20 +1924,20 @@ body:has(#oddsSheet.open) .alt-menu {
 .ac-kapa::before {
     content: '';
     position: absolute;
-    inset: .6875rem;
-    border: .25rem solid #fff;
+    inset: 1.85rem 1.26875rem .6875rem;
+    border: .1875rem solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #3d8dff 0%, #1f6ff2 100%);
-    box-shadow: 0 .5625rem 1.25rem rgba(37, 117, 252, .45);
+    box-shadow: 0 .4rem .9rem rgba(37, 117, 252, .45);
 }
 
 .ac-kapa:active { transform: scale(.94); }
 
 .ac-kapa svg {
     position: relative;
-    top: 1px;
-    width: 1.4375rem;
-    height: 1.4375rem;
+    top: calc(1px + .58rem);
+    width: 1rem;
+    height: 1rem;
     transition: transform .3s ease;
 }
 
