@@ -9251,14 +9251,22 @@ function renderStats(match) {
     head.textContent = 'MAÇ İSTATİSTİKLERİ';
     box.appendChild(head);
 
+    /* Gol beklentisi (xG) yalnızca veren liglerde; ondalık virgülle */
+    const xg = match.stats[0][16] != null || match.stats[1][16] != null;
+    const decimal = value => Number(value).toFixed(2).replace('.', ',');
+
     [
         ['Topla Oynama', '%' + h[9], '%' + a[9], h[9], a[9]],
+        xg && ['Gol Beklentisi', decimal(h[16]), decimal(a[16]), h[16], a[16]],
         ['Şut', h[2], a[2]],
         ['İsabetli Şut', h[0], a[0]],
+        ['Toplam Pas', h[13], a[13]],
         ['Korner', h[7], a[7]],
+        ['Ofsayt', h[8], a[8]],
         ['Faul', h[6], a[6]],
-        ['Kart', h[10] + h[11], a[10] + a[11]]
-    ].forEach(([label, h, a, hv, av]) => {
+        ['Sarı Kart', h[10], a[10]],
+        ['Kırmızı Kart', h[11], a[11]]
+    ].filter(Boolean).forEach(([label, h, a, hv, av]) => {
 
         hv = hv === undefined ? h : hv;
         av = av === undefined ? a : av;
