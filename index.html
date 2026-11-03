@@ -979,32 +979,35 @@ button {
     color: #ff8a80;
 }
 
-/* Her mesaj çerçeve içinde: Oranlar blokları gibi lacivert zemin, açık mavi çerçeve */
+/* Her mesaj Özet gibi bir kart: üstte lacivert şeritte rumuz ve saat, altında açık zeminde mesaj ve alt satır */
 .cm-item {
     margin-bottom: .55em;
-    padding: .55em .75em .35em;
-    border: .0625rem solid rgba(90, 160, 255, .55);
+    padding: 0 0 .35em;
+    overflow: hidden;
+    border: .0625rem solid #1f3c6e;
     border-radius: .75rem;
-    background: linear-gradient(180deg, #15335f, #0d2142);
+    background: #f4f7fb;
 }
 
 .cm-head {
     display: flex;
     align-items: baseline;
+    padding: .35em .75em;
+    background: linear-gradient(180deg, #24447a, #1a3462);
     gap: .5em;
     font-size: .8125rem;
 }
 
 .cm-name {
     font-weight: normal;
-    color: #c9d6ec;
+    color: white;
 }
 
 /* Saat sağda, üç noktanın solunda (alt kenarları aynı hizada) */
 .cm-time {
     margin-left: auto;
     font-size: .5625rem;
-    color: #8f9bb0;
+    color: #c9d6ec;
 }
 
 /* Mesajdaki @rumuz etiketi kalın değil */
@@ -1018,15 +1021,15 @@ button {
     background: none;
     font-size: 1.1em;
     font-weight: 800;
-    color: #8f9bb0;
+    color: #c9d6ec;
 }
 
 .cm-text {
-    margin: .2em 0 .35em;
+    margin: .45em .75rem .35em;
     font-weight: 600;
     font-size: .9375rem;
     line-height: 1.35;
-    color: white;
+    color: #1d2340;
     overflow-wrap: anywhere;
 }
 
@@ -1036,9 +1039,10 @@ button {
     align-items: center;
     gap: 1.1em;
     padding-top: .3em;
-    border-top: .0625rem solid rgba(255, 255, 255, .12);
+    margin: 0 .75rem;
+    border-top: .0625rem solid #dde5f0;
     font-size: .625rem;
-    color: #b8c3d6;
+    color: #4a5874;
 }
 
 /* Ayırıcı Yanıtla ile beğen arasında ortada */
@@ -1081,13 +1085,13 @@ button {
 .cm-sep {
     width: .0625rem;
     height: 1.1em;
-    background: rgba(255, 255, 255, .22);
+    background: #c9d3e2;
 }
 
 /* Beğen / beğenme gri; seçilince içi dolu yeşil / kırmızı */
 .cm-like.on svg { color: #2e9e48; }
 .cm-dislike.on svg { color: #d93025; }
-.cm-flag { margin-left: auto; color: #8f9bb0; }
+.cm-flag { margin-left: auto; color: #7d879a; }
 
 /* Yanıtla simgesi diğerlerinden küçük */
 .cm-reply svg { width: 1em; height: 1em; }
@@ -1095,18 +1099,18 @@ button {
 .cm-menu {
     display: flex;
     gap: .5em;
-    margin-top: .45em;
+    margin: .45em .75rem 0;
 }
 
 .cm-menu button {
     padding: .25em .7em;
-    border: .0625rem solid rgba(90, 160, 255, .45);
+    border: .0625rem solid #c9d3e2;
     border-radius: 2em;
-    background: rgba(255, 255, 255, .08);
+    background: white;
     font: inherit;
     font-size: .8125rem;
     font-weight: 700;
-    color: #dbe5f5;
+    color: #1d2340;
 }
 
 #cmMore {
