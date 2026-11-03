@@ -916,7 +916,7 @@ button {
     flex: 1;
     min-width: 0;
     padding: .6em .75em;
-    border: .0625rem solid #d5d8de;
+    border: .0625rem solid rgba(90, 160, 255, .7);
     border-radius: .75rem;
     font: inherit;
     font-size: .9375rem;
@@ -926,7 +926,7 @@ button {
 #cmCount {
     flex: none;
     font-size: .75rem;
-    color: #9aa0ab;
+    color: #8f9bb0;
 }
 
 #cmSend {
@@ -934,7 +934,7 @@ button {
     padding: .6em .9em;
     border: none;
     border-radius: .75rem;
-    background: #1d2340;
+    background: linear-gradient(180deg, #4a8dff, #1f6ff2);
     color: white;
     font: inherit;
     font-size: .875rem;
@@ -948,11 +948,12 @@ button {
     gap: .7em;
     margin: .2em 0 .6em;
     padding: .7em .8em;
+    border: .0625rem solid rgba(90, 160, 255, .55);
     border-radius: .75rem;
-    background: #eef3ff;
+    background: linear-gradient(180deg, #15335f, #0d2142);
     font-size: .8125rem;
     font-weight: 600;
-    color: #1d2340;
+    color: white;
 }
 
 #cmLogin[hidden] {
@@ -965,7 +966,7 @@ button {
     padding: .5em .9em;
     border: none;
     border-radius: .65rem;
-    background: #1d2340;
+    background: linear-gradient(180deg, #4a8dff, #1f6ff2);
     color: white;
     font: inherit;
     font-weight: 800;
@@ -975,15 +976,16 @@ button {
     min-height: 1em;
     margin: .35em 0 .2em;
     font-size: .8125rem;
-    color: #d93025;
+    color: #ff8a80;
 }
 
-/* Her mesaj çerçeve içinde */
+/* Her mesaj çerçeve içinde: Oranlar blokları gibi lacivert zemin, açık mavi çerçeve */
 .cm-item {
     margin-bottom: .55em;
     padding: .55em .75em .35em;
-    border: .0625rem solid #e5e7ec;
+    border: .0625rem solid rgba(90, 160, 255, .55);
     border-radius: .75rem;
+    background: linear-gradient(180deg, #15335f, #0d2142);
 }
 
 .cm-head {
@@ -995,14 +997,14 @@ button {
 
 .cm-name {
     font-weight: normal;
-    color: #1d2340;
+    color: #c9d6ec;
 }
 
 /* Saat sağda, üç noktanın solunda (alt kenarları aynı hizada) */
 .cm-time {
     margin-left: auto;
     font-size: .5625rem;
-    color: #9aa0ab;
+    color: #8f9bb0;
 }
 
 /* Mesajdaki @rumuz etiketi kalın değil */
@@ -1016,7 +1018,7 @@ button {
     background: none;
     font-size: 1.1em;
     font-weight: 800;
-    color: #9aa0ab;
+    color: #8f9bb0;
 }
 
 .cm-text {
@@ -1024,7 +1026,7 @@ button {
     font-weight: 600;
     font-size: .9375rem;
     line-height: 1.35;
-    color: #222;
+    color: white;
     overflow-wrap: anywhere;
 }
 
@@ -1034,9 +1036,9 @@ button {
     align-items: center;
     gap: 1.1em;
     padding-top: .3em;
-    border-top: .0625rem solid #eef0f4;
+    border-top: .0625rem solid rgba(255, 255, 255, .12);
     font-size: .625rem;
-    color: #555a66;
+    color: #b8c3d6;
 }
 
 /* Ayırıcı Yanıtla ile beğen arasında ortada */
@@ -1079,13 +1081,13 @@ button {
 .cm-sep {
     width: .0625rem;
     height: 1.1em;
-    background: #d5d8de;
+    background: rgba(255, 255, 255, .22);
 }
 
 /* Beğen / beğenme gri; seçilince içi dolu yeşil / kırmızı */
 .cm-like.on svg { color: #2e9e48; }
 .cm-dislike.on svg { color: #d93025; }
-.cm-flag { margin-left: auto; color: #8a8f9c; }
+.cm-flag { margin-left: auto; color: #8f9bb0; }
 
 /* Yanıtla simgesi diğerlerinden küçük */
 .cm-reply svg { width: 1em; height: 1em; }
@@ -1098,13 +1100,13 @@ button {
 
 .cm-menu button {
     padding: .25em .7em;
-    border: .0625rem solid #e2e4ea;
+    border: .0625rem solid rgba(90, 160, 255, .45);
     border-radius: 2em;
-    background: white;
+    background: rgba(255, 255, 255, .08);
     font: inherit;
     font-size: .8125rem;
     font-weight: 700;
-    color: #555a66;
+    color: #dbe5f5;
 }
 
 #cmMore {
@@ -1112,13 +1114,13 @@ button {
     width: 100%;
     margin-top: .8em;
     padding: .65em;
-    border: .0625rem solid #d5d8de;
+    border: .0625rem solid rgba(90, 160, 255, .55);
     border-radius: .75rem;
-    background: white;
+    background: linear-gradient(180deg, #15335f, #0d2142);
     font: inherit;
     font-size: .875rem;
     font-weight: 700;
-    color: #1d2340;
+    color: white;
 }
 
 #cmMore[hidden], #cmLimit[hidden] {
@@ -1129,7 +1131,7 @@ button {
     margin: .8em 0 0;
     text-align: center;
     font-size: .75rem;
-    color: #9aa0ab;
+    color: #8f9bb0;
 }
 
 /* Rumuz penceresi (uyarı penceresi gibi) */
@@ -2770,28 +2772,50 @@ body.has-layer .ac-kapa svg {
 }
 
 /*
- * İstatistik: koyu zeminde her satır ışıklı çerçeveli bir kart.
- * Üstte ev sahibi değeri | ad | deplasman değeri, altta mavi ve turuncu çubuklar.
+ * İstatistik: Özet gibi tek kart (lacivert çerçeve, açık zemin, düz köşeler).
+ * Üstte ve altta lacivert şerit (başlık, son güncelleme); her satırda ev değeri | ad | deplasman değeri,
+ * altında tek çubuk: ev sahibi mavi, deplasman koyu sarı.
  */
-.stat-line {
-    margin-bottom: .6em;
-    padding: .3em .9em .4em;
-    border: 1px solid rgba(70, 200, 255, .45);
-    border-radius: .9rem;
-    background: linear-gradient(180deg, #10213a, #0b1729);
-    box-shadow: 0 0 .6rem rgba(40, 170, 255, .2);
+#detailSheet:not(.an-mode) .tab-page[data-page="stats"] {
+    padding-left: .3rem;
+    padding-right: .3rem;
 }
 
-/* Ad her zaman kartın tam ortasında: iki yandaki sütun eşit genişlikte */
+#statsBox:has(.stat-line) {
+    overflow: hidden;
+    border: 1px solid #1f3c6e;
+    background: #f4f7fb;
+}
+
+.stat-head {
+    padding: .45em;
+    background: linear-gradient(180deg, #24447a, #1a3462);
+    text-align: center;
+    font-size: .875rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: white;
+}
+
+.stat-line {
+    padding: .55em .9em .6em;
+    border-bottom: 1px solid #dde5f0;
+}
+
+.stat-line:last-of-type {
+    border-bottom: 0;
+}
+
+/* Ad her zaman satırın tam ortasında: iki yandaki sütun eşit genişlikte */
 .stat-top {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    margin-bottom: .25em;
-    font-size: 1.125rem;
+    margin-bottom: .35em;
+    font-size: 1.0625rem;
     font-weight: 800;
     line-height: 1.1;
-    color: white;
+    color: #1d2340;
 }
 
 .stat-top span:nth-child(3) {
@@ -2800,19 +2824,17 @@ body.has-layer .ac-kapa svg {
 
 .stat-top span:nth-child(2) {
     text-align: center;
-    font-size: .8125rem;
-    font-weight: 800;
-    color: #e3ebf7;
+    font-size: .875rem;
+    font-weight: 600;
+    color: #1d2340;
 }
 
+/* Tek çubuk: iki renk bitişik, uçları yuvarlak */
 .stat-bars {
     display: flex;
-    gap: .35rem;
-    height: .55rem;
-}
-
-.stat-bars div {
+    height: .5rem;
     border-radius: 999px;
+    overflow: hidden;
 }
 
 .stat-bars .h { background: linear-gradient(180deg, #4a8dff, #1f6ff2); }
@@ -2826,6 +2848,7 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"],
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"],
 #detailSheet:not(.an-mode) .tab-page[data-page="lineup"],
+#detailSheet:not(.an-mode) .tab-page[data-page="comments"],
 .os-page {
     background:
         radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
@@ -2836,49 +2859,30 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="lineup"] .tab-empty,
+#detailSheet:not(.an-mode) .tab-page[data-page="comments"] .tab-empty,
 .os-page .tab-empty {
     color: #b8c3d6;
 }
 
 .odds-block {
-    --c: #1e6bff;
-
     display: grid;
     grid-template-columns: minmax(0, 36%) 1fr;
     margin-bottom: .75em;
-    border: 1px solid var(--c);
+    border: 1px solid rgba(90, 160, 255, .7);
     border-radius: .9rem;
     overflow: hidden;
-    background: rgba(9, 18, 34, .9);
-    box-shadow: 0 0 .65rem -.1rem var(--c);
+    background: linear-gradient(180deg, #15335f, #0d2142);
+    box-shadow: 0 0 .65rem -.15rem rgba(60, 140, 255, .8);
 }
-
-/* Tür renkleri */
-.ob-ms   { --c: #1e6bff; }
-.ob-cs   { --c: #8b2cf5; }
-.ob-iy   { --c: #f08a00; }
-.ob-iyms { --c: #d61f8a; }
-.ob-kg   { --c: #0fb5a6; }
-.ob-au   { --c: #22a447; }
-.ob-iau  { --c: #e0a400; }
-.ob-tg   { --c: #3b5bdb; }
-.ob-tc   { --c: #c2410c; }
-.ob-hnd  { --c: #0284c7; }
-.ob-skor { --c: #dc2626; }
-.ob-kor  { --c: #16a34a; }
-.ob-kart { --c: #ca8a04; }
-.ob-ofs  { --c: #7c3aed; }
 
 .odds-title {
     display: flex;
     align-items: center;
-    gap: .5em;
     margin: 0;
-    padding: .6em .55em;
-    background: linear-gradient(100deg, var(--c), rgba(9, 18, 34, .6));
-    font-size: .75rem;
-    font-weight: 800;
-    line-height: 1.2;
+    padding: .6em .75em;
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1.25;
     color: white;
 }
 
@@ -2891,14 +2895,15 @@ body.has-layer .ac-kapa svg {
 }
 
 .odds-block .odd {
-    /* Alçak: üst / alt boşluk az, satır aralığı dar */
+    /* Alçak: üst / alt boşluk az, iki satır birbirine yakın */
     padding: .12em 0;
-    line-height: 1.15;
+    line-height: 1;
     border-radius: .55rem;
     background: linear-gradient(180deg, #ffffff, #e2e7ef);
 }
 
 .odds-block .odd span {
+    margin-bottom: -.05em;
     color: #3a4256;
 }
 
@@ -2927,11 +2932,16 @@ body.has-layer .ac-kapa svg {
     color: #8f9bb0;
 }
 
-/* İstatistik altındaki "Son güncelleme": solunda yenileme simgesi */
+/* İstatistik altındaki "Son güncelleme": lacivert alt şerit, solunda yenileme simgesi */
 .stat-updated {
     display: flex;
     align-items: center;
     gap: .4em;
+    margin: 0;
+    padding: .55em .9em;
+    background: linear-gradient(180deg, #24447a, #1a3462);
+    font-size: .8125rem;
+    color: #c9d6ec;
 }
 
 .stat-updated::before {
@@ -9229,6 +9239,11 @@ function renderStats(match) {
     /* Sıra: sunucu/VERITABANI.md → "İstatistik sırası" */
     const [h, a] = match.stats.map(list => list.map(value => value || 0));
 
+    const head = document.createElement('div');
+    head.className = 'stat-head';
+    head.textContent = 'MAÇ İSTATİSTİKLERİ';
+    box.appendChild(head);
+
     [
         ['Topla Oynama', '%' + h[9], '%' + a[9], h[9], a[9]],
         ['Şut', h[2], a[2]],
@@ -9265,7 +9280,7 @@ function renderStats(match) {
     /* Verinin son değiştiği saat (sunucunun yazdığı an) */
     if (match.updated) {
         const note = document.createElement('p');
-        note.className = 'odds-note stat-updated';
+        note.className = 'stat-updated';
         note.textContent = 'Son güncelleme: ' + formatTime(match.updated);
         box.appendChild(note);
     }
@@ -9697,10 +9712,9 @@ function renderMatchOdds(match, box, load) {
     const open = match.status === 'upcoming' && match.date > Date.now();
 
     /* cells: [ad, anahtar, oran] */
-    /* kind: oran türü (renk için: ms, cs, iy...) */
-    const block = (title, cells, columns, kind) => {
+    const block = (title, cells, columns) => {
         const wrap = document.createElement('div');
-        wrap.className = 'odds-block ob-' + kind;
+        wrap.className = 'odds-block';
         const t = document.createElement('p');
         t.className = 'odds-title';
         t.textContent = title;
@@ -9720,25 +9734,24 @@ function renderMatchOdds(match, box, load) {
             cells.push([lineText(line) + ' Alt', code + ':' + line + ':a', lines[line][0]]);
             cells.push([lineText(line) + ' Üst', code + ':' + line + ':u', lines[line][1]]);
         });
-        block(title, cells, 2, code);
+        block(title, cells, 2);
     };
 
-    if (data.ms) block('MAÇ SONUCU', three('ms', ['1', 'X', '2'], data.ms), 0, 'ms');
-    if (data.cs) block('ÇİFTE ŞANS', three('cs', ['1X', '12', 'X2'], data.cs), 0, 'cs');
-    if (data.iy) block('İLK YARI SONUCU', three('iy', ['1', 'X', '2'], data.iy), 0, 'iy');
-    if (data.iyms) block('İLK YARI / MAÇ SONUCU', three('iyms', IYMS, data.iyms), 3, 'iyms');
-    if (data.kg) block('KARŞILIKLI GOL', [['Var', 'kg:var', data.kg[0]], ['Yok', 'kg:yok', data.kg[1]]], 0, 'kg');
+    if (data.ms) block('MAÇ SONUCU', three('ms', ['1', 'X', '2'], data.ms));
+    if (data.cs) block('ÇİFTE ŞANS', three('cs', ['1X', '12', 'X2'], data.cs));
+    if (data.iy) block('İLK YARI SONUCU', three('iy', ['1', 'X', '2'], data.iy));
+    if (data.iyms) block('İLK YARI / MAÇ SONUCU', three('iyms', IYMS, data.iyms), 3);
+    if (data.kg) block('KARŞILIKLI GOL', [['Var', 'kg:var', data.kg[0]], ['Yok', 'kg:yok', data.kg[1]]]);
     overUnder('GOL ALT / ÜST', 'au', data.au);
     overUnder('İLK YARI GOL ALT / ÜST', 'iau', data.iau);
-    if (data.tg) block('TOPLAM GOL ARALIĞI', three('tg', ['0-1', '2-3', '4-5', '6+'], data.tg), 0, 'tg');
-    if (data.tc) block('TOPLAM GOL TEK / ÇİFT', [['Tek', 'tc:tek', data.tc[0]], ['Çift', 'tc:cift', data.tc[1]]], 0, 'tc');
+    if (data.tg) block('TOPLAM GOL ARALIĞI', three('tg', ['0-1', '2-3', '4-5', '6+'], data.tg));
+    if (data.tc) block('TOPLAM GOL TEK / ÇİFT', [['Tek', 'tc:tek', data.tc[0]], ['Çift', 'tc:cift', data.tc[1]]]);
     if (data.hnd)
         Object.keys(data.hnd).sort((a, b) => a - b).forEach(line => block(
             'HANDİKAPLI MAÇ SONUCU ' + (HND_LABELS[line] || line),
-            ['1', 'X', '2'].map((label, i) => [label, 'hnd:' + line + ':' + label, data.hnd[line][i]]),
-            0, 'hnd'
+            ['1', 'X', '2'].map((label, i) => [label, 'hnd:' + line + ':' + label, data.hnd[line][i]])
         ));
-    if (data.skor) block('SKOR', Object.keys(data.skor).sort(byScore).map(s => [s, 'skor:' + s, data.skor[s]]), 3, 'skor');
+    if (data.skor) block('SKOR', Object.keys(data.skor).sort(byScore).map(s => [s, 'skor:' + s, data.skor[s]]), 3);
     overUnder('KORNER ALT / ÜST', 'kor', data.kor);
     overUnder('KART ALT / ÜST', 'kart', data.kart);
     overUnder('OFSAYT ALT / ÜST', 'ofs', data.ofs);
