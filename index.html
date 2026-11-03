@@ -903,8 +903,12 @@ button {
 }
 
 /*
- * MESAJLAR (maç sayfası, Yorumlar): üstte yazma alanı, altında en yeni üstte mesajlar
+ * MESAJLAR (maç sayfası, Yorumlar): üstte yazma alanı, altında en yeni üstte mesajlar.
+ * Zemin açık gri (beyaza yakın gri biraz koyulaştırıldı)
  */
+#detailSheet:not(.an-mode) .tab-page[data-page="comments"] {
+    background: #e4e8ee;
+}
 .cm-compose {
     display: flex;
     align-items: center;
@@ -926,7 +930,7 @@ button {
 #cmCount {
     flex: none;
     font-size: .75rem;
-    color: #8f9bb0;
+    color: #6b7080;
 }
 
 #cmSend {
@@ -976,7 +980,7 @@ button {
     min-height: 1em;
     margin: .35em 0 .2em;
     font-size: .8125rem;
-    color: #ff8a80;
+    color: #d93025;
 }
 
 /* Her mesaj Özet gibi bir kart: üstte lacivert şeritte rumuz ve saat, altında açık zeminde mesaj ve alt satır */
@@ -1135,7 +1139,7 @@ button {
     margin: .8em 0 0;
     text-align: center;
     font-size: .75rem;
-    color: #8f9bb0;
+    color: #6b7080;
 }
 
 /* Rumuz penceresi (uyarı penceresi gibi) */
@@ -2852,7 +2856,6 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"],
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"],
 #detailSheet:not(.an-mode) .tab-page[data-page="lineup"],
-#detailSheet:not(.an-mode) .tab-page[data-page="comments"],
 .os-page {
     background:
         radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
@@ -2863,7 +2866,6 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] .tab-empty,
 #detailSheet:not(.an-mode) .tab-page[data-page="lineup"] .tab-empty,
-#detailSheet:not(.an-mode) .tab-page[data-page="comments"] .tab-empty,
 .os-page .tab-empty {
     color: #b8c3d6;
 }
