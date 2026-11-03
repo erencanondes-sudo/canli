@@ -978,9 +978,12 @@ button {
     color: #d93025;
 }
 
+/* Her mesaj çerçeve içinde */
 .cm-item {
-    padding: .65em 0;
-    border-bottom: .0625rem solid #eef0f4;
+    margin-bottom: .55em;
+    padding: .55em .75em .35em;
+    border: .0625rem solid #e5e7ec;
+    border-radius: .75rem;
 }
 
 .cm-head {
@@ -1009,7 +1012,7 @@ button {
 }
 
 .cm-text {
-    margin: .25em 0 .35em;
+    margin: .2em 0 .35em;
     font-size: .9375rem;
     line-height: 1.35;
     color: #222;
@@ -1021,20 +1024,21 @@ button {
     display: flex;
     align-items: center;
     gap: 1.1em;
-    padding-top: .45em;
+    padding-top: .3em;
     border-top: .0625rem solid #eef0f4;
-    font-size: .75rem;
+    font-size: .625rem;
     color: #555a66;
 }
 
-.cm-like { margin-left: .6em; }
-.cm-dislike { margin-left: .6em; }
+/* Ayırıcı Yanıtla ile beğen arasında ortada */
+.cm-sep { margin: 0 .9em; }
+.cm-dislike { margin-left: .4em; }
 
 .cm-bar button {
     display: inline-flex;
     align-items: center;
     gap: .35em;
-    padding: .2em 0;
+    padding: 0;
     border: none;
     background: none;
     font: inherit;
@@ -1069,8 +1073,9 @@ button {
     background: #d5d8de;
 }
 
-.cm-like svg { color: #2e9e48; }
-.cm-dislike svg { color: #d93025; }
+/* Beğen / beğenme gri; seçilince içi dolu yeşil / kırmızı */
+.cm-like.on svg { color: #2e9e48; }
+.cm-dislike.on svg { color: #d93025; }
 .cm-flag { margin-left: auto; color: #8a8f9c; }
 
 .cm-menu {
