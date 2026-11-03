@@ -9251,8 +9251,9 @@ function renderStats(match) {
     head.textContent = 'MAÇ İSTATİSTİKLERİ';
     box.appendChild(head);
 
-    /* Gol beklentisi (xG) yalnızca veren liglerde; ondalık virgülle */
-    const xg = match.stats[0][16] != null || match.stats[1][16] != null;
+    /* Gol beklentisi (xG) ve önlenen gol yalnızca veren liglerde; ondalık virgülle */
+    const has = i => match.stats[0][i] != null || match.stats[1][i] != null;
+    const xg = has(16);
     const decimal = value => Number(value).toFixed(2).replace('.', ',');
 
     [
@@ -9260,6 +9261,8 @@ function renderStats(match) {
         xg && ['Gol Beklentisi', decimal(h[16]), decimal(a[16]), h[16], a[16]],
         ['Şut', h[2], a[2]],
         ['İsabetli Şut', h[0], a[0]],
+        /* Önlenen gol eksi olabilir: çubukta eksi değer 0 sayılır */
+        has(17) && ['Önlenen Gol', decimal(h[17]), decimal(a[17]), Math.max(h[17], 0), Math.max(a[17], 0)],
         ['Toplam Pas', h[13], a[13]],
         ['Korner', h[7], a[7]],
         ['Ofsayt', h[8], a[8]],
