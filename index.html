@@ -941,6 +941,36 @@ button {
     font-weight: 800;
 }
 
+/* Giriş yapmadan yazmaya ya da oy vermeye çalışınca: uyarı ve Giriş yap düğmesi */
+#cmLogin {
+    display: flex;
+    align-items: center;
+    gap: .7em;
+    margin: .2em 0 .6em;
+    padding: .7em .8em;
+    border-radius: .75rem;
+    background: #eef3ff;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: #1d2340;
+}
+
+#cmLogin[hidden] {
+    display: none;
+}
+
+#cmLoginBtn {
+    flex: none;
+    margin-left: auto;
+    padding: .5em .9em;
+    border: none;
+    border-radius: .65rem;
+    background: #1d2340;
+    color: white;
+    font: inherit;
+    font-weight: 800;
+}
+
 #cmNote {
     min-height: 1em;
     margin: .35em 0 .2em;
@@ -3920,6 +3950,10 @@ body.has-layer .ac-kapa svg {
                         <button id="cmSend" type="button">Gönder</button>
                     </div>
                     <p id="cmNote"></p>
+                    <div id="cmLogin" hidden>
+                        <span>Mesaj yazmak ve oy vermek için giriş yapmalısın.</span>
+                        <button id="cmLoginBtn" type="button">Giriş yap</button>
+                    </div>
                     <div id="cmList"></div>
                     <button id="cmMore" type="button" hidden>Daha fazla göster</button>
                     <p id="cmLimit" hidden>En fazla son 100 mesaj gösterilir.</p>
@@ -7822,6 +7856,7 @@ function accountChanged(user) {
             const value = profile && profile.val() || {};
             me = { uid: uid, r: value.r || null, k: value.k || null };
             writeJSON(ACCOUNT_KEY, { r: me.r });
+            document.getElementById('cmLogin').hidden = true;
         }
         renderAccountMenu();
         renderComments();
@@ -7854,15 +7889,29 @@ async function googleLogin() {
     }
 }
 
-/* Yazmak, oy ve şikayet için: giriş yoksa Google girişi, rumuz yoksa rumuz penceresi, sonra iş yapılır */
-async function requireWriter(action) {
+/*
+ * Yazmak, oy ve şikayet için: giriş yoksa Yorumlar'da "giriş yapmalısın" uyarısı ve Giriş yap düğmesi çıkar
+ * (menüden gelince doğrudan Google girişi), rumuz yoksa rumuz penceresi, sonra iş yapılır.
+ */
+let loginNext = null;
+
+async function requireWriter(action, direct) {
     if (!fbApp || !rd)
         return;
     const { auth } = await authLoad();
     if (!auth.currentUser || auth.currentUser.isAnonymous) {
+        if (!direct) {
+            loginNext = action;
+            document.getElementById('cmLogin').hidden = false;
+            return;
+        }
         if (!(await googleLogin()))
             return;
     }
+    afterLogin(action);
+}
+
+async function afterLogin(action) {
     await meReady;
     if (!me)
         return;
@@ -7872,6 +7921,14 @@ async function requireWriter(action) {
     }
     action();
 }
+
+document.getElementById('cmLoginBtn').addEventListener('click', async () => {
+    const next = loginNext;
+    loginNext = null;
+    document.getElementById('cmLogin').hidden = true;
+    if (await googleLogin())
+        afterLogin(next || (() => {}));
+});
 
 /* ---------- Rumuz penceresi ---------- */
 const profileBox = document.getElementById('profileBox');
@@ -7968,12 +8025,12 @@ function renderAccountMenu() {
 
 document.getElementById('menuLogin').addEventListener('click', () => {
     closeHomeMenu();
-    requireWriter(() => {});
+    requireWriter(() => {}, true);
 });
 
 document.getElementById('menuProfile').addEventListener('click', () => {
     closeHomeMenu();
-    requireWriter(() => openProfile());
+    requireWriter(() => openProfile(), true);
 });
 
 document.getElementById('menuLogout').addEventListener('click', () => {
@@ -8037,6 +8094,8 @@ function startComments(id) {
     cm.match = id;
     cm.limit = CM_PAGE;
     cmNote('');
+    loginNext = null;
+    document.getElementById('cmLogin').hidden = true;
     listenComments();
     renderComments();
 }
