@@ -5,7 +5,11 @@
     "gun": {
       "$gun": {
         ".read": true,
-        ".indexOn": ".value"
+        ".indexOn": ".value",
+        "$no": {
+          ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
+          ".validate": "newData.isString()"
+        }
       }
     },
     "olay": {
@@ -161,15 +165,41 @@
     "hizli": {
       ".read": true,
       "$no": {
-        ".write": "auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)",
+        ".write": "(auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)) || (auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2' && !newData.exists())",
         ".validate": "newData.isString() && newData.val().matches(/^[0-9]{1,2}-[0-9]{1,2}$/)"
       }
     },
     "hizli_u": {
       ".read": true,
       "$no": {
-        ".write": "auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)",
+        ".write": "(auth != null && auth.uid === 'DGJx21d8ZsUNkE1sxpGXnKgjnix1' && $no.matches(/^[0-9]{1,10}$/)) || (auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2' && !newData.exists())",
         ".validate": "newData.isString() && newData.val().matches(/^(k|[0-9]{1,2}-[0-9]{1,2})$/)"
+      }
+    },
+    "elle": {
+      ".read": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
+      "$no": {
+        ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2' && $no.matches(/^[0-9]{1,10}$/)",
+        ".validate": "newData.hasChildren(['s', 't'])",
+        "s": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{1,2}-[0-9]{1,2}$/)"
+        },
+        "d": {
+          ".validate": "newData.val() === 'FT' || newData.val() === 'PST' || newData.val() === 'CANC' || newData.val() === 'ABD'"
+        },
+        "t": {
+          ".validate": "newData.val() === now"
+        },
+        "$diger": {
+          ".validate": false
+        }
+      }
+    },
+    "yenile": {
+      ".read": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
+      "$no": {
+        ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2' && $no.matches(/^[0-9]{1,10}$/)",
+        ".validate": "newData.val() === now"
       }
     },
     "hizli_t": {

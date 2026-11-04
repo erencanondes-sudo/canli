@@ -7,6 +7,7 @@
  *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), gün dokümanı (Firestore, en fazla 10 dk'da bir),
  *      Özet (RTDB olay günlüğü + Firestore, değişince)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
+ * Yönetim sayfasından (RTDB): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; yenile/{maç} maçı hemen yeniden çektirir.
  */
 
 const A = require('./ayarlar');
@@ -31,6 +32,56 @@ const maclar = new Map();
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
 let sonCanli = null;
 let sonHata = null;
+
+/*
+ * ELLE DÜZELTME (yönetim sayfası yazar)
+ *   elle/{maç}: { s: "2-1", d?: "FT", t } kilit. Kilit durdukça maçın skoru (ve verildiyse durumu) API'den değil buradan;
+ *     kilitli maç için bildirim gönderilmez. Kilit kalkınca maç API'den yeniden çekilir.
+ *   yenile/{maç}: maç bir sonraki turda API'den yeniden çekilir, sonra kayıt silinir.
+ */
+const elle = new Map();      /* maç no → { s, d } */
+const yenilenecek = new Set();
+
+function elleUygula(f) {
+    const kilit = elle.get(f.fixture.id);
+    if (!kilit) return;
+    const m = /^(\d+)-(\d+)$/.exec(kilit.s || '');
+    if (m) f.goals = { home: Number(m[1]), away: Number(m[2]) };
+    if (kilit.d) f.fixture.status.short = kilit.d;
+}
+
+function elleDinle() {
+    const degisti = snap => {
+        const no = Number(snap.key);
+        const k = maclar.get(no);
+        if (snap.exists()) {
+            elle.set(no, snap.val() || {});
+            if (k) {
+                elleUygula(k.f);
+                if (BITTI.has(durumu(k)) && !k.bitis) k.bitis = simdi();
+            }
+        } else {
+            elle.delete(no);
+            yenilenecek.add(no);
+        }
+    };
+    const ref = db.rtdb.ref('elle');
+    ref.on('child_added', degisti, e => console.error('elle dinlenemedi: ' + e.message));
+    ref.on('child_changed', degisti);
+    ref.on('child_removed', degisti);
+    db.rtdb.ref('yenile').on('child_added', snap => yenilenecek.add(Number(snap.key)),
+        e => console.error('yenile dinlenemedi: ' + e.message));
+}
+
+/* İstenen maçlar API'den yeniden çekilir (canlı listedeki eski hal de geçilir), sonra yenile kaydı silinir */
+async function yenile() {
+    const nolar = [...yenilenecek];
+    nolar.forEach(no => { const k = maclar.get(no); if (k) k.kontrol = true; });
+    await detayCek(nolar);
+    nolar.forEach(no => yenilenecek.delete(no));
+    await db.cokluYaz(Object.fromEntries(nolar.map(no => ['yenile/' + no, null])));
+    console.log('Yeniden çekildi: ' + nolar.join(', '));
+}
 
 const simdi = () => Math.floor(Date.now() / 1000);
 const gunAdi = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: A.SAAT_DILIMI });
@@ -82,6 +133,7 @@ function kaydet(f, canliIstek) {
     }
     if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
         return k;
+    elleUygula(f);
     k.f = f;
     const ts = f.fixture.timestamp;
     const sa = saatTR(ts);
@@ -89,7 +141,7 @@ function kaydet(f, canliIstek) {
     k.gun2 = sa >= A.SABAH[0] && sa < A.SABAH[1] ? takvimGunu(ts) : null;
     if (f.events) k.olaylar = B.olaylar(f);
     if (BITTI.has(f.fixture.status.short) && !k.bitis) k.bitis = simdi();
-    bildirim.kontrol(f, k.olaylar, canliSaatte());
+    bildirim.kontrol(f, k.olaylar, canliSaatte() && !elle.has(no));
     return k;
 }
 
@@ -407,6 +459,8 @@ async function tur() {
             if (kontrol.length) await detayCek(kontrol);
         }
 
+        if (yenilenecek.size) await yenile();
+
         if (basla - zaman.detay >= A.DETAY_ARALIK) {
             zaman.detay = basla;
             await detayCek(detaySec());
@@ -449,6 +503,7 @@ if (require.main === module) {
     bildirim.zilDinle();
     mesaj.dinle();
     bildirim.hizliDinle(canliSaatte);
+    elleDinle();
     tur();
 }
 
