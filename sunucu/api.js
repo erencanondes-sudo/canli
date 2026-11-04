@@ -3,6 +3,7 @@
  * Bütün istekler tek bir sıradan geçer: iki istek arası en az ISTEK_ARALIK.
  * Canlı skor isteği sıranın başına geçer.
  * Günlük hak azalınca arka plan işleri durur (yedekte()).
+ * Hak bitince KILIT_DENEME aralıkla bir istek denenir: hak yenilenince (cevaptaki kalan) devam edilir.
  */
 
 const A = require('./ayarlar');
@@ -19,6 +20,7 @@ const durum = {
 const sira = [];
 let calisiyor = false;
 let sonIstek = 0;
+let kilitDeneme = 0;
 
 const uyu = ms => new Promise(r => setTimeout(r, ms));
 
@@ -56,7 +58,10 @@ async function isle() {
 async function gonder(yol, deneme = 0) {
 
     if (!ANAHTAR) throw new Error('API anahtarı yok (/etc/canli/anahtar.env)');
-    if (durum.kalan !== null && durum.kalan <= A.SON_HAK) throw new Error('Günlük istek hakkı bitti');
+    if (durum.kalan !== null && durum.kalan <= A.SON_HAK) {
+        if (Date.now() - kilitDeneme < A.KILIT_DENEME) throw new Error('Günlük istek hakkı bitti');
+        kilitDeneme = Date.now();
+    }
 
     const cevap = await fetch(ADRES + yol, {
         headers: { 'x-apisports-key': ANAHTAR },

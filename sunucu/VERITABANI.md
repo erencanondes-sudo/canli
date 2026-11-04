@@ -62,6 +62,8 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 ## Hızlı kaynak (`hizli`, `hizli_u`)
 
 - Canlı maçta iki kaynaktan (API, hızlı) en son değişen skor gösterilir. Açılışta farklıysa hızlı kaynağınki.
+- Biten maçta (API'de canlı değil) hızlı kaynağa bakılmaz.
+- Canlı maçta hızlı skor API'ninkinden 2 dk farklı kalırsa sunucu o maçın `hizli` ve `hizli_u` kaydını siler.
 - Telefon bildirimi (sunucu) golü ve iptali hangi kaynak önce görürse ondan gönderir, aynı skor için bir kez.
 - `hizli_u` varken (yalnızca top oyundayken) satır hafif kırmızı olur; `"2-2"`de beklenen takımın yanında kırmızı nokta. Uyarı geldikten sonra skor değişirse (hangi kaynaktan olursa) kırmızı kalkar.
 - Skor değişince o maçta 1 dk `"k"` uyarısı gösterilmez; `"2-2"` (nokta) gösterilir.

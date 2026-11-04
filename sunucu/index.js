@@ -402,6 +402,7 @@ async function tur() {
 
         if (canliGerekli()) {
             await canliCek();
+            bildirim.hizliKontrol();
             const kontrol = [...maclar].filter(([, k]) => k.kontrol).map(([no]) => no);
             if (kontrol.length) await detayCek(kontrol);
         }

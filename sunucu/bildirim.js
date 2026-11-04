@@ -124,16 +124,49 @@ function hizliSkor(no, deger, gonder) {
     });
 }
 
+const hizliKayit = new Map();  /* maç no → hızlı kaynağın skoru "2-1" */
+const hizliFark = new Map();   /* maç no → API skorundan farklı olduğu ilk an (ms) */
+
 /* canliSaatte: bildirim gönderilecek saatlerde miyiz (index.js verir). İlk gelen kayıtlar yalnızca not edilir. */
 function hizliDinle(canliSaatte) {
 
     let ilk = true;
 
-    const degisti = snap => hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
+    const degisti = snap => {
+        hizliKayit.set(Number(snap.key), snap.val());
+        hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
+    };
     const ref = getDatabase().ref('hizli');
     ref.on('child_added', degisti, e => console.error('hizli dinlenemedi: ' + e.message));
     ref.on('child_changed', degisti);
+    ref.on('child_removed', snap => {
+        hizliKayit.delete(Number(snap.key));
+        hizliFark.delete(Number(snap.key));
+    });
     ref.once('value', () => { ilk = false; });
+}
+
+/*
+ * Hızlı kaynağın skoru, canlı maçta API'nin skorundan HIZLI_FARK süresince farklı kalırsa
+ * (program durmuş, yanlış ya da iptal edilmiş gol) maçın hızlı kaydı ve uyarısı silinir; site API skoruna döner.
+ * Yalnızca API'nin canlı skoru yeni çekilmişken çağrılır (index.js), API'ye ulaşılamıyorsa karşılaştırılmaz.
+ */
+function hizliKontrol() {
+    const t = Date.now();
+    for (const [no, deger] of hizliKayit) {
+        const d = durumlar.get(no);
+        if (!d || !CANLI.has(d.durum) || deger === d.skor.join('-')) {
+            hizliFark.delete(no);
+            continue;
+        }
+        if (!hizliFark.has(no)) hizliFark.set(no, t);
+        else if (t - hizliFark.get(no) >= A.HIZLI_FARK) {
+            hizliFark.delete(no);
+            console.log('Hızlı kayıt silindi (' + no + '): ' + deger + ', API ' + d.skor.join('-'));
+            getDatabase().ref().update({ ['hizli/' + no]: null, ['hizli_u/' + no]: null })
+                .catch(e => console.error('Hızlı kayıt silinemedi (' + no + '): ' + e.message));
+        }
+    }
 }
 
 function gonderMesaj(no, baslik, metin) {
@@ -276,4 +309,4 @@ function kisiyeGonder(kisi, baslik, metin, link) {
     return true;
 }
 
-module.exports = { kontrol, zilDinle, hizliDinle, kisiyeGonder };
+module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, kisiyeGonder };

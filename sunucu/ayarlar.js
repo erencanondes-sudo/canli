@@ -94,13 +94,13 @@ module.exports = {
     GUN_KAYMA: 7,                   /* maçın günü = başlama saati − 7 saat (07:00'den önce başlayan önceki güne yazılır) */
     BUGUN_KAYMA: 4,                 /* "bugün" = şu an − 4 saat (gün 04:00'te değişir, sitede de aynı) */
     SABAH: [4, 7],                  /* 04:00–06:59 başlayan maç kendi takvim gününün listesine de yazılır */
-    TUR_ARALIK: 15000,              /* canlı saatlerde: canlı skor ve yazma 15 sn */
+    TUR_ARALIK: 20000,              /* canlı saatlerde: canlı skor ve yazma 20 sn */
     GUN_ARALIK: 10 * 60000,         /* Firestore gün dokümanı en fazla 10 dk'da bir yazılır */
     B1_SURE: 21 * 60,               /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */
     RTDB_GUN_SAKLA: 2,              /* RTDB'deki günler bu kadar gün sonra silinir (Firestore'da kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
-    DETAY_ARALIK: 60000,            /* canlı maç detayı: 1 dk */
-    FIKSTUR_BUGUN: 15 * 60000,      /* bugünün fikstürü: 15 dk */
+    DETAY_ARALIK: 2 * 60000,        /* canlı maç detayı: 2 dk */
+    FIKSTUR_BUGUN: 30 * 60000,      /* bugünün ve yarının fikstürü: 30 dk */
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
     ILERI_GUN: 7,                   /* bugünden sonra kaç günün fikstürü çekilir */
     FIKSTUR_ILERI: 6 * 3600000,     /* yarından sonraki günlerin fikstürü: 6 saat */
@@ -119,5 +119,9 @@ module.exports = {
 
     ISTEK_ARALIK: 400,              /* iki API isteği arası en az (ms) */
     YEDEK_HAK: 500,                 /* bu kadar hak kalınca yalnızca canlı skor ve maç sonları */
-    SON_HAK: 30                     /* bu kadar hak kalınca hiç istek atılmaz */
+    SON_HAK: 30,                    /* bu kadar hak kalınca istek atılmaz; */
+    KILIT_DENEME: 5 * 60000,        /* yalnızca bu aralıkla bir istek denenir (hak yenilenince devam edilir) */
+
+    /* HIZLI KAYNAK: skoru API'den bu kadar süre farklı kalırsa kaydı silinir (site API skoruna döner) */
+    HIZLI_FARK: 2 * 60000
 };
