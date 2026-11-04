@@ -14,7 +14,11 @@
     },
     "olay": {
       "$gun": {
-        ".read": true
+        ".read": true,
+        "$anahtar": {
+          ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
+          ".validate": "newData.isString()"
+        }
       }
     },
     "takim": {
@@ -186,6 +190,9 @@
         },
         "d": {
           ".validate": "newData.val() === 'FT' || newData.val() === 'PST' || newData.val() === 'CANC' || newData.val() === 'ABD'"
+        },
+        "o": {
+          ".validate": "newData.isString() && newData.val().length <= 20000"
         },
         "t": {
           ".validate": "newData.val() === now"

@@ -19,7 +19,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | RTDB `hizli/{maç no}` | Hızlı kaynağın onaylı skoru `"2-1"` | Hızlı kaynak (bilgisayar) | Site (canlı) | Gol olunca | ~15 bayt |
 | RTDB `hizli_u/{maç no}` | Uyarı: `"2-2"` gol bekleniyor, `"k"` genel uyarı | Hızlı kaynak | Site (canlı) | Uyarı başlayıp bitince | ~10 bayt |
 | RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms). Yalnızca programın çalıştığını kontrol etmek için | Hızlı kaynak | Yalnızca sen | Dakikada bir | ~20 bayt |
-| RTDB `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", t }`: kilit durdukça maçın skoru (ve durumu) API'nin yerine geçer, bildirim gitmez | Yönetim sayfası | Sunucu, yönetim sayfası | Düzeltmede | ~40 bayt |
+| RTDB `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez | Yönetim sayfası | Sunucu, yönetim sayfası | Düzeltmede | ~40 bayt |
 | RTDB `yenile/{maç no}` | Maçı hemen API'den yeniden çek isteği; sunucu çekince siler | Yönetim sayfası | Sunucu | İstendiğinde | ~15 bayt |
 | Firestore `gun/{gün}` | Günün bütün maçları: `z` = gzip ile sıkıştırılmış `{ "maç no": "satır" }` metni (`c` olmadan). Arşiv, silinmez | Sunucu | Canlı Skor | En fazla 10 dk'da bir, değişince | 200 maç ~7,7 KB, sıkıştırılmış ~3 KB |
 | RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Firestore'a girmemiş satırlar) | Olay olunca | satır ~50 bayt |

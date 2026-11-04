@@ -35,7 +35,7 @@ let sonHata = null;
 
 /*
  * ELLE DÜZELTME (yönetim sayfası yazar)
- *   elle/{maç}: { s: "2-1", d?: "FT", t } kilit. Kilit durdukça maçın skoru (ve verildiyse durumu) API'den değil buradan;
+ *   elle/{maç}: { s: "2-1", d?: "FT", o?: "[olaylar]", t } kilit. Kilit durdukça maçın skoru (ve verildiyse durumu, olayları) API'den değil buradan;
  *     kilitli maç için bildirim gönderilmez. Kilit kalkınca maç API'den yeniden çekilir.
  *   yenile/{maç}: maç bir sonraki turda API'den yeniden çekilir, sonra kayıt silinir.
  */
@@ -50,6 +50,17 @@ function elleUygula(f) {
     if (kilit.d) f.fixture.status.short = kilit.d;
 }
 
+/* Kilitteki olaylar (yönetim sayfasında düzenlendiyse) */
+function elleOlaylar(no) {
+    const kilit = elle.get(no);
+    if (!kilit || !kilit.o) return null;
+    try {
+        return JSON.parse(kilit.o);
+    } catch (e) {
+        return null;
+    }
+}
+
 function elleDinle() {
     const degisti = snap => {
         const no = Number(snap.key);
@@ -58,6 +69,7 @@ function elleDinle() {
             elle.set(no, snap.val() || {});
             if (k) {
                 elleUygula(k.f);
+                k.olaylar = elleOlaylar(no) || k.olaylar;
                 if (BITTI.has(durumu(k)) && !k.bitis) k.bitis = simdi();
             }
         } else {
@@ -140,6 +152,7 @@ function kaydet(f, canliIstek) {
     k.gun = macGunu(ts);
     k.gun2 = sa >= A.SABAH[0] && sa < A.SABAH[1] ? takvimGunu(ts) : null;
     if (f.events) k.olaylar = B.olaylar(f);
+    k.olaylar = elleOlaylar(no) || k.olaylar;
     if (BITTI.has(f.fixture.status.short) && !k.bitis) k.bitis = simdi();
     bildirim.kontrol(f, k.olaylar, canliSaatte() && !elle.has(no));
     return k;
