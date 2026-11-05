@@ -4111,15 +4111,18 @@ body.has-layer .ac-kapa svg {
    -------------------------------------------------
    Veriyi sunucu API-Football'dan çekip yazar; uygulama
    yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
-     Firestore gun/{gün}  : günün bütün maçları (canlı skor satırları)
+     R2 gun/{gün}         : günün bütün maçları (canlı skor satırları), okuyucudan (VERI_ADRES)
      RTDB gun/{gün}       : aynısı; yalnızca canlı ve yeni biten ("c" ile başlayan) satırlar dinlenir
      RTDB takim           : takım adları (telefonda saklanır)
      RTDB hizli, hizli_u  : hızlı kaynağın skoru ve uyarısı (canlı maçlar)
-     Firestore ozet/{gün} : günün olayları (Özet sekmesi)
+     R2 ozet/{gün}        : günün olayları (Özet sekmesi), okuyucudan
      Firestore maclar/{no}: istatistik ve kadro (maç açılınca)
 ================================================= */
 
 const FIREBASE_SURUM = '12.19.0';
+
+/* R2 dosyaları (gün listesi, Özet): Cloudflare Pages'teki okuyucu (functions/veri) */
+const VERI_ADRES = '/veri/';
 
 /* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
 const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';
@@ -4495,7 +4498,8 @@ function scheduleMinuteTick() {
 const MATCHES = [];
 const MATCH_BY_ID = new Map();
 
-const dayRows = new Map();       /* gün → Map(maç no → satır) (Firestore) */
+const dayRows = new Map();       /* gün → Map(maç no → satır) (R2 dosyası) */
+const heldRows = new Map();      /* gün → Map(maç no → satır) (RTDB'den gelip "c"si kalkan satırların son hali) */
 let scoresReady = false;         /* bir önceki çizimde canlı veri tazeydi */
 let scoresSettled = false;       /* bu çizimdeki skor değişimleri gerçek değişim sayılır */
 const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
@@ -4520,6 +4524,7 @@ function rebuildMatches() {
         const events = dayEvents.get(day);
         const live = liveRows.get(day) || new Map();
         const rows = new Map(stored);
+        (heldRows.get(day) || new Map()).forEach((text, no) => rows.set(no, text));
         live.forEach((text, no) => rows.set(no, text));
         rows.forEach((text, no) => {
             const match = rowToMatch(day, no, text, matchEvents(day, no));
@@ -5005,7 +5010,7 @@ function readLeagues() {
  * GOL: canlı maçın skoru bir öncekinden büyükse gol olmuştur.
  * İlk açılışta ve uygulama öne geldiğinde skorlar yalnızca not edilir: canlı günlerin
  * RTDB satırları ve hızlı kaynak bu bağlantıda ilk kez gelene kadar, ve geldikleri
- * ilk çizimde de gol sayılmaz (Firestore'daki eski skor ile yenisi arasındaki fark gol değildir).
+ * ilk çizimde de gol sayılmaz (listedeki eski skor ile yenisi arasındaki fark gol değildir).
  */
 const lastScores = new Map();   /* maç no → [ev, dep] */
 const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
@@ -5160,7 +5165,7 @@ function goalSound() {
 }
 
 /*
- * Büyük dokümanlar (gün listesi, Özet) gzip ile sıkıştırılmış gelir (z, ikili); tarayıcının
+ * Büyük dokümanlar (maç, oranlar) gzip ile sıkıştırılmış gelir (z, ikili); tarayıcının
  * kendi açıcısıyla açılır. Eski dokümanlarda açık metin (m) olabilir.
  */
 async function docJSON(data) {
@@ -5173,17 +5178,26 @@ async function docJSON(data) {
     return data.m ? JSON.parse(data.m) : {};
 }
 
+/* R2 dosyası (okuyucudan); yoksa null */
+async function readFile(path) {
+    const response = await fetch(VERI_ADRES + path + '.json');
+    if (response.status === 404)
+        return null;
+    if (!response.ok)
+        throw new Error('Dosya okunamadı: ' + response.status);
+    return response.json();
+}
+
 /*
  * GÜNLER
- * Liste Firestore gun/{gün} dokümanından gelir (sunucu en fazla 10 dk'da bir yazar).
- * Bugün ve dün: doküman canlı dinlenir, ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan
- * satırlar (canlı ve 21 dk içinde biten maçlar) dinlenir; bunlar Firestore'dakinden önceliklidir.
- * Diğer günler bir kez okunur.
+ * Liste R2 gun/{gün}.json dosyasından bir kez okunur ve gelince gösterilir (sunucu skor ya da durum değişince yazar).
+ * Bugün ve dün: ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan satırlar (canlı ve 3 dk içinde
+ * biten maçlar) dinlenir; bunlar dosyadakinden önceliklidir. "c"si kalkan satırın son hali heldRows'ta kalır.
  *
  * ÖZET (olaylar), summaryMode'a göre:
- *   'live': Firestore ozet/{gün} bir kez okunur, sonra RTDB olay/{gün} günlüğünden yalnızca
- *           dokümana girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; 04:00–07:00 dün de.
- *   'once': Firestore ozet/{gün} bir kez okunur (dün, 07:00'den sonra).
+ *   'live': R2 ozet/{gün}.json bir kez okunur, sonra RTDB olay/{gün} günlüğünden yalnızca
+ *           dosyaya girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; 04:00–07:00 dün de.
+ *   'once': R2 ozet/{gün}.json bir kez okunur (dün, 07:00'den sonra).
  *   null  : okunmaz; maç açılınca olaylar maç dokümanından gelir (eski günler, yarın).
  * GÜN TANIMI (sunucuda da aynı): maçın günü = başlama − 7 saat; "Bugün" = şu an − 4 saat (04:00'te değişir).
  * Uygulama öne gelince Özet yeniden okunmaz; günlük kalınan yerden sürer.
@@ -5272,22 +5286,16 @@ function openDay(day) {
     const state = { live: isLiveDay(day), loaded: false, fresh: false, off: [] };
     days.set(day, state);
 
-    const listRef = fs.doc(db, 'gun', day);
     const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
     const mode = summaryMode(day);
+    heldRows.delete(day);
 
-    /* Açma beklerken daha yeni bir doküman gelirse eskisi yazılmaz */
-    let rowsTurn = 0;
-
-    const takeRows = snap => {
-        const turn = ++rowsTurn;
-        docJSON(snap.exists() ? snap.data() : null).then(rows => {
-            if (turn !== rowsTurn)
-                return;
-            dayRows.set(day, new Map(Object.entries(rows)));
-            state.loaded = true;
-            refreshViews();
-        }, failed);
+    const takeRows = rows => {
+        if (days.get(day) !== state)
+            return;
+        dayRows.set(day, new Map(Object.entries(rows || {})));
+        state.loaded = true;
+        refreshViews();
     };
 
     const failed = () => {
@@ -5295,8 +5303,20 @@ function openDay(day) {
         refreshViews();
     };
 
+    /*
+     * "c"si kalkan (listeden çıkan) satırın son hali saklanır: dosya açılıştaki haliyle kalmıştır.
+     * İlk gelişte saklanmaz (arka plandan dönünce eldeki satırlar eskidir, dosya daha yenidir).
+     */
     const takeLive = snap => {
-        liveRows.set(day, new Map(Object.entries(snap.val() || {})));
+        const rows = new Map(Object.entries(snap.val() || {}));
+        const held = heldRows.get(day) || new Map();
+        if (state.fresh)
+            (liveRows.get(day) || new Map()).forEach((text, no) => {
+                if (!rows.has(no))
+                    held.set(no, text.replace(/^c/, ''));
+            });
+        heldRows.set(day, held);
+        liveRows.set(day, rows);
         state.fresh = true;
         refreshViews();
     };
@@ -5313,25 +5333,21 @@ function openDay(day) {
         state.off.push(rt.onChildAdded(log, snap => applyEventLine(day, snap.key, snap.val()), () => {}));
     };
 
-    const takeEvents = async snap => {
-        const data = snap.exists() ? snap.data() : null;
-        dayEvents.set(day, await docJSON(data));
+    const takeEvents = data => {
+        dayEvents.set(day, data && data.m || {});
         eventKeys.set(day, data && data.t || '');
         refreshViews();
     };
 
-    if (state.live) {
-        state.off.push(fs.onSnapshot(listRef, takeRows, failed));
+    readFile('gun/' + day).then(takeRows, failed);
+    if (state.live)
         state.off.push(rt.onValue(liveQuery, takeLive, liveFailed));
-    } else {
-        fs.getDoc(listRef).then(takeRows, failed);
-    }
 
     if (mode && dayEvents.has(day)) {
         if (mode === 'live')
             listenLog();
     } else if (mode) {
-        fs.getDoc(fs.doc(db, 'ozet', day)).then(takeEvents).then(() => {
+        readFile('ozet/' + day).then(takeEvents).then(() => {
             if (mode === 'live')
                 listenLog();
         }, () => {
@@ -5350,7 +5366,7 @@ function openDay(day) {
 /*
  * Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır).
  * keepLive: son canlı satırlar (RTDB) da kalır; uygulama arka plana geçerken kullanılır,
- * öne gelince yenisi gelene kadar eski Firestore skoru gösterilmesin diye.
+ * öne gelince yenisi gelene kadar listedeki eski skor gösterilmesin diye.
  */
 function closeDay(day, keepLive) {
     const state = days.get(day);

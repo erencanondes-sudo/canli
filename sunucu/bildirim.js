@@ -127,14 +127,18 @@ function hizliSkor(no, deger, gonder) {
 const hizliKayit = new Map();  /* maç no → hızlı kaynağın skoru "2-1" */
 const hizliFark = new Map();   /* maç no → API skorundan farklı olduğu ilk an (ms) */
 
-/* canliSaatte: bildirim gönderilecek saatlerde miyiz (index.js verir). İlk gelen kayıtlar yalnızca not edilir. */
-function hizliDinle(canliSaatte) {
+/*
+ * canliSaatte: bildirim gönderilecek saatlerde miyiz; skorDegisti(maç no): skor değişince ya da kayıt silinince
+ * (gün listesi yeniden yazılsın diye). İkisini index.js verir. İlk gelen kayıtlar yalnızca not edilir.
+ */
+function hizliDinle(canliSaatte, skorDegisti) {
 
     let ilk = true;
 
     const degisti = snap => {
         hizliKayit.set(Number(snap.key), snap.val());
         hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
+        skorDegisti(Number(snap.key));
     };
     const ref = getDatabase().ref('hizli');
     ref.on('child_added', degisti, e => console.error('hizli dinlenemedi: ' + e.message));
@@ -142,6 +146,7 @@ function hizliDinle(canliSaatte) {
     ref.on('child_removed', snap => {
         hizliKayit.delete(Number(snap.key));
         hizliFark.delete(Number(snap.key));
+        skorDegisti(Number(snap.key));
     });
     ref.once('value', () => { ilk = false; });
 }
@@ -168,6 +173,9 @@ function hizliKontrol() {
         }
     }
 }
+
+/* Hızlı kaynağın maç için son değeri ("2-1"; uyarıda "k"), yoksa undefined */
+const hizliSkoru = no => hizliKayit.get(no);
 
 function gonderMesaj(no, baslik, metin) {
     let mesajci;
@@ -309,4 +317,4 @@ function kisiyeGonder(kisi, baslik, metin, link) {
     return true;
 }
 
-module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, kisiyeGonder };
+module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, hizliSkoru, kisiyeGonder };

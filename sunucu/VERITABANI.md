@@ -1,16 +1,17 @@
 # Veritabanı
 
-İki veritabanı var:
+İki veritabanı ve bir dosya deposu var:
 
 - **Realtime Database (RTDB):** canlı maçların satırları, takım adları, hızlı kaynak. Küçük ve sık değişen veri. Yalnızca değişen satır gönderilir.
-- **Firestore:** günün maç listesi (arşiv), Özet (olaylar), maç detayı, oranlar, bildirim kayıtları, sunucu durumu.
+- **Firestore:** maç detayı, oranlar, analizler, bildirim kayıtları, sunucu durumu.
+- **Cloudflare R2 (kova `canli`):** günün maç listesi ve Özet, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json` olarak okur. Okuyucu bugün, dün ve ilerideki günleri 30 sn, daha eski günleri 1 saat önbellekte tutturur.
 
 Dokümanları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), `hizli` dallarını hızlı kaynak (başka bir bilgisayardaki skor sunucusu, ayrı bir kullanıcıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
-Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (gün listesi, Özet, maç dokümanı) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar. Eski arşiv dokümanlarında açık metin `m` alanı olabilir.
+Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (maç dokümanı, oranlar) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar.
 
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
-| RTDB `gun/{gün}/{maç no}` | Günün maçları, her maç bir satır. Canlı ve 21 dk içinde biten maçlar `c` ile başlar | Sunucu | Canlı Skor (yalnızca `c` ile başlayanlar) | Skor, dakika, durum değişince | satır ~40 bayt |
+| RTDB `gun/{gün}/{maç no}` | Günün maçları, her maç bir satır. Canlı ve 3 dk içinde biten maçlar `c` ile başlar | Sunucu | Canlı Skor (yalnızca `c` ile başlayanlar) | Skor, dakika, durum değişince | satır ~40 bayt |
 | RTDB `takim/{takım no}` | Takım adı (bütün takımlar) | Sunucu | Site (yalnızca telefonda sözlük yoksa) | Yeni takım görülünce | takım başına ~20 bayt |
 | RTDB `takim_ek/{sürüm}` | O sürümde eklenen ya da değişen takımlar `{ no: ad }`. 30 gün saklanır | Sunucu | Site | Yeni takım görülünce | birkaç yüz bayt |
 | RTDB `takim_surum` | Takım listesinin sürümü (zaman, saniye) | Sunucu | Site (canlı) | Yeni takım görülünce | birkaç bayt |
@@ -21,9 +22,9 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | RTDB `hizli_t` | Hızlı kaynağın son çalıştığı an (ms). Yalnızca programın çalıştığını kontrol etmek için | Hızlı kaynak | Yalnızca sen | Dakikada bir | ~20 bayt |
 | RTDB `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez | Yönetim sayfası | Sunucu, yönetim sayfası | Düzeltmede | ~40 bayt |
 | RTDB `yenile/{maç no}` | Maçı hemen API'den yeniden çek isteği; sunucu çekince siler | Yönetim sayfası | Sunucu | İstendiğinde | ~15 bayt |
-| Firestore `gun/{gün}` | Günün bütün maçları: `z` = gzip ile sıkıştırılmış `{ "maç no": "satır" }` metni (`c` olmadan). Arşiv, silinmez | Sunucu | Canlı Skor | En fazla 10 dk'da bir, değişince | 200 maç ~7,7 KB, sıkıştırılmış ~3 KB |
-| RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Firestore'a girmemiş satırlar) | Olay olunca | satır ~50 bayt |
-| Firestore `ozet/{gün}` | Dün ve bugünün oynanan ve biten maçlarının olayları (`z`, gzip ile sıkıştırılmış `{ "maç no": [olaylar] }`) ve dahil olan son günlük anahtarı (`t`). Arşiv, silinmez | Sunucu | Site (bir kez) | Olay olunca | 150 maç ~95 KB, sıkıştırılmış ~25–35 KB |
+| R2 `gun/{gün}.json` | Günün bütün maçları `{ "maç no": "satır" }` (`c` olmadan). Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) o. Arşiv, silinmez | Sunucu | Canlı Skor (bir kez) | Skor ya da durum değişince (hızlı kaynağın golünde de) | 200 maç ~7,7 KB |
+| RTDB `olay/{gün}/{anahtar}` | Olay günlüğü (dün ve bugün). Yeni olay: `[maç no, sıra, olay...]`; API eski bir olayı değiştirir ya da silerse maçın tamamı: `[maç no, [olaylar]]`. Anahtar zamana göre sıralı (`"1793431720433-00"`). 2 gün sonra silinir | Sunucu | Site (canlı, yalnızca Özet dosyasına girmemiş satırlar) | Olay olunca | satır ~50 bayt |
+| R2 `ozet/{gün}.json` | Dün ve bugünün oynanan ve biten maçlarının olayları `{ t: dahil olan son günlük anahtarı, m: { "maç no": [olaylar] } }`. Arşiv, silinmez | Sunucu | Site (bir kez) | Olay olunca (önce günlük, sonra dosya) | 150 maç ~95 KB |
 | Firestore `maclar/{maç no}` | `z`: gzip ile sıkıştırılmış `{ durum, istatistik, kadro, olaylar }`. İstatistik ve kadro; maç bitince olaylar da (istatistik vermeyen liglerde yalnızca olaylar) | Sunucu | Maç sayfası | Canlı maçta en sık dakikada bir; maç bitince ve 2 saat sonra | ~1,5–2 KB, sıkıştırılmış ~0,7–1 KB |
 | Firestore `oran_gun/{gün}` | Bugün ve sonraki 7 günün başlamamış maçlarının menü oranları (`z`, gzip: `{ "maç no": "satır" }`) | Sunucu | Oranlar menüsü (seçili gün, bir kez) | Günde 2 kez, değişince | hafta içi ~1,5–2 KB, hafta sonu ~4–5 KB (sıkıştırılmış) |
 | Firestore `oran_lig/{lig no}` | Aynı oranlar, ligin 8 günü | Sunucu | Oranlar menüsü (lig seçilince, bir kez) | Günde 2 kez, değişince | ~0,3–1 KB (sıkıştırılmış) |
@@ -38,15 +39,15 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 
 **Gün tanımı (sunucu ve site aynı):** maçın günü = başlama saati − 7 saat (00:00–06:59 başlayan maç önceki günün listesindedir); "bugün" = şu an − 4 saat (gün 04:00'te değişir). 04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır; site 04:00–07:00 arası önceki günün canlı satırlarını ve olay günlüğünü de dinler. Canlı skor 12:30–07:00 arası çekilir.
 
-Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, dün ve yarın saatte bir, sonraki günler 6 saatte bir yenilenir). RTDB'deki günler 2 gün sonra silinir; Firestore'daki günler arşiv olarak kalır.
+Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, dün ve yarın saatte bir, sonraki günler 6 saatte bir yenilenir). RTDB'deki günler 2 gün sonra silinir; R2'deki günler arşiv olarak kalır.
 
 ## Site ne zaman ne okur
 
 | Ne | Bugün ve dün | Diğer geçmiş günler | Yarın ve sonrası |
 |---|---|---|---|
-| Liste (Firestore `gun`) | Canlı dinlenir (en fazla 10 dk'da bir değişir) | Bir kez | Bir kez |
-| Canlı satırlar (RTDB `gun`, `c` ile başlayanlar) | Canlı dinlenir; Firestore'dakinden önceliklidir | Okunmaz | Okunmaz |
-| Özet | Bugün: Firestore `ozet` bir kez, sonra RTDB `olay` günlüğünden `t`'den sonrası canlı. Dün: Firestore `ozet` bir kez | Okunmaz (maç açılınca olaylar `maclar/{no}`'dan) | Okunmaz |
+| Liste (R2 `gun`) | Bir kez; gelince gösterilir | Bir kez | Bir kez |
+| Canlı satırlar (RTDB `gun`, `c` ile başlayanlar) | Canlı dinlenir; listedekinden önceliklidir. `c` kalkınca (maç bittikten 3 dk sonra) son hali listede kalır | Okunmaz | Okunmaz |
+| Özet | Bugün: R2 `ozet` bir kez, sonra RTDB `olay` günlüğünden `t`'den sonrası canlı. Dün: R2 `ozet` bir kez | Okunmaz (maç açılınca olaylar `maclar/{no}`'dan) | Okunmaz |
 
 - Gece penceresi: 23:55–00:00 yarının, 00:00–02:30 dünün olay günlüğü de canlı dinlenir (gece yarısını geçen maçlar).
 - Uygulama öne gelince Özet yeniden okunmaz, günlük kalınan yerden sürer.
@@ -95,7 +96,7 @@ Virgülle ayrılmış metin. Sondaki boş alanlar yazılmaz (başlamamış maçt
 
 **Hafta:** ligde sayı (`9`). Kupada: `3T` 3. tur, `S16` son 16, `S32`, `S64`, `CF` çeyrek final, `YF` yarı final, `F` final, `G` grup aşaması, `PO` play-off. Bilinmeyen tur API'nin yazdığı gibi.
 
-**Başta `c`:** maç canlı ya da 21 dakika içinde bitti (b1); site yalnızca bunları RTDB'den dinler. 21 dakika sonra `c` kalkar (b2). Firestore'daki satırlarda `c` yoktur.
+**Başta `c`:** maç canlı ya da 3 dakika içinde bitti (b1); site yalnızca bunları RTDB'den dinler. 3 dakika sonra `c` kalkar (b2). R2'deki satırlarda `c` yoktur.
 
 **Durum:** boş = başlamadı; oynanan devrede devre kodu + devrenin başladığı an, planlanan başlama saatinden kaç saniye sonra (`1H-30`, `2H3725`, `ET6400`; dakika yazılmaz, site sunucu saatiyle hesaplar, 45'ten sonra `45+N`); diğerlerinde aşağıdaki kodlar. Devre değişince ve API'nin dakikası 2 dk'dan fazla saparsa bir kez yazılır.
 
@@ -113,11 +114,12 @@ Virgülle ayrılmış metin. Sondaki boş alanlar yazılmaz (başlamamış maçt
 | PST, CANC, ABD | Ertelendi, iptal, yarıda kaldı |
 | AWD, WO | Hükmen |
 
-## Firestore `ozet/{gün}`
+## R2 `ozet/{gün}.json`
 
 | Alan | Açıklama |
 |---|---|
-| `m` | Metin: `{ "maç no": [olaylar], … }`. Yalnızca oynanan ve biten maçlar. Olayı olmayan maçta `[]` |
+| `t` | Dosyaya dahil olan son olay günlüğü anahtarı |
+| `m` | `{ "maç no": [olaylar], … }`. Yalnızca oynanan ve biten maçlar. Olayı olmayan maçta `[]` |
 
 Sitedeki Özet sekmesi şimdilik yalnızca gol ve kartları gösterir; değişiklik, VAR, asist ve kaçan penaltı da yazılır.
 

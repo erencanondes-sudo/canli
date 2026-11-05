@@ -1,6 +1,6 @@
 /*
  * Veritabanına yazma. Sunucu Google'ın kendi bağlantısıyla yazar (anahtar dosyası yok).
- *   Firestore : gün listesi, Özet, oranlar (gzip ile sıkıştırılmış), maç detayı, sistem durumu
+ *   Firestore : oranlar (gzip ile sıkıştırılmış), maç detayı, sistem durumu
  *               (bir doküman son yazılandan farklı değilse yazılmaz)
  *   RTDB      : canlı skor listesi, takım adları (yalnızca değişen satırlar yazılır)
  */
@@ -38,7 +38,7 @@ async function yaz(yol, veri, aralik = 0) {
 }
 
 /*
- * Büyük doküman (gün listesi, Özet): metin gzip ile sıkıştırılıp z alanına (ikili) yazılır, ek alanlar açık.
+ * Büyük doküman (maç, oranlar): metin gzip ile sıkıştırılıp z alanına (ikili) yazılır, ek alanlar açık.
  * Değişmediyse sıkıştırılmaz ve yazılmaz.
  */
 async function yazSikistir(yol, metin, ek = {}, aralik = 0) {
@@ -62,7 +62,7 @@ function unut(yol) {
     sonZaman.delete(yol);
 }
 
-/* Firestore dokümanını bir kez okur (sunucu açılınca eski Özet'i korumak için); z açılır, m olarak döner */
+/* Firestore dokümanını bir kez okur; z açılır, m olarak döner */
 async function oku(yol) {
     const snap = await db.doc(yol).get();
     if (!snap.exists) return null;

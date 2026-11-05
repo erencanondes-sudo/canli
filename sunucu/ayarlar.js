@@ -4,6 +4,7 @@ module.exports = {
 
     PROJE: 'canli-b4406',
     RTDB_ADRES: 'https://canli-b4406-default-rtdb.firebaseio.com',   /* Realtime Database adresi */
+    R2_KOVA: 'canli',               /* Cloudflare R2: gün listesi ve Özet dosyaları (anahtarlar /etc/canli/anahtar.env) */
     SITE_ADRES: 'https://erencanondes-sudo.github.io/canli/',   /* bildirime basınca açılan adres */
     SAAT_DILIMI: 'Europe/Istanbul',
 
@@ -95,8 +96,7 @@ module.exports = {
     BUGUN_KAYMA: 4,                 /* "bugün" = şu an − 4 saat (gün 04:00'te değişir, sitede de aynı) */
     SABAH: [4, 7],                  /* 04:00–06:59 başlayan maç kendi takvim gününün listesine de yazılır */
     TUR_ARALIK: 20000,              /* canlı saatlerde: canlı skor ve yazma 20 sn */
-    GUN_ARALIK: 10 * 60000,         /* Firestore gün dokümanı en fazla 10 dk'da bir yazılır */
-    B1_SURE: 21 * 60,               /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */
+    B1_SURE: 3 * 60,                /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */
     RTDB_GUN_SAKLA: 2,              /* RTDB'deki günler bu kadar gün sonra silinir (Firestore'da kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 2 * 60000,        /* canlı maç detayı: 2 dk */
