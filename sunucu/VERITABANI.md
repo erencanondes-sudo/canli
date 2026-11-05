@@ -4,7 +4,7 @@
 
 - **Realtime Database (RTDB):** canlı maçların satırları, takım adları, hızlı kaynak. Küçük ve sık değişen veri. Yalnızca değişen satır gönderilir.
 - **Firestore:** maç detayı, oranlar, analizler, bildirim kayıtları, sunucu durumu.
-- **Cloudflare R2 (kova `canli`):** günün maç listesi ve Özet, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json` olarak okur. Okuyucu bugün, dün ve ilerideki günleri 30 sn, daha eski günleri 1 saat önbellekte tutturur.
+- **Cloudflare R2 (kova `canli`):** günün maç listesi ve Özet, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json` olarak okur. Okuyucu bugün, dün ve ilerideki günleri önbelleğe aldırmaz (her açılışta en son hali), daha eski günleri 1 saat tutturur.
 
 Dokümanları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), `hizli` dallarını hızlı kaynak (başka bir bilgisayardaki skor sunucusu, ayrı bir kullanıcıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
 Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (maç dokümanı, oranlar) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar.
@@ -45,8 +45,8 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 
 | Ne | Bugün ve dün | Diğer geçmiş günler | Yarın ve sonrası |
 |---|---|---|---|
-| Liste (R2 `gun`) | Bir kez; gelince gösterilir | Bir kez | Bir kez |
-| Canlı satırlar (RTDB `gun`, `c` ile başlayanlar) | Canlı dinlenir; listedekinden önceliklidir. `c` kalkınca (maç bittikten 3 dk sonra) son hali listede kalır | Okunmaz | Okunmaz |
+| Liste (R2 `gun`) | Bir kez (öne gelince yeniden); gelince gösterilir | Bir kez | Bir kez |
+| Canlı satırlar (RTDB `gun`, `c` ile başlayanlar) | Canlı dinlenir; listedekinden önceliklidir; hızlı kaynakla birlikte gelince tek seferde işlenir. `c` kalkınca (maç bittikten 3 dk sonra) son hali listede kalır | Okunmaz | Okunmaz |
 | Özet | Bugün: R2 `ozet` bir kez, sonra RTDB `olay` günlüğünden `t`'den sonrası canlı. Dün: R2 `ozet` bir kez | Okunmaz (maç açılınca olaylar `maclar/{no}`'dan) | Okunmaz |
 
 - Gece penceresi: 23:55–00:00 yarının, 00:00–02:30 dünün olay günlüğü de canlı dinlenir (gece yarısını geçen maçlar).

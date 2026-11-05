@@ -4971,8 +4971,10 @@ function watchFast() {
         rt.onValue(rt.ref(rd, 'hizli'), snap => {
             takeScores(snap);
             fastReady = true;
+            commitLive();
         }, () => {
             fastReady = true;
+            commitLive();
             refreshViews();
         }),
         rt.onValue(rt.ref(rd, 'hizli_u'), takeFast(fastWarns, id => {
@@ -5282,17 +5284,24 @@ function openDay(day) {
     if (!rd || days.has(day))
         return;
 
-    /* fresh: canlı satırlar (RTDB) bu bağlantıda en az bir kez geldi */
-    const state = { live: isLiveDay(day), loaded: false, fresh: false, off: [] };
+    /*
+     * fresh: canlı satırlar (RTDB) bu bağlantıda en az bir kez işlendi.
+     * pendingLive: gelen canlı satırlar; hızlı kaynak da gelince birlikte işlenir (commitLive).
+     */
+    const state = { live: isLiveDay(day), loaded: false, fresh: false, pendingLive: null, off: [] };
     days.set(day, state);
 
     const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
     const mode = summaryMode(day);
-    heldRows.delete(day);
 
+    /* Yeni dosya, arka plana geçmeden önceki canlı satırlardan yenidir: onlar bırakılır */
     const takeRows = rows => {
         if (days.get(day) !== state)
             return;
+        if (!state.fresh) {
+            liveRows.delete(day);
+            heldRows.delete(day);
+        }
         dayRows.set(day, new Map(Object.entries(rows || {})));
         state.loaded = true;
         refreshViews();
@@ -5303,22 +5312,9 @@ function openDay(day) {
         refreshViews();
     };
 
-    /*
-     * "c"si kalkan (listeden çıkan) satırın son hali saklanır: dosya açılıştaki haliyle kalmıştır.
-     * İlk gelişte saklanmaz (arka plandan dönünce eldeki satırlar eskidir, dosya daha yenidir).
-     */
     const takeLive = snap => {
-        const rows = new Map(Object.entries(snap.val() || {}));
-        const held = heldRows.get(day) || new Map();
-        if (state.fresh)
-            (liveRows.get(day) || new Map()).forEach((text, no) => {
-                if (!rows.has(no))
-                    held.set(no, text.replace(/^c/, ''));
-            });
-        heldRows.set(day, held);
-        liveRows.set(day, rows);
-        state.fresh = true;
-        refreshViews();
+        state.pendingLive = new Map(Object.entries(snap.val() || {}));
+        commitLive();
     };
 
     const liveFailed = () => {
@@ -5364,9 +5360,38 @@ function openDay(day) {
 }
 
 /*
+ * Gelen canlı satırlar (RTDB) hızlı kaynak da gelmişse işlenir: ikisi tek çizimde yansır
+ * (biri önce gelirse skor gidip gelmesin). "c"si kalkan (listeden çıkan) satırın son hali
+ * heldRows'ta saklanır: dosya açılıştaki haliyle kalmıştır. İlk işlemede saklanmaz.
+ */
+function commitLive() {
+    if (!fastReady)
+        return;
+    let changed = false;
+    days.forEach((state, day) => {
+        const rows = state.pendingLive;
+        if (!rows)
+            return;
+        const held = heldRows.get(day) || new Map();
+        if (state.fresh)
+            (liveRows.get(day) || new Map()).forEach((text, no) => {
+                if (!rows.has(no))
+                    held.set(no, text.replace(/^c/, ''));
+            });
+        heldRows.set(day, held);
+        liveRows.set(day, rows);
+        state.pendingLive = null;
+        state.fresh = true;
+        changed = true;
+    });
+    if (changed)
+        refreshViews();
+}
+
+/*
  * Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır).
- * keepLive: son canlı satırlar (RTDB) da kalır; uygulama arka plana geçerken kullanılır,
- * öne gelince yenisi gelene kadar listedeki eski skor gösterilmesin diye.
+ * keepLive: son canlı satırlar (RTDB) da kalır; uygulama arka plana geçerken kullanılır:
+ * öne gelince ekran, yeni dosya gelene kadar ayrılırken gördüğü gibi kalır (eski dosyaya dönmez).
  */
 function closeDay(day, keepLive) {
     const state = days.get(day);
