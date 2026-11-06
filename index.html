@@ -8383,8 +8383,10 @@ function foldAnCard(card, open, done) {
 }
 
 /*
- * Açılan kart yavaşça kayıp en üste, şeridin hemen altına gelir (0.4 sn; zaten oradaysa beklemez).
- * Üstte kapanan kart varsa hedef her karede yeniden ölçülür. done: kayma bitince çağrılır.
+ * Açılan kart kayıp en üste, şeridin hemen altına gelir. Kaydırmayı tarayıcının kendi yumuşak
+ * kaydırması yapar (ekranın tazeleme hızında akıcı; süreyi tarayıcı belirler, yaklaşık 0.3-0.5 sn).
+ * Hedef bir kez ölçülür; üstte kapanmakta olan kart varsa onun kapanınca kaybolacak yüksekliği düşülür.
+ * done: kayma bitince (ya da parmakla durdurulunca) çağrılır; zaten oradaysa hemen.
  */
 let anScrollRun = 0;
 
@@ -8392,33 +8394,44 @@ function scrollAnCardTop(card, done) {
 
     const run = ++anScrollRun;
     const start = homeMain.scrollTop;
-    const begin = performance.now();
 
-    /* Gidilecek yol yoksa (en üstte ya da sayfanın sonunda) hemen bitir */
-    const max = homeMain.scrollHeight - homeMain.clientHeight;
-    const goal = Math.min(max, start + card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top);
+    let shrink = 0;
+    document.querySelectorAll('.an-card.closing').forEach(other => {
+        if (other.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING) {
+            const expand = other.querySelector('.an-expand');
+            shrink += expand.getBoundingClientRect().height + parseFloat(getComputedStyle(expand).marginTop);
+        }
+    });
+
+    const max = homeMain.scrollHeight - homeMain.clientHeight - shrink;
+    const goal = Math.max(0, Math.min(max,
+        start + card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top - shrink));
+
     if (Math.abs(goal - start) < 2) {
         if (done)
             done();
         return;
     }
 
-    (function step(now) {
+    homeMain.scrollTo({ top: goal, behavior: 'smooth' });
+
+    /* Bitişi bekle: hedefe vardı, kayma durdu (5 kare aynı yer) ya da 1 sn geçti */
+    const begin = performance.now();
+    let last = start, still = 0;
+
+    (function wait() {
         if (run !== anScrollRun)
             return;
-
-        const t = Math.min(1, (now - begin) / 400);
-        const ease = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        const target = homeMain.scrollTop +
-            card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top;
-
-        homeMain.scrollTop = start + (target - start) * ease;
-
-        if (t < 1)
-            requestAnimationFrame(step);
-        else if (done)
-            done();
-    })(begin);
+        const now = homeMain.scrollTop;
+        still = Math.abs(now - last) < .5 ? still + 1 : 0;
+        last = now;
+        if (Math.abs(now - goal) < 1.5 || still >= 5 || performance.now() - begin > 1000) {
+            if (done)
+                done();
+            return;
+        }
+        requestAnimationFrame(wait);
+    })();
 }
 
 function renderAnalysis() {
