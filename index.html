@@ -3647,6 +3647,11 @@ body.has-layer .ac-kapa svg {
 }
 
 /* ---------- Detaylı Analiz: yeni bölümler ---------- */
+/* Futbol analizinde Taraf ve Gol %10 dar, aradaki genişlik Kart/Ofsayt'a (18 / 18 / 20 / 24 / 20) */
+#detailSheet.an-mode:not(.an-nba) #detailTabs button[data-tab="summary"],
+#detailSheet.an-mode:not(.an-nba) #detailTabs button[data-tab="stats"] { flex-grow: .9; }
+#detailSheet.an-mode:not(.an-nba) #detailTabs button[data-tab="odds"] { flex-grow: 1.2; }
+
 /* NBA'de dört sekme: Yorumlar yerindeki gizli */
 #detailSheet.an-nba #detailTabs button[data-tab="comments"] { display: none; }
 
