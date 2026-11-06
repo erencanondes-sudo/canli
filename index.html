@@ -3484,15 +3484,15 @@ body.has-layer .ac-kapa svg {
 
 
 /* ---------- Analiz kartı: yeni parçalar ---------- */
-/* Tercih türüne göre renk (sol şerit ve zemin) */
-.an-pick { border-left-width: .22em; }
-.an-pick.t-blue   { background: #f3f7fd; border-color: #c5d6ee; border-left-color: #1b56b5; }
-.an-pick.t-green  { background: #f1f9f5; border-color: #bbded0; border-left-color: #0c7a58; }
-.an-pick.t-yellow { background: #fcf8ec; border-color: #e3d09e; border-left-color: #c28216; }
-.an-pick.t-orange { background: #fcf6f1; border-color: #e5c9b3; border-left-color: #c05621; }
-.an-pick.t-purple { background: #f3f5fc; border-color: #c6d0eb; border-left-color: #2b3e8f; }
-.an-pick.t-teal   { background: #f1f9f9; border-color: #b8dcdc; border-left-color: #0d7477; }
-.an-pick.t-rose   { background: #faf4f7; border-color: #dec2ce; border-left-color: #8f2d56; }
+/* Tercih türüne göre renk (sağ şerit ve zemin) */
+.an-pick { border-right-width: .33em; }
+.an-pick.t-blue   { background: #f3f7fd; border-color: #c5d6ee; border-right-color: #1b56b5; }
+.an-pick.t-green  { background: #f1f9f5; border-color: #bbded0; border-right-color: #0c7a58; }
+.an-pick.t-yellow { background: #fcf8ec; border-color: #e3d09e; border-right-color: #c28216; }
+.an-pick.t-orange { background: #fcf6f1; border-color: #e5c9b3; border-right-color: #c05621; }
+.an-pick.t-purple { background: #f3f5fc; border-color: #c6d0eb; border-right-color: #2b3e8f; }
+.an-pick.t-teal   { background: #f1f9f9; border-color: #b8dcdc; border-right-color: #0d7477; }
+.an-pick.t-rose   { background: #faf4f7; border-color: #dec2ce; border-right-color: #8f2d56; }
 .an-pick.star-5   { box-shadow: inset 0 0 0 1px rgba(196, 132, 29, .3); }
 
 .an-conf {
@@ -8218,9 +8218,9 @@ function anProbHTML(prob, home, away) {
     const side = (cls, label, pct, fav) =>
         '<span class="cp-side ' + cls + (fav ? ' fav' : '') + '"><i class="cp-dot ' + cls + '"></i>' + label + ' <b>%' + pct + '</b></span>';
     return '<div class="an-prob"><div class="an-prob-labels">' +
-        side('h', (nba ? '' : 'MS 1 ') + e(home), pH, pH === top) +
+        side('h', ((nba ? '' : 'MS 1 ') + e(home)).trim(), pH, pH === top) +
         (nba ? '<span class="cp-mid">Kazanma İhtimali</span>' : side('d', 'X', pD, false)) +
-        side('a', (nba ? '' : 'MS 2 ') + e(away), pA, pA === top && pA > pH) +
+        side('a', ((nba ? '' : 'MS 2 ') + e(away)).trim(), pA, pA === top && pA > pH) +
         '</div><div class="an-prob-bar"><i class="h" style="width:' + pH + '%"></i>' +
         (nba ? '' : '<i class="d" style="width:' + pD + '%"></i>') +
         '<i class="a" style="width:' + pA + '%"></i></div></div>';
@@ -8284,7 +8284,8 @@ function anCard(m) {
                 '<small>Öne Çıkan Tercih</small><b></b><span class="an-stars">' + stars + '</span>' +
                 (conf ? '<span class="an-conf">' + conf + '</span>' : '') + odd + '</div>' +
         '</div>' +
-        anProbHTML(m.prob, teamLook(m.home).short, teamLook(m.away).short) +
+        /* Futbolda kartta takım kısaltması yazmaz (MS 1 %24); NBA'de yalnızca kısaltma var, kalır */
+        anProbHTML(m.prob, m.nba ? teamLook(m.home).short : '', m.nba ? teamLook(m.away).short : '') +
         anResultHTML(m.result) +
         '<div class="an-strip"><div class="an-chips">' + chips + '</div></div>' +
         '<div class="an-expand"><h4>📌 Maç Özeti</h4>' + extra +
