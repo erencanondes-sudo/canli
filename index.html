@@ -3038,11 +3038,11 @@ body.has-layer .ac-kapa svg {
 
 /* =====================================================
    ANALİZ SAYFASI
-   Gün satırı (bugünden 7 gün, birden çok seçilebilir) ve Ligler, arama, analiz kartları;
+   Gün satırı (bugün ve sonraki 3 gün, birden çok seçilebilir), Ligler, Başarı Karnesi, arama, analiz kartları;
    karta basınca açılır, "Detaylı Analiz" alttan açılan pencerede.
 ===================================================== */
 /*
- * Analiz gün satırı: solda 7 gün (yana kayar, 5'i görünür), sağda Ligler.
+ * Analiz gün satırı: solda 4 gün, sağda Ligler ve Başarı Karnesi; hepsi tek satıra sığar (kaymaz).
  * Gün düğmesinde üstte gün adı, altta analiz sayısı.
  */
 #anDayRow {
@@ -3057,11 +3057,11 @@ body.has-layer .ac-kapa svg {
     min-width: 0;
     display: flex;
     gap: .3em;
-    overflow-x: auto;
 }
 
 #anDayBox button {
-    flex: 0 0 calc((100% - 4 * .3em) / 5);
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3079,7 +3079,8 @@ body.has-layer .ac-kapa svg {
 }
 
 #anDayBox button,
-#anLeagueBtn {
+#anLeagueBtn,
+#anKarneBtn {
     height: 2.9em;
     padding: 0 .4em;
     border: .0625rem solid #d5d8de;
@@ -3092,7 +3093,21 @@ body.has-layer .ac-kapa svg {
 }
 
 #anLeagueBtn {
-    padding: 0 .8em;
+    padding: 0 .6em;
+}
+
+/* Başarı Karnesi: iki satır, yeşil */
+#anKarneBtn {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 .55em;
+    line-height: 1.1;
+    border-color: #bce0d2;
+    background: #e7f4ee;
+    color: #095c43;
 }
 
 #anDayBox button.active,
@@ -3370,7 +3385,7 @@ body.has-layer .ac-kapa svg {
 
 /*
  * DETAYLI ANALİZ: maç sayfası (Canlı Skor'daki) "analiz" düzeninde açılır.
- * Sekmeler Taraf / Gol / Korner / Kart / Ofsayt olur; normal içerik gizlenir.
+ * Sekmeler futbolda Taraf / Gol / Korner / Kart-Ofsayt / Benzer, NBA'de Taraf / Toplam / Oyuncu / Kadro olur; normal içerik gizlenir.
  */
 #detailSheet .an-pane {
     display: none;
@@ -3438,18 +3453,6 @@ body.has-layer .ac-kapa svg {
 
 #detailSheet .an-pane .stat-cmp-head .lbl { font-size: .96em; font-weight: 600; color: #6b7080; text-align: center; }
 
-#detailSheet .an-pane .stat-bar-track {
-    display: flex;
-    gap: 2px;
-    height: .45em;
-    overflow: hidden;
-    border-radius: .3em;
-    background: #eaecf0;
-}
-
-#detailSheet .an-pane .stat-bar-left  { background: #2563eb; }
-#detailSheet .an-pane .stat-bar-right { background: #10b981; }
-
 #detailSheet .an-pane .simple-notes {
     margin: 0;
     padding-left: 1.2em;
@@ -3478,17 +3481,522 @@ body.has-layer .ac-kapa svg {
 #detailSheet .an-pane .f-b { background: #9ca3af; }
 #detailSheet .an-pane .f-m { background: #dc2626; }
 
-#detailSheet .an-pane .score-pill {
+
+
+/* ---------- Analiz kartı: yeni parçalar ---------- */
+/* Tercih türüne göre renk (sol şerit ve zemin) */
+.an-pick { border-left-width: .22em; }
+.an-pick.t-blue   { background: #f3f7fd; border-color: #c5d6ee; border-left-color: #1b56b5; }
+.an-pick.t-green  { background: #f1f9f5; border-color: #bbded0; border-left-color: #0c7a58; }
+.an-pick.t-yellow { background: #fcf8ec; border-color: #e3d09e; border-left-color: #c28216; }
+.an-pick.t-orange { background: #fcf6f1; border-color: #e5c9b3; border-left-color: #c05621; }
+.an-pick.t-purple { background: #f3f5fc; border-color: #c6d0eb; border-left-color: #2b3e8f; }
+.an-pick.t-teal   { background: #f1f9f9; border-color: #b8dcdc; border-left-color: #0d7477; }
+.an-pick.t-rose   { background: #faf4f7; border-color: #dec2ce; border-left-color: #8f2d56; }
+.an-pick.star-5   { box-shadow: inset 0 0 0 1px rgba(196, 132, 29, .3); }
+
+.an-conf {
+    margin-top: .15em;
+    font-size: .7em;
+    font-weight: 700;
+    color: #6b7080;
+}
+
+.an-odd {
+    margin-top: .3em;
+    padding: .12em .65em;
+    border-radius: 99em;
+    background: #11253e;
+    font-size: .72em;
+    font-weight: 800;
+    color: #f4f7fb;
+    white-space: nowrap;
+}
+
+.an-pick.star-5 .an-odd { color: #fde68a; }
+
+/* Taraf ihtimalleri çubuğu (kartta ve Detaylı Analiz'de) */
+.an-prob {
+    margin-top: .7em;
+    padding: .5em .65em;
+    border: 1px solid #e3e8f0;
+    border-radius: .75em;
+    background: #f5f7fb;
+}
+
+.an-prob-labels {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .25em;
+    margin-bottom: .4em;
+    font-size: .74em;
+    font-weight: 700;
+    color: #6b7080;
+}
+
+.cp-side, .cp-mid { display: inline-flex; align-items: center; gap: .3em; white-space: nowrap; }
+
+.cp-side b {
+    padding: .1em .4em;
+    border-radius: .4em;
+    background: #e8eef5;
+    font-weight: 800;
+    color: #475569;
+}
+
+.cp-side.h b { background: #e6effc; color: #154596; }
+.cp-side.a b { background: #e5f4ed; color: #095e43; }
+.cp-side.h.fav b { background: #153e7e; color: white; }
+.cp-side.a.fav b { background: #0c7a58; color: white; }
+
+.cp-dot { width: .45em; height: .45em; border-radius: 50%; }
+.cp-dot.h { background: #1b56b5; }
+.cp-dot.d { background: #8c9bae; }
+.cp-dot.a { background: #0c7a58; }
+
+.an-prob-bar {
+    display: flex;
+    gap: .2em;
+    height: .45em;
+    padding: 1px;
+    border-radius: 99em;
+    background: #d7e1ee;
+    overflow: hidden;
+}
+
+.an-prob-bar i { height: 100%; border-radius: 99em; }
+.an-prob-bar .h { background: #1b56b5; }
+.an-prob-bar .d { background: #94a3b8; }
+.an-prob-bar .a { background: #0c7a58; }
+
+/* Sonuç: Tuttu / Tutmadı */
+.an-result {
     display: inline-block;
-    margin: 0 .3em .2em 0;
-    padding: .15em .6em;
-    border: 1px solid #cfe0ff;
+    margin-top: .5em;
+    padding: .2em .6em;
+    border: 1px solid;
+    border-radius: .5em;
+    font-size: .8em;
+    font-weight: 800;
+}
+
+.an-result span { font-weight: 700; opacity: .88; }
+.an-result.won  { background: #e3f5ed; border-color: #a7dcc5; color: #08583e; }
+.an-result.lost { background: #fceeef; border-color: #e9bfc4; color: #992230; }
+.an-result.done { background: #f1f3f7; border-color: #e3e8f0; color: #2d3f56; }
+
+/* Açılan kısım: kadro bilgisi, uyarılar, gerekçe ve sonucu */
+.an-lineup {
+    display: inline-block;
+    margin: .35em 0 .45em;
+    padding: .12em .55em;
     border-radius: .45em;
     background: #eef4ff;
-    font-size: .88em;
-    font-weight: 800;
+    font-size: .85em;
+    font-weight: 700;
     color: #1a56db;
 }
+
+.an-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35em;
+    margin: .4em 0;
+}
+
+.an-badges span {
+    padding: .15em .55em;
+    border: 1px solid #dfd0ae;
+    border-radius: .45em;
+    background: #f8f3e6;
+    font-size: .85em;
+    font-weight: 800;
+    color: #8c5d14;
+}
+
+.an-why {
+    margin: .5em 0 0;
+    line-height: 1.5;
+    color: #333;
+}
+
+.an-concl,
+#detailSheet .an-pane .why-concl {
+    margin-top: .55em;
+    padding: .55em .7em;
+    border: 1px solid #c3e3d5;
+    border-left: .22em solid #0c7a58;
+    border-radius: .65em;
+    background: #eef8f3;
+    font-weight: 600;
+    line-height: 1.5;
+    color: #1d2340;
+}
+
+.an-concl b, #detailSheet .an-pane .why-concl b { color: #084c37; }
+
+.an-muted { margin: .3em 0; font-size: .9em; font-weight: 600; color: #6b7080; }
+
+.an-foot {
+    margin: .6em 0 0;
+    font-size: .85em;
+    font-weight: 600;
+    line-height: 1.45;
+    color: #6b7080;
+}
+
+/* ---------- Detaylı Analiz: yeni bölümler ---------- */
+/* NBA'de dört sekme: Yorumlar yerindeki gizli */
+#detailSheet.an-nba #detailTabs button[data-tab="comments"] { display: none; }
+
+#detailSheet .an-pane .p-box.full { grid-column: 1 / -1; }
+
+#detailSheet .an-pane .sec-divider { height: 1px; margin: .7em 0; background: #e5e8f0; }
+
+#detailSheet .an-pane .why-card { border-left: .22em solid #1b56b5; }
+#detailSheet .an-pane .why-card .sec-title { color: #1b56b5; }
+
+#detailSheet .an-pane .why-text { margin: 0; line-height: 1.55; color: #1d2340; }
+#detailSheet .an-pane .why-text b { color: #0d1c30; }
+
+#detailSheet .an-pane .why-sub {
+    margin: 0 0 .35em;
+    font-size: .85em;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #1b56b5;
+}
+
+#detailSheet .an-pane .react-card {
+    border-color: #dfd3b5;
+    border-left: .22em solid #c4841d;
+    background: #f6f3ea;
+}
+
+#detailSheet .an-pane .react-card .sec-title { color: #8c5d14; }
+#detailSheet .an-pane .react-card ul { margin: 0; padding-left: 1.2em; line-height: 1.45; color: #2d2618; }
+#detailSheet .an-pane .react-card li { margin-bottom: .25em; }
+
+/* Son 5 maç */
+#detailSheet .an-pane .hist-team + .hist-team { margin-top: .8em; }
+
+#detailSheet .an-pane .hist-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5em;
+    margin-bottom: .4em;
+    padding: .45em .65em;
+    border: 1px solid #d5e0ee;
+    border-radius: .6em;
+    background: #ecf2f9;
+}
+
+#detailSheet .an-pane .hist-head.away { border-color: #cce0d9; background: #eaf4f0; }
+
+#detailSheet .an-pane .hist-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 800;
+    color: #1d2340;
+}
+
+#detailSheet .an-pane .hist-name small { margin-left: .4em; font-size: .85em; font-weight: 700; color: #6b7080; }
+#detailSheet .an-pane .hist-sum { font-size: .88em; font-weight: 800; color: #0d1c30; white-space: nowrap; }
+#detailSheet .an-pane .hist-line { padding: 0 .15em .4em; font-size: .88em; font-weight: 600; line-height: 1.45; color: #2d3f56; }
+
+#detailSheet .an-pane .hist-row {
+    display: grid;
+    grid-template-columns: 3em 1fr auto auto;
+    align-items: center;
+    gap: .5em;
+    padding: .4em .25em;
+    border-bottom: 1px solid #eef0f4;
+    font-size: .92em;
+}
+
+#detailSheet .an-pane .hist-row:last-child { border-bottom: none; }
+#detailSheet .an-pane .hist-date { font-size: .92em; font-weight: 700; color: #6b7080; }
+
+#detailSheet .an-pane .hist-opp {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    color: #1d2340;
+}
+
+#detailSheet .an-pane .hist-opp small { margin-right: .3em; font-weight: 800; color: #6b7080; }
+
+#detailSheet .an-pane .hist-score,
+#detailSheet .an-pane .h-tag {
+    padding: .1em .45em;
+    border: 1px solid #e3e8f0;
+    border-radius: .4em;
+    background: #f1f3f7;
+    font-weight: 800;
+    color: #1d2340;
+    white-space: nowrap;
+}
+
+#detailSheet .an-pane .hist-metric { display: inline-flex; gap: .25em; font-size: .92em; font-weight: 700; color: #2d3f56; white-space: nowrap; }
+#detailSheet .an-pane .h-tag { font-size: .85em; font-style: normal; color: #8c9bae; }
+#detailSheet .an-pane .h-tag.on { border-color: #b8dad0; background: #e6f3ef; color: #0b5340; }
+
+/* Benzer oranlı maçlar */
+#detailSheet .an-pane .sim-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4em;
+    margin-bottom: .6em;
+    font-weight: 800;
+    color: #1d2340;
+}
+
+#detailSheet .an-pane .sim-odd-chips { display: flex; gap: .3em; }
+
+#detailSheet .an-pane .sim-odd-chips i {
+    padding: .1em .5em;
+    border: 1px solid #dfd0ae;
+    border-radius: .4em;
+    background: #f8f3e6;
+    font-size: .9em;
+    font-style: normal;
+    font-weight: 800;
+    color: #8c5d14;
+}
+
+#detailSheet .an-pane .sim-odd-chips b { margin-right: .2em; color: #a17837; }
+
+#detailSheet .an-pane .sim-row {
+    margin-bottom: .5em;
+    padding: .6em .7em;
+    border: 1px solid #e3e8f0;
+    border-radius: .75em;
+    background: #f5f7fb;
+}
+
+#detailSheet .an-pane .sim-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: .4em;
+    font-size: .88em;
+    font-weight: 700;
+    color: #6b7080;
+}
+
+#detailSheet .an-pane .sim-meta span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#detailSheet .an-pane .sim-odds { flex: none; font-weight: 800; color: #8c5d14; }
+
+#detailSheet .an-pane .sim-score {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: .5em;
+    margin: .4em 0 .45em;
+}
+
+#detailSheet .an-pane .sim-score span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 800;
+    color: #1d2340;
+}
+
+#detailSheet .an-pane .sim-score .away { text-align: right; }
+
+#detailSheet .an-pane .sim-score b {
+    padding: .15em .55em;
+    border-radius: .45em;
+    background: #0d1c30;
+    font-weight: 800;
+    color: white;
+    white-space: nowrap;
+}
+
+#detailSheet .an-pane .sim-score em {
+    padding: .15em .45em;
+    border-radius: .4em;
+    font-size: .85em;
+    font-style: normal;
+    font-weight: 800;
+    color: white;
+    white-space: nowrap;
+}
+
+#detailSheet .an-pane .ms-1 { background: #1b56b5; }
+#detailSheet .an-pane .ms-X { background: #7c8ba1; }
+#detailSheet .an-pane .ms-2 { background: #0c7a58; }
+
+#detailSheet .an-pane .sim-stats,
+#detailSheet .an-pane .sim-sum { display: flex; flex-wrap: wrap; gap: .35em; }
+
+#detailSheet .an-pane .sim-stat,
+#detailSheet .an-pane .sim-sum span {
+    display: inline-flex;
+    align-items: center;
+    gap: .25em;
+    padding: .15em .5em;
+    border: 1px solid #e3e8f0;
+    border-radius: .45em;
+    background: white;
+    font-size: .88em;
+    font-weight: 700;
+    color: #1d2340;
+}
+
+#detailSheet .an-pane .sim-stat i { font-style: normal; color: #6b7080; }
+
+/* NBA: oyuncu tercihleri, eksik oyuncular */
+#detailSheet .an-pane .prop-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .4em;
+    padding: .45em 0;
+    border-top: 1px solid #eef0f4;
+}
+
+#detailSheet .an-pane .prop-row:first-of-type { border-top: none; }
+#detailSheet .an-pane .prop-name { font-weight: 800; color: #1d2340; }
+#detailSheet .an-pane .prop-sub { font-size: .9em; font-weight: 700; color: #6b7080; }
+
+#detailSheet .an-pane .prop-pick {
+    align-self: center;
+    padding: .2em .55em;
+    border: 1px solid #c9d8ec;
+    border-radius: .45em;
+    background: #e8eff8;
+    font-weight: 800;
+    color: #1b56b5;
+    white-space: nowrap;
+}
+
+#detailSheet .an-pane .team-sub-title { margin: .2em 0 .15em; font-weight: 800; color: #1d2340; }
+
+#detailSheet .an-pane .inj-row {
+    display: flex;
+    justify-content: space-between;
+    gap: .4em;
+    padding: .3em 0;
+    border-top: 1px solid #eef0f4;
+}
+
+#detailSheet .an-pane .inj-name { font-weight: 800; color: #1d2340; }
+#detailSheet .an-pane .inj-st { font-weight: 800; color: #a62634; white-space: nowrap; }
+#detailSheet .an-pane .inj-st.q { color: #9a5b13; }
+
+/* ---------- Başarı Karnesi (alttan açılır) ---------- */
+#karneBox {
+    position: fixed;
+    inset: 0;
+    z-index: 46;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(0, 0, 0, .25);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .18s ease, visibility 0s linear .18s;
+}
+
+#karneBox.open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .18s ease, visibility 0s;
+}
+
+#karneSheet {
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 0 1rem 1.25rem;
+    border-radius: 1rem 1rem 0 0;
+    background: #f4f5f7;
+    font-size: .875rem;
+    color: #1d2340;
+    transform: translateY(100%);
+    transition: transform .22s ease;
+}
+
+#karneBox.open #karneSheet { transform: none; }
+
+#karneHead {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .9em 0 .6em;
+    background: #f4f5f7;
+    font-size: 1.05em;
+}
+
+#karneClose {
+    padding: .3em .7em;
+    border: none;
+    border-radius: .6em;
+    background: #e9ebf0;
+    font-size: .9em;
+    font-weight: 800;
+    color: #1d2340;
+}
+
+.karne-part {
+    margin-bottom: .8em;
+    padding: .8em .9em;
+    border: 1px solid #e5e8f0;
+    border-radius: .9em;
+    background: white;
+}
+
+.karne-title { font-weight: 800; }
+
+.karne-big { display: flex; align-items: baseline; gap: .5em; margin: .3em 0 .5em; }
+.karne-big b { font-size: 1.8em; font-weight: 800; color: #0c7a58; }
+.karne-big span { font-weight: 700; color: #2d3f56; }
+
+.karne-sub {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: .2em;
+    font-size: .85em;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #6b7080;
+}
+
+.karne-row {
+    display: grid;
+    grid-template-columns: 1fr 4.5em 3em;
+    align-items: center;
+    gap: .2em .5em;
+    padding: .45em 0;
+    border-top: 1px solid #eef0f4;
+}
+
+.karne-row span { font-weight: 800; }
+.karne-row small { font-weight: 700; color: #6b7080; text-align: right; }
+.karne-row b { text-align: right; }
+.karne-row b.hi { color: #0f6952; }
+.karne-row b.mid { color: #9a5b13; }
+.karne-row b.lo { color: #9e2a35; }
+
+.karne-row > i {
+    grid-column: 1 / -1;
+    height: .3em;
+    border-radius: .2em;
+    background: #e3e8f0;
+    overflow: hidden;
+}
+
+.karne-row > i i { display: block; height: 100%; background: #0c7a58; }
 /* =====================================================
    GOL BİLDİRİMİ (uygulama içi): en üstte, tam genişlik, 100px
 ===================================================== */
@@ -3882,13 +4390,14 @@ body.has-layer .ac-kapa svg {
                 <p class="home-empty">Ai kuponları yakında burada olacak.</p>
             </div>
             <div class="home-page" data-page="analysis">
-                <!-- Gün satırı: bugünden 7 gün (altında analiz sayısı), sağda Ligler -->
+                <!-- Gün satırı: bugün ve sonraki 3 gün (altında analiz sayısı), sağda Ligler ve Başarı Karnesi; hepsi tek satır -->
                 <div id="anDayRow">
                     <div id="anDayBox"></div>
                     <div class="league-filter" id="anLeagueFilter">
                         <button class="tb-league" id="anLeagueBtn">Ligler <span class="caret">▾</span></button>
                         <div class="league-menu" id="anLeagueMenu"></div>
                     </div>
+                    <button id="anKarneBtn"><span>Başarı</span><span>Karnesi</span></button>
                 </div>
                 <label id="anSearchBox" class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -3965,6 +4474,14 @@ body.has-layer .ac-kapa svg {
 </div>
 
 <!-- RUMUZ PENCERESİ: ilk girişte rumuz ve kurallar, sonra rumuz değiştirme -->
+<!-- Başarı Karnesi: alttan açılır (futbol ve NBA birlikte) -->
+<div id="karneBox" role="dialog" aria-modal="true">
+    <div id="karneSheet">
+        <div id="karneHead"><b>Başarı Karnesi</b><button id="karneClose" aria-label="Kapat">✕</button></div>
+        <div id="karneBody"></div>
+    </div>
+</div>
+
 <div id="profileBox" role="dialog" aria-modal="true">
     <div id="profileCard">
         <p class="pf-title">Rumuz</p>
@@ -6354,6 +6871,7 @@ document.querySelectorAll('.sport-btn').forEach(button => {
             b.classList.toggle('active', b === button);
         });
         renderLive();
+        anSportChanged();
     });
 });
 
@@ -7307,12 +7825,20 @@ function renderOdds() {
    ANALİZ
    -------------------------------------------------
    Veri: yönetim sayfasının yazdığı dokümanlar (sunucu/VERITABANI.md → "Analiz").
-   Sekme ilk açılınca analiz_dizin/futbol (gün ve lig sayıları) ve seçili günün analiz_gun
+   Sekme ilk açılınca analiz_dizin/futbol (gün ve lig sayıları, başarı karnesi) ve seçili günün analiz_gun
    dokümanı okunur; lig seçilince analiz_lig, Detaylı Analiz'e basınca analiz_futbol/{no}.
+   Üstte basketbol seçiliyse NBA: analiz_dizin/nba, analiz_nba_gun, analiz_nba_lig, analiz_nba/{no}.
 ================================================= */
 
 /* Sekme açıldı mı (açılmadan okuma yapılmaz) */
 let anShown = false;
+
+/* Seçili spora göre doküman adları */
+const AN_DOCS = {
+    football: { dizin: 'analiz_dizin/futbol', gun: 'analiz_gun/', lig: 'analiz_lig/', mac: 'analiz_futbol' },
+    basketball: { dizin: 'analiz_dizin/nba', gun: 'analiz_nba_gun/', lig: 'analiz_nba_lig/', mac: 'analiz_nba' }
+};
+const anDocs = () => AN_DOCS[sport] || AN_DOCS.football;
 
 /* Lig dokümanının adı: "/" kullanılamaz */
 function anLeagueKey(name) {
@@ -7324,12 +7850,72 @@ function anDayOf(ts) {
     return new Date((ts - 4 * 3600) * 1000).toISOString().slice(0, 10);
 }
 
-/* Bir doküman okununca gün düğmeleri, lig menüsü ve liste yeniden çizilir */
+/* Bir doküman okununca gün düğmeleri, lig menüsü, liste ve (açıksa) başarı karnesi yeniden çizilir */
 function anRedraw() {
     renderAnDays();
     buildAnLeagueMenu();
     renderAnalysis();
+    if (karneBox.classList.contains('open'))
+        renderKarne();
 }
+
+/*
+ * BAŞARI KARNESİ: futbol ve NBA, öne çıkan tercihin genel tutma oranı ve tercih türlerine göre
+ * (analiz dosyasındaki basari_karnesi; yönetim sayfası analiz_dizin/futbol'a yazar). Alttan açılır.
+ */
+const karneBox = document.getElementById('karneBox');
+const KARNE_NAMES = {
+    goals_over: 'Gol Üst', goals_under: 'Gol Alt', ms: 'Maç Sonucu', btts: 'Karşılıklı Gol', corners: 'Toplam Korner',
+    team_corners: 'Takım Korneri', cards: 'Kart', offsides: 'Ofsayt',
+    total_under: 'Toplam Alt', total_over: 'Toplam Üst', spread: 'Handikap', ml: 'Kazanır (MS)', prop: 'Oyuncu Tercihi'
+};
+
+function karnePart(title, part) {
+    part = part || {};
+    const [won, all] = part.t1 || [0, 0];
+    const pct = all ? Math.round(won / all * 100) : null;
+    const rows = Object.entries(part.markets || {}).filter(([, v]) => v && v[1] > 0)
+        .sort((a, b) => b[1][0] / b[1][1] - a[1][0] / a[1][1])
+        .map(([key, [w, n]]) => {
+            const p = Math.round(w / n * 100);
+            return '<div class="karne-row"><span>' + escapeHTML(KARNE_NAMES[key] || key) + '</span><small>' + w + '/' + n + '</small>' +
+                '<b class="' + (p >= 70 ? 'hi' : p >= 55 ? 'mid' : 'lo') + '">%' + p + '</b><i><i style="width:' + p + '%"></i></i></div>';
+        }).join('');
+    return '<div class="karne-part"><div class="karne-title">' + title + '</div>' +
+        '<div class="karne-big"><b>' + (pct == null ? '–' : '%' + pct) + '</b><span>' + won + ' / ' + all + ' öne çıkan tercih tuttu</span></div>' +
+        (rows ? '<div class="karne-sub">Tercih türüne göre <span>Tutan / Toplam</span></div>' + rows : '<p class="an-muted">Henüz sonuçlanmış maç yok.</p>') + '</div>';
+}
+
+function renderKarne() {
+    const body = document.getElementById('karneBody');
+    const k = anKarne();
+    body.innerHTML = k === undefined ? '<p class="an-muted">Yükleniyor…</p>'
+        : !k ? '<p class="an-muted">Başarı karnesi verisi yok.</p>'
+        : karnePart('⚽ Futbol', k) + karnePart('🏀 NBA', k.nba) +
+          '<p class="an-foot">Yalnızca sonuçlanmış maçlar sayılır. 5★ yalnızca geçmiş isabeti %70 ve üzeri (en az 10 maç) olan tercih türlerinde verilir.</p>';
+}
+
+function hideKarne() {
+    karneBox.classList.remove('open');
+}
+
+document.getElementById('anKarneBtn').addEventListener('click', () => {
+    renderKarne();
+    karneBox.classList.add('open');
+    layerOpened('karne');
+});
+
+document.getElementById('karneClose').addEventListener('click', () => {
+    hideKarne();
+    layerClosed('karne');
+});
+
+karneBox.addEventListener('click', event => {
+    if (event.target !== karneBox)
+        return;
+    hideKarne();
+    layerClosed('karne');
+});
 
 /*
  * ANALİZ SÜRÜMÜ (RTDB analiz_surum): yönetim sayfası her yüklemede yazar. Sayfa açılınca bugünün
@@ -7368,8 +7954,8 @@ function saveAnDoc(path, data) {
     Object.keys(anStore.docs).forEach(key => {
         const [collection, id] = key.split('/');
         const doc = anStore.docs[key] || {};
-        if ((collection === 'analiz_gun' && id < TODAY) ||
-            (collection === 'analiz_futbol' && doc.ts && doc.ts * 1000 < Date.now() - 86400000))
+        if (((collection === 'analiz_gun' || collection === 'analiz_nba_gun') && id < TODAY) ||
+            ((collection === 'analiz_futbol' || collection === 'analiz_nba') && doc.ts && doc.ts * 1000 < Date.now() - 86400000))
             delete anStore.docs[key];
     });
     writeJSON(AN_STORE_KEY, anStore);
@@ -7388,31 +7974,40 @@ function anDoc(path) {
     });
 }
 
-/* Dizin: { gunler: { gün: sayı }, ligler: { lig: sayı } } */
+/* Dizin: { gunler: { gün: sayı }, ligler: { lig: sayı } } (seçili spor) */
 function anIndex() {
-    return anDoc('analiz_dizin/futbol');
+    return anDoc(anDocs().dizin);
+}
+
+/* Başarı karnesi (futbol ve NBA birlikte) futbol dizinindedir */
+function anKarne() {
+    const index = anDoc(AN_DOCS.football.dizin);
+    return index === undefined ? undefined : (index.karne || null);
 }
 
 /*
  * Gösterilecek analizler (okunuyorsa null): seçili günlerin maçları. Lig seçiliyse seçilen liglerin
- * dokümanlarından, değilse seçili günlerin dokümanlarından. Biten maçlar (başlayalı 2 saatten fazla) listelenmez.
+ * dokümanlarından, değilse seçili günlerin dokümanlarından. Başlayalı 2 saati geçen maç, sonucu yoksa listelenmez
+ * (sonucu geldiyse Tuttu / Tutmadı ile kalır).
  */
 function anMatches() {
 
+    const names = anDocs();
+    const nba = sport === 'basketball';
     const docs = anLeagues.size
-        ? Array.from(anLeagues).map(name => anDoc('analiz_lig/' + anLeagueKey(name)))
-        : Array.from(anDays).map(day => anDoc('analiz_gun/' + day));
+        ? Array.from(anLeagues).map(name => anDoc(names.lig + anLeagueKey(name)))
+        : Array.from(anDays).map(day => anDoc(names.gun + day));
 
     if (docs.some(data => data === undefined))
         return null;
 
     const list = new Map();
     docs.forEach(data => Object.entries(data).forEach(([id, m]) => {
-        list.set(id, { ...m, key: id, day: anDayOf(m.ts) });
+        list.set(id, { ...m, key: id, day: anDayOf(m.ts), nba: nba });
     }));
 
     return Array.from(list.values()).filter(m =>
-        m.ts * 1000 + 2 * 3600000 > Date.now() && anDays.has(m.day));
+        (m.result || m.ts * 1000 + 2 * 3600000 > Date.now()) && anDays.has(m.day));
 }
 
 /* Analiz metinlerindeki kalın yazı (<b>) dışında hiçbir etiket çalışmaz */
@@ -7473,15 +8068,14 @@ function AN_FLAG(league) {
 /* Seçili günler: açılışta bugün; basınca eklenir, seçili olana basınca çıkar */
 const anDays = new Set([TODAY]);
 
-/* Bugün ve sonraki 6 gün */
+/* Bugün ve sonraki 3 gün */
 function anDayKeys() {
-    return Array.from({ length: 7 }, (_, i) => dayShift(i));
+    return Array.from({ length: 4 }, (_, i) => dayShift(i));
 }
 
 function renderAnDays() {
 
     const box = document.getElementById('anDayBox');
-    const scroll = box.scrollLeft;
     box.textContent = '';
 
     const index = anIndex();
@@ -7512,9 +8106,6 @@ function renderAnDays() {
         });
         box.appendChild(button);
     });
-
-    /* Yeniden çizilince kaydırma yerinde kalır */
-    box.scrollLeft = scroll;
 }
 
 /* Ligler: analizdeki ligler, işaret kutulu (boşsa hepsi) */
@@ -7579,30 +8170,120 @@ anLeagueBtn.addEventListener('click', () => {
 
 document.getElementById('anSearch').addEventListener('input', renderAnalysis);
 
-/* Analiz kartı: üstte lig ve tarih, ortada takımlar ve öne çıkan tercih,
-   altta korner / kart / ofsayt; basınca açılır */
+/* Spor değişince ligler sıfırlanır (her sporun kendi ligleri), liste o sporun dokümanlarından */
+function anSportChanged() {
+    anLeagues.clear();
+    anLeagueMenuFor = null;
+    anLeagueMenu.textContent = '';
+    anLeagueBtn.firstChild.textContent = 'Ligler ';
+    anLeagueBtn.classList.remove('active');
+    anRedraw();
+}
+
+/* Tercih türünün rengi (kart ve tercih kutusu): pazar adı (market) ya da tercihin metninden */
+function anTheme(pick, market) {
+    const u = String(pick || '').toLocaleUpperCase('tr');
+    const mk = String(market || '').toLowerCase();
+    if (u.includes('KART') || mk === 'cards') return 't-yellow';
+    if (u.includes('KG ') || u.includes('KARŞILIKLI GOL') || mk === 'btts') return 't-green';
+    if (u.includes('KORNER') || mk === 'corners' || mk === 'team_corners') return 't-orange';
+    if (mk === 'spread' || u.includes('HANDİKAP')) return 't-teal';
+    if (mk === 'offsides' || mk === 'prop' || u.includes('OFSAYT')) return 't-rose';
+    if (mk === 'ms' || mk === 'ml' || u.startsWith('MS ') || u.includes('KAZANIR')) return 't-purple';
+    return 't-blue';
+}
+
+/* Güven: yıldız sayısından */
+function anConf(stars) {
+    return stars >= 5 ? 'Çok Yüksek Güven' : stars === 4 ? 'Yüksek Güven' : stars ? 'Orta Güven' : '';
+}
+
+/*
+ * Taraf ihtimalleri çubuğu: prob futbolda [ev, beraberlik, dep], NBA'de [ev, dep] (yüzde).
+ * Kısaltmalar takım adından (analiz dosyasında varsa onun kısaltması).
+ */
+function anProbHTML(prob, home, away) {
+    if (!Array.isArray(prob) || prob.length < 2)
+        return '';
+    const e = escapeHTML;
+    const r = v => Math.round(Number(v) || 0);
+    const nba = prob.length === 2;
+    const [pH, pD, pA] = nba ? [r(prob[0]), 0, r(prob[1])] : prob.map(r);
+    const top = Math.max(pH, pD, pA);
+    const side = (cls, label, pct, fav) =>
+        '<span class="cp-side ' + cls + (fav ? ' fav' : '') + '"><i class="cp-dot ' + cls + '"></i>' + label + ' <b>%' + pct + '</b></span>';
+    return '<div class="an-prob"><div class="an-prob-labels">' +
+        side('h', (nba ? '' : 'MS 1 ') + e(home), pH, pH === top) +
+        (nba ? '<span class="cp-mid">Kazanma İhtimali</span>' : side('d', 'X', pD, false)) +
+        side('a', (nba ? '' : 'MS 2 ') + e(away), pA, pA === top && pA > pH) +
+        '</div><div class="an-prob-bar"><i class="h" style="width:' + pH + '%"></i>' +
+        (nba ? '' : '<i class="d" style="width:' + pD + '%"></i>') +
+        '<i class="a" style="width:' + pA + '%"></i></div></div>';
+}
+
+/* Maç bittiyse: Tuttu / Tutmadı, skor ve korner, kart, ofsayt */
+function anResultHTML(res) {
+    if (!res)
+        return '';
+    const e = escapeHTML;
+    const cls = res.won === true ? 'won' : res.won === false ? 'lost' : 'done';
+    const text = res.won === true ? '✓ Tuttu' : res.won === false ? '✕ Tutmadı' : 'Tamamlandı';
+    const more = [['Korner', res.corners], ['Kart', res.cards], ['Ofsayt', res.offsides]]
+        .filter(([, v]) => v).map(([k, v]) => k + ' ' + e(v));
+    return '<div class="an-result ' + cls + '">' + text + ' · Skor ' + e(res.score) +
+        (more.length ? ' <span>· ' + more.join(' · ') + '</span>' : '') + '</div>';
+}
+
+/* Gerekçeler: birden çoksa sonuncusu sonuç kutusunda (analiz dosyasındaki <b> kalın yazılır) */
+function anReasonsHTML(list) {
+    list = (list || []).filter(Boolean);
+    if (list.length < 2)
+        return '<ul class="an-reasons">' + list.map(r => '<li>' + boldHTML(r) + '</li>').join('') + '</ul>';
+    return '<p class="an-why">' + list.slice(0, -1).map(boldHTML).join(' ') + '</p>' +
+        '<div class="an-concl">' + boldHTML(list[list.length - 1]) + '</div>';
+}
+
+/* Analiz kartı: üstte lig ve tarih, ortada takımlar ve öne çıkan tercih, altında taraf ihtimalleri,
+   (bittiyse) sonuç ve beklenti şeridi (futbol: korner / kart / ofsayt, NBA: toplam / handikap / oyuncu); basınca açılır */
 function anCard(m) {
 
     const card = document.createElement('div');
     card.className = 'an-card';
     card.setAttribute('role', 'button');
 
+    const e = escapeHTML;
     const starCount = Math.max(0, Math.min(5, Number(m.stars) || 0));
     const stars = '★'.repeat(starCount) + '<i>' + '★'.repeat(5 - starCount) + '</i>';
+    const odd = Number(m.featured_odd) ? '<span class="an-odd">Oran ' + Number(m.featured_odd).toFixed(2) + '</span>' : '';
+    const conf = anConf(starCount);
+
+    const chip = (label, value) => '<span class="an-chip"><span>' + label + '</span> <em>' + e(value ?? '–') + '</em></span>';
+    const c = m.chips || {};
+    const chips = m.nba
+        ? chip('Toplam:', c.total) + chip('Handikap:', c.spread) + (c.prop ? chip('Oyuncu:', c.prop) : '')
+        : chip('🚩 Korner:', m.corner_chip) +
+          '<span class="an-chip"><span class="an-yellow"></span> <span>Kart:</span> <em>' + e(m.card_chip ?? '–') + '</em></span>' +
+          '<span class="an-chip"><span class="an-offside"></span> <span>Ofsayt:</span> <em>' + e(m.offside_chip ?? '–') + '</em></span>';
+
+    const extra = m.nba
+        ? ((m.badges || []).length ? '<div class="an-badges">' + m.badges.map(b => '<span>' + e(b) + '</span>').join('') + '</div>' : '')
+        : (m.lineup_label ? '<span class="an-lineup">' + e(m.lineup_label) + '</span>' : '') +
+          '<div class="an-subs">' + (m.sub_boxes || []).map(b =>
+              '<div class="an-sub"><span>' + e(b.label) + '</span><b>' + e(b.val ?? '–') + '</b></div>').join('') + '</div>';
 
     card.innerHTML =
         '<div class="an-head"><span class="oc-league"></span><span class="an-when"></span></div>' +
         '<div class="an-body">' +
             '<div class="an-teams"><div class="an-team" data-side="home"></div><div class="an-team" data-side="away"></div></div>' +
-            '<div class="an-pick"><small>Öne Çıkan Tercih</small><b></b><span class="an-stars">' + stars + '</span></div>' +
+            '<div class="an-pick ' + anTheme(m.featured_pick, m.market) + (starCount === 5 ? ' star-5' : '') + '">' +
+                '<small>Öne Çıkan Tercih</small><b></b><span class="an-stars">' + stars + '</span>' +
+                (conf ? '<span class="an-conf">' + conf + '</span>' : '') + odd + '</div>' +
         '</div>' +
-        '<div class="an-strip"><div class="an-chips">' +
-            '<span class="an-chip"><span>🚩 Korner:</span> <em></em></span>' +
-            '<span class="an-chip"><span class="an-yellow"></span> <span>Kart:</span> <em></em></span>' +
-            '<span class="an-chip"><span class="an-offside"></span> <span>Ofsayt:</span> <em></em></span>' +
-        '</div></div>' +
-        '<div class="an-expand"><h4>📌 Maç Analizi & Taktik Nedenler:</h4>' +
-            '<ul class="an-reasons"></ul><div class="an-subs"></div>' +
+        anProbHTML(m.prob, teamLook(m.home).short, teamLook(m.away).short) +
+        anResultHTML(m.result) +
+        '<div class="an-strip"><div class="an-chips">' + chips + '</div></div>' +
+        '<div class="an-expand"><h4>📌 Maç Özeti</h4>' + extra +
+            anReasonsHTML(m.nba ? m.reasons : m.card_reasons) +
             '<button class="an-deep">📊 Detaylı Analiz</button></div>';
 
     /* Solda bayrak ve lig adı (silik), sağda tarih ve saat: Oranlar kartı gibi */
@@ -7622,24 +8303,6 @@ function anCard(m) {
     });
 
     card.querySelector('.an-pick b').textContent = m.featured_pick;
-
-    const chips = card.querySelectorAll('.an-chip em');
-    chips[0].textContent = m.corner_chip;
-    chips[1].textContent = m.card_chip;
-    chips[2].textContent = m.offside_chip;
-
-    /* Gerekçeler analiz dosyasından geliyor (kalın yazılar için <b> içerir) */
-    card.querySelector('.an-reasons').innerHTML = (m.card_reasons || []).map(r => '<li>' + boldHTML(r) + '</li>').join('');
-
-    const subs = card.querySelector('.an-subs');
-    (m.sub_boxes || []).forEach(box => {
-        const el = document.createElement('div');
-        el.className = 'an-sub';
-        el.innerHTML = '<span></span><b></b>';
-        el.querySelector('span').textContent = box.label;
-        el.querySelector('b').textContent = box.val;
-        subs.appendChild(el);
-    });
 
     /* Aynı anda tek kart açık */
     /*
@@ -7787,210 +8450,314 @@ function renderAnalysis() {
 
 /* DETAYLI ANALİZ penceresi: maçın dokümanı (analiz_futbol/{no}) basınca bir kez okunur */
 let anSheetKey = null;
-const anDetails = new Map();   /* maç no → doküman */
+const anDetails = new Map();   /* "analiz_futbol/maç no" → doküman */
 
 function anFormDots(arr) {
-    return '<span class="form-dots">' + (arr || []).map(x => {
+    if (!arr || !arr.length)
+        return '<span class="an-muted">Veri yok</span>';
+    return '<span class="form-dots">' + arr.map(x => {
         const cls = x === 'G' ? 'f-g' : (x === 'B' ? 'f-b' : 'f-m');
         return '<span class="f-dot ' + cls + '">' + escapeHTML(x) + '</span>';
     }).join('') + '</span>';
 }
 
+/* Analiz bölmeleri için küçük parçalar */
+const anNum1 = v => v == null || v === '' ? '–' : Number(v).toFixed(1);
+const anNum2 = v => v == null || v === '' ? '–' : Number(v).toFixed(2);
+const anVal = v => v == null || v === '' ? 'Veri yok' : v;
+
+function anBox(cls, label, value, full) {
+    return '<div class="p-box ' + cls + (full ? ' full' : '') + '"><span class="p-lbl">' + label +
+        '</span><span class="p-val">' + escapeHTML(anVal(value)) + '</span></div>';
+}
+
+function anNotes(list) {
+    list = (list || []).filter(Boolean);
+    return list.length ? '<ul class="simple-notes">' + list.map(n => '<li>' + boldHTML(n) + '</li>').join('') + '</ul>'
+        : '<p class="an-muted">Not yok.</p>';
+}
+
+/* Neden bu tercih: son satır sonuç kutusunda. plain: kart içinde alt başlık olarak */
+function anWhy(lines, title, plain) {
+    lines = (lines || []).filter(Boolean);
+    if (!lines.length)
+        return '';
+    const body = '<p class="why-text">' + (lines.length > 1 ? lines.slice(0, -1) : lines).map(boldHTML).join(' ') + '</p>' +
+        (lines.length > 1 ? '<div class="why-concl">' + boldHTML(lines[lines.length - 1]) + '</div>' : '');
+    if (plain)
+        return '<div class="why-sub">' + title + '</div>' + body;
+    return '<div class="sec-card why-card"><div class="sec-title"><span>' + (title || 'Neden Bu Tercih?') + '</span></div>' + body + '</div>';
+}
+
+/* Skor durumuna tepki (son 10 maç) */
+function anReact(lines) {
+    lines = (lines || []).filter(Boolean);
+    if (!lines.length)
+        return '';
+    return '<div class="sec-card react-card"><div class="sec-title"><span>Skor Durumuna Tepki</span><span>Son 10 Maç</span></div>' +
+        '<ul>' + lines.map(l => '<li>' + boldHTML(l) + '</li>').join('') + '</ul></div>';
+}
+
+/*
+ * Son 5 maç (gecmis: { h: [...], a: [...] }; satır [tarih, rakip, E/D, attığı, yediği, korner, rakibin korneri]).
+ * Yükleme sırasında JSON metni olarak yazılır (Firestore liste içinde liste kabul etmez).
+ * mode: taraf (G/B/M), gol (2.5 Üst, KG), korner
+ */
+function anHistory(m, mode) {
+    let hist = m.gecmis || {};
+    if (typeof hist === 'string') {
+        try { hist = JSON.parse(hist); } catch (error) { hist = {}; }
+    }
+    const e = escapeHTML;
+    const titles = { taraf: 'Son 5 Maç · Sonuçlar', gol: 'Son 5 Maç · Goller', korner: 'Son 5 Maç · Kornerler' };
+    const avg = arr => arr.length ? (arr.reduce((x, y) => x + y, 0) / arr.length).toFixed(1) : '–';
+    const dot = x => '<span class="f-dot ' + (x === 'G' ? 'f-g' : x === 'B' ? 'f-b' : 'f-m') + '">' + x + '</span>';
+
+    const block = (rows, team, side, cls) => {
+        rows = rows || [];
+        const head = sum => '<div class="hist-head ' + cls + '"><span class="hist-name">' + e(team) + '<small>' + side + '</small></span>' +
+            (sum ? '<span class="hist-sum">' + sum + '</span>' : '') + '</div>';
+        if (!rows.length)
+            return '<div class="hist-team">' + head('') + '<p class="an-muted">Geçmiş maç verisi yok.</p></div>';
+
+        const n = rows.length;
+        let sum, line;
+        if (mode === 'taraf') {
+            const w = rows.filter(r => r[3] > r[4]).length, d = rows.filter(r => r[3] === r[4]).length, pts = w * 3 + d;
+            sum = w + 'G ' + d + 'B ' + (n - w - d) + 'M';
+            line = 'Son ' + n + ' maçta <b>' + pts + ' puan</b> topladı (maç başı <b>' + (pts / n).toFixed(2) + '</b>).';
+        } else if (mode === 'gol') {
+            const o25 = rows.filter(r => r[3] + r[4] >= 3).length, kg = rows.filter(r => r[3] > 0 && r[4] > 0).length;
+            sum = o25 + '/' + n + ' maç 2.5 Üst';
+            line = 'Maç başı <b>' + avg(rows.map(r => r[3])) + '</b> attı, <b>' + avg(rows.map(r => r[4])) + '</b> yedi · KG Var <b>' + kg + '/' + n + '</b>';
+        } else {
+            const kr = rows.filter(r => r[5] != null && r[6] != null);
+            sum = kr.length ? 'Maç başı ' + avg(kr.map(r => r[5] + r[6])) + ' korner' : 'Veri yok';
+            line = kr.length ? 'Kullandığı <b>' + avg(kr.map(r => r[5])) + '</b> · Rakibe verdiği <b>' + avg(kr.map(r => r[6])) + '</b>' +
+                (kr.length < n ? ' (' + kr.length + '/' + n + ' maçta veri var)' : '') : 'Bu maçlarda korner verisi yok.';
+        }
+
+        const list = rows.map(([dt, opp, ven, gf, ga, cf, ca]) => {
+            const metric = mode === 'taraf' ? dot(gf > ga ? 'G' : gf === ga ? 'B' : 'M')
+                : mode === 'gol' ? '<span class="hist-metric"><i class="h-tag' + (gf + ga >= 3 ? ' on' : '') + '">2.5Ü</i><i class="h-tag' + (gf > 0 && ga > 0 ? ' on' : '') + '">KG</i></span>'
+                : '<span class="hist-metric">' + (cf == null || ca == null ? 'Korner –' : 'Korner ' + cf + '-' + ca + ' (' + (cf + ca) + ')') + '</span>';
+            return '<div class="hist-row"><span class="hist-date">' + e(dt) + '</span><span class="hist-opp"><small>' + (ven === 'E' ? '(E)' : '(D)') + '</small>' +
+                e(opp) + '</span><span class="hist-score">' + gf + '-' + ga + '</span>' + metric + '</div>';
+        }).join('');
+
+        return '<div class="hist-team">' + head(sum) + '<div class="hist-line">' + line + '</div>' + list + '</div>';
+    };
+
+    return '<div class="sec-card"><div class="sec-title"><span>' + titles[mode] + '</span></div>' +
+        block(hist.h, m.home, 'Ev Sahibi', '') + block(hist.a, m.away, 'Deplasman', 'away') +
+        '<p class="an-foot">(E) iç saha, (D) deplasman · ' + (mode === 'korner' ? 'Skor ve korner' : 'Skor') + ': takımın kendisi - rakip</p></div>';
+}
+
+/* Benzer oranlı maçlar (benzer: { odds, summary, matches }) */
+function anSimilar(m) {
+    const bz = m.benzer;
+    const e = escapeHTML;
+    if (!bz || !(bz.matches || []).length)
+        return '<div class="sec-card"><div class="sec-title"><span>Benzer Oranlı Maçlar</span></div>' +
+            '<p class="an-muted">Bu maç için oran verisi olmadığından benzer oranlı maç listesi oluşturulamadı.</p></div>';
+
+    const s = bz.summary || {}, o = bz.odds || {};
+    const n = s.count ?? bz.matches.length;
+    const rows = bz.matches.map(r => {
+        const ms = r.ms || (r.hg > r.ag ? '1' : r.hg === r.ag ? 'X' : '2');
+        const pair = (label, x, y) => '<span class="sim-stat">' + label + ' ' + (x == null || y == null ? '<i>veri yok</i>' : x + '-' + y + ' <i>(' + (x + y) + ')</i>') + '</span>';
+        return '<div class="sim-row"><div class="sim-meta"><span>' + e(r.date) + ' · ' + e(r.league) + '</span><span class="sim-odds">' +
+            anNum2(r.o1) + ' · ' + anNum2(r.oX) + ' · ' + anNum2(r.o2) + '</span></div>' +
+            '<div class="sim-score"><span>' + e(r.home) + '</span><b>' + r.hg + ' - ' + r.ag + '</b><span class="away">' + e(r.away) + '</span>' +
+            '<em class="ms-' + ms + '">MS ' + ms + '</em></div>' +
+            '<div class="sim-stats">' + pair('Korner', r.hc, r.ac) + pair('<span class="an-yellow"></span> Kart', r.hk, r.ak) + pair('Ofsayt', r.ho, r.ao) + '</div></div>';
+    }).join('');
+
+    return '<div class="sec-card"><div class="sim-top"><span>Benzer Oranlı ' + n + ' Maç</span><span class="sim-odd-chips">' +
+        '<i><b>1</b> ' + anNum2(o.o1) + '</i><i><b>X</b> ' + anNum2(o.oX) + '</i><i><b>2</b> ' + anNum2(o.o2) + '</i></span></div>' + rows +
+        '<div class="sec-divider"></div><div class="sec-title"><span>Bu ' + n + ' Maçta Ne Oldu?</span></div><div class="sim-sum">' +
+        '<span>MS 1: ' + (s.ms1 ?? '–') + ' · X: ' + (s.msX ?? '–') + ' · 2: ' + (s.ms2 ?? '–') + '</span><span>Ort. Gol ' + anNum1(s.avgGoals) + '</span>' +
+        '<span>2.5 Üst ' + (s.over25 ?? '–') + '/' + n + '</span><span>KG Var ' + (s.btts ?? '–') + '/' + n + '</span>' +
+        '<span>Ort. Korner ' + anNum1(s.avgCorners) + '</span><span>Ort. Kart ' + anNum1(s.avgCards) + '</span><span>Ort. Ofsayt ' + anNum1(s.avgOffsides) + '</span></div>' +
+        '<p class="an-foot">Bu maçın 1X2 oranlarına en yakın oranlarla oynanmış gerçek maçlar. Değerler maç sonu verisidir (Ev - Dep, parantezde toplam). Bilgi amaçlıdır, tercihi etkilemez.</p></div>';
+}
+
+/* Futbol: Taraf, Gol, Korner, Kart & Ofsayt, Benzer Oranlar */
 function renderAnSheet(m) {
 
     const t = m.taraf || {}, g = m.gol || {}, k = m.korner || {}, c = m.kart || {}, o = m.ofsayt || {};
-    const num = v => Number(v) || 0;
-    const pct = (a, b) => Math.round(num(a) / Math.max(0.1, num(a) + num(b)) * 100);
-    const xgTot = (num(g.xgH) + num(g.xgA)).toFixed(2);
-    const xgHPct = pct(g.xgH, g.xgA), scHPct = pct(g.scoredH, g.scoredA);
-    const krHPct = pct(k.avgH, k.avgA), cdHPct = pct(c.teamCardH, c.teamCardA), ofHPct = pct(o.offH, o.offA);
-    const notes = list => '<ul class="simple-notes">' + (list || []).map(n => '<li>' + boldHTML(n) + '</li>').join('') + '</ul>';
-    const e = escapeHTML;
+    const why = m.neden || {}, tp = m.tepki || {};
+    const prob = anProbHTML([t.probH, t.probD, t.probA].every(v => v != null) ? [t.probH, t.probD, t.probA] : null, m.home_code || '', m.away_code || '');
+    const ppg = (v, r) => v == null ? 'Veri yok' : anNum2(v) + (r ? ' <span class="an-muted">(#' + r + ')</span>' : '');
     const pane = key => 'data-pane="' + key + '"';
 
     return `
       <div ${pane('taraf')}>
         <div class="sec-card">
-          <div class="sec-title"><span>🏆 Taraf Bahsi Önerileri</span></div>
-          <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Taraf</span><span class="p-val">${e(t.mainPick)}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Cesur Tercih</span><span class="p-val">${e(t.cesurPick)}</span></div>
-            <div class="p-box red"><span class="p-lbl">⛔ Uzak Dur</span><span class="p-val">${e(t.neverPick)}</span></div>
-          </div>
+          <div class="sec-title"><span>Taraf Tercihleri</span></div>
+          <div class="picks-2col">${anBox('green', 'Öne Çıkan Taraf', t.mainPick, true)}${anBox('amber', 'Cesur Tercih', t.cesurPick)}${anBox('red', 'Kesinlikle Oynamam', t.neverPick)}</div>
+          ${prob}
         </div>
+        ${anWhy(why.taraf)}
         <div class="sec-card">
-          <div class="sec-title"><span>📊 Kazanma İhtimali & Form</span></div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>Ev %${num(t.probH)}</span><span class="lbl">Beraberlik %${num(t.probD)}</span><span>Dep %${num(t.probA)}</span></div>
-            <div class="stat-bar-track">
-              <div class="stat-bar-left" style="width:${num(t.probH)}%"></div>
-              <div style="width:${num(t.probD)}%; background:#9ca3af;"></div>
-              <div class="stat-bar-right" style="width:${num(t.probA)}%"></div>
-            </div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${anFormDots(t.formH)}</span><span class="lbl">Son 5 Maç Formu</span><span>${anFormDots(t.formA)}</span></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(t.ppgH)} Puan</span><span class="lbl">Maç Başı Puan Ortalaması</span><span>${num(t.ppgA)} Puan</span></div>
-          </div>
+          <div class="sec-title"><span>Son 5 Maç Formu &amp; Puan Tablosu</span></div>
+          <div class="stat-cmp-row"><div class="stat-cmp-head"><span>${anFormDots(t.formH)}</span><span class="lbl">Son 5 Maç</span><span>${anFormDots(t.formA)}</span></div></div>
+          <div class="stat-cmp-row"><div class="stat-cmp-head"><span>${ppg(t.ppgH, t.rankH)}</span><span class="lbl">Maç Başı Puan</span><span>${ppg(t.ppgA, t.rankA)}</span></div></div>
         </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📌 Taraf Analiz Özeti</span></div>
-          ${notes(t.notes)}
-        </div>
+        ${anReact(tp.taraf)}
+        ${anHistory(m, 'taraf')}
       </div>
 
       <div ${pane('gol')}>
         <div class="sec-card">
-          <div class="sec-title"><span>⚽ Gol Tercihleri</span><span>Toplam xG: ${xgTot}</span></div>
-          <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Ana Gol Tercihi</span><span class="p-val">${e(g.mainPick)}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Alternatif Gol</span><span class="p-val">${e(g.altPick)}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Takım Gol Baremi</span><span class="p-val">${e(g.teamPick)}</span></div>
-          </div>
+          <div class="sec-title"><span>Gol Tercihleri</span></div>
+          <div class="picks-2col">${anBox('green', 'Toplam Gol', g.mainPick)}${anBox('blue', 'Karşılıklı Gol', g.altPick)}${anBox('amber', 'Takım Golü', g.teamPick, true)}</div>
+          ${prob}
         </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📊 Gol & Hücum Verileri</span></div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(g.xgH)} xG</span><span class="lbl">Gol Beklentisi (xG)</span><span>${num(g.xgA)} xG</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-left" style="width:${xgHPct}%"></div><div class="stat-bar-right" style="width:${100 - xgHPct}%"></div></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(g.scoredH)}</span><span class="lbl">Maç Başı Atılan Gol</span><span>${num(g.scoredA)}</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-left" style="width:${scHPct}%"></div><div class="stat-bar-right" style="width:${100 - scHPct}%"></div></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(g.concededH)}</span><span class="lbl">Maç Başı Yenilen Gol</span><span>${num(g.concededA)}</span></div>
-          </div>
-        </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📌 Gol Analiz Özeti</span></div>
-          ${notes(g.notes)}
-        </div>
+        ${anWhy(why.gol)}
+        ${anReact(tp.gol)}
+        ${anHistory(m, 'gol')}
       </div>
 
       <div ${pane('korner')}>
         <div class="sec-card">
-          <div class="sec-title"><span>🚩 Korner Tercihleri</span></div>
-          <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Korner</span><span class="p-val">${e(k.mainPick)}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Taraf Korner</span><span class="p-val">${e(k.teamPick)}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Korner Üstünlüğü</span><span class="p-val">${e(k.mostPick)}</span></div>
-          </div>
+          <div class="sec-title"><span>Korner Tercihleri</span></div>
+          <div class="picks-2col">${anBox('green', 'Toplam Korner', k.mainPick, true)}${anBox('blue', 'Daha Çok Korner Kullanır', k.mostPick)}${anBox('amber', 'Takım Korneri', k.teamPick)}</div>
+          ${prob}
+        </div>
+        ${anWhy(why.korner)}
+        ${anReact(tp.korner)}
+        ${anHistory(m, 'korner')}
+      </div>
+
+      <div ${pane('kartofsayt')}>
+        <div class="sec-card">
+          <div class="sec-title"><span>Kart Analizi</span></div>
+          <div class="picks-2col">${anBox('green', 'Kart Beklentisi', c.mainPick, true)}${anBox('blue', 'Daha Çok Kart Görür', c.mostPick)}${anBox('', 'Kırmızı Kart Riski', c.redRisk)}${anBox('amber', 'Hakem', c.refAvg, true)}</div>
+          ${prob}
+          ${why.kart && why.kart.length ? '<div class="sec-divider"></div>' + anWhy(why.kart, 'Neden?', true) : ''}
         </div>
         <div class="sec-card">
-          <div class="sec-title"><span>📊 Korner Ortalamaları</span></div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(k.avgH)}</span><span class="lbl">Maç Başı Kullanılan Korner</span><span>${num(k.avgA)}</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-left" style="width:${krHPct}%"></div><div class="stat-bar-right" style="width:${100 - krHPct}%"></div></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(k.againstH)}</span><span class="lbl">Rakiplere Verilen Korner</span><span>${num(k.againstA)}</span></div>
-          </div>
+          <div class="sec-title"><span>Ofsayt Analizi</span></div>
+          <div class="picks-2col">${anBox('green', 'Ofsayt Beklentisi', o.mainPick, true)}${anBox('blue', 'Daha Çok Ofsayta Düşer', o.mostPick)}${anBox('', 'Savunma Çizgisi', o.lineStyle)}</div>
+          ${why.ofsayt && why.ofsayt.length ? '<div class="sec-divider"></div>' + anWhy(why.ofsayt, 'Neden?', true) : ''}
         </div>
+        ${anReact(tp.kart)}
+      </div>
+
+      <div ${pane('benzer')}>${anSimilar(m)}</div>`;
+}
+
+/* NBA: Taraf & Handikap, Toplam Sayı, Oyuncu, Kadro & Yorgunluk */
+function renderNbaSheet(m) {
+
+    const e = escapeHTML;
+    const t = m.taraf || {}, s = m.toplam || {}, o = m.oyuncu || {}, k = m.kadro || {}, why = m.neden || {};
+    const prob = anProbHTML(t.winH != null && t.winA != null ? [t.winH, t.winA] : null, m.home_code || '', m.away_code || '');
+    const sp = v => v == null ? null : (m.home_code || '') + ' ' + (v > 0 ? '+' : '') + v;
+    const pane = key => 'data-pane="' + key + '"';
+
+    const props = (o.props || []).map(p =>
+        '<div class="prop-row"><div><div class="prop-name">' + e(p.player) + ' <span class="an-muted">(' + e(p.team) + ')</span></div>' +
+        '<div class="prop-sub">' + e(p.category) + ' · Sezon ort. ' + anNum1(p.seasonAvg) + ' · Beklenen ' + anNum1(p.projected) + '</div></div>' +
+        '<span class="prop-pick">' + e(p.pick) + '</span></div>').join('');
+
+    const injuries = (list, team) => '<div class="team-sub-title">' + e(team) + '</div>' + ((list || []).length
+        ? list.map(x => '<div class="inj-row"><span class="inj-name">' + e(x.player) + ' <span class="an-muted">' + e(x.badge || '') + '</span></span>' +
+            '<span class="inj-st' + (/Belirsiz|Şüpheli/.test(x.status) ? ' q' : '') + '">' + e(x.status) + '</span></div>').join('')
+        : '<p class="an-muted">Bildirilen eksik yok.</p>');
+
+    const tired = x => !x ? 'Veri yok' : x.b2b ? 'Üst Üste 2. Gün (Yorgun)' : x.threeInFour ? '4 Günde 3. Maç' : x.rest != null ? x.rest + ' gün dinlendi' : 'Normal';
+    const warns = (m.warnings || []).map(w => '<span>' + e(w) + '</span>').join('');
+
+    return `
+      <div ${pane('taraf')}>
         <div class="sec-card">
-          <div class="sec-title"><span>📌 Korner Analiz Özeti</span></div>
-          ${notes(k.notes)}
+          <div class="sec-title"><span>Taraf &amp; Handikap</span></div>
+          <div class="picks-2col">${anBox('green', 'Öne Çıkan Taraf', t.mainPick, true)}${anBox('blue', 'Büro Handikapı', sp(t.marketSpread))}${anBox('amber', 'Modelin Handikapı', sp(t.fairSpread))}</div>
+          ${prob}
+          <p class="an-foot">Sezon derecesi: ${e(m.home_code || m.home)} ${e(anVal(t.recordH))} · ${e(m.away_code || m.away)} ${e(anVal(t.recordA))}</p>
+        </div>
+        ${anWhy(why.taraf)}
+      </div>
+
+      <div ${pane('toplam')}>
+        <div class="sec-card">
+          <div class="sec-title"><span>Toplam Sayı</span></div>
+          <div class="picks-2col">${anBox('green', 'Toplam Tercihi', s.mainPick, true)}${anBox('blue', 'Büro Çizgisi', s.marketTotal)}${anBox('amber', 'Modelin Beklentisi', s.modelTotal == null ? null : anNum1(s.modelTotal) + ' sayı')}</div>
+          ${prob}
+        </div>
+        ${anWhy(why.toplam)}
+        <div class="sec-card"><div class="sec-title"><span>Tempo &amp; Sayı Notları</span></div>${anNotes(s.notes)}</div>
+      </div>
+
+      <div ${pane('oyuncu')}>
+        ${anWhy(why.oyuncu)}
+        <div class="sec-card"><div class="sec-title"><span>Oyuncu Tercihleri</span></div>
+          ${props || '<p class="an-muted">Oyuncu tercihi yok.</p>'}
+          <div class="sec-divider"></div>${anNotes(o.notes)}
         </div>
       </div>
 
-      <div ${pane('kart')}>
-        <div class="sec-card">
-          <div class="sec-title"><span>🟨 Kart Tercihleri</span></div>
-          <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Kart Baremi</span><span class="p-val">${e(c.mainPick)}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Daha Çok Kart Görür</span><span class="p-val">${e(c.mostPick)}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Hakem / Kart Ortalaması</span><span class="p-val">${e(c.refAvg)}</span></div>
-            <div class="p-box"><span class="p-lbl">Kırmızı Kart Riski</span><span class="p-val">${e(c.redRisk)}</span></div>
-          </div>
+      <div ${pane('kadro')}>
+        <div class="sec-card"><div class="sec-title"><span>Eksik Oyuncular</span></div>${injuries(k.injH, m.home)}<div class="sec-divider"></div>${injuries(k.injA, m.away)}</div>
+        <div class="sec-card"><div class="sec-title"><span>Yorgunluk Durumu</span></div>
+          <div class="picks-2col">${anBox('', e(m.home_code || m.home), tired(k.fatH))}${anBox('', e(m.away_code || m.away), tired(k.fatA))}</div>
         </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📊 Takım Kart & Faul Ortalamaları</span></div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(c.teamCardH)} Kart</span><span class="lbl">Maç Başı Görülen Kart</span><span>${num(c.teamCardA)} Kart</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-left" style="width:${cdHPct}%"></div><div class="stat-bar-right" style="width:${100 - cdHPct}%"></div></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(c.foulH)} Faul</span><span class="lbl">Maç Başı Faul Ortalaması</span><span>${num(c.foulA)} Faul</span></div>
-          </div>
-        </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📌 Kart & Hakem Özeti</span></div>
-          ${notes(c.notes)}
-        </div>
-      </div>
-
-      <div ${pane('ofsayt')}>
-        <div class="sec-card">
-          <div class="sec-title"><span>📐 Ofsayt Tercihleri</span></div>
-          <div class="picks-2col">
-            <div class="p-box green"><span class="p-lbl">Öne Çıkan Ofsayt Baremi</span><span class="p-val">${e(o.mainPick)}</span></div>
-            <div class="p-box blue"><span class="p-lbl">Daha Çok Ofsayta Düşer</span><span class="p-val">${e(o.mostPick)}</span></div>
-            <div class="p-box amber"><span class="p-lbl">Takım Ofsayt Baremi</span><span class="p-val">${e(o.teamPick)}</span></div>
-            <div class="p-box"><span class="p-lbl">Savunma Çizgisi</span><span class="p-val">${e(o.lineStyle)}</span></div>
-          </div>
-        </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📊 Ofsayt & Savunma Çizgisi Verileri</span></div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(o.offH)}</span><span class="lbl">Maç Başı Ofsayta Düşme</span><span>${num(o.offA)}</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-left" style="width:${ofHPct}%"></div><div class="stat-bar-right" style="width:${100 - ofHPct}%"></div></div>
-          </div>
-          <div class="stat-cmp-row">
-            <div class="stat-cmp-head"><span>${num(o.trapH)}</span><span class="lbl">Rakibi Ofsayta Düşürme</span><span>${num(o.trapA)}</span></div>
-          </div>
-        </div>
-        <div class="sec-card">
-          <div class="sec-title"><span>📌 Ofsayt Analiz Özeti</span></div>
-          ${notes(o.notes)}
-        </div>
+        <div class="sec-card"><div class="sec-title"><span>Kadro &amp; Dinlenme Özeti</span></div>${anNotes(k.notes)}${warns ? '<div class="an-badges">' + warns + '</div>' : ''}</div>
       </div>`;
 }
 
 /*
- * Detaylı Analiz, Canlı Skor'daki maç sayfasını kullanır:
- * üstte takımlar ve saat, altta beş sekme (Taraf, Gol, Korner, Kart, Ofsayt).
+ * Detaylı Analiz, Canlı Skor'daki maç sayfasını kullanır: üstte takımlar ve saat, altta sekmeler.
+ * [maç sayfasının sekmesi, bölme, sekme adı]. NBA'de dört sekme (Yorumlar yerindeki gizlenir).
  */
-const AN_TABS = [
-    ['summary', 'taraf', 'Taraf'],
-    ['stats', 'gol', 'Gol'],
-    ['lineup', 'korner', 'Korner'],
-    ['odds', 'kart', 'Kart'],
-    ['comments', 'ofsayt', 'Ofsayt']
-];
+const AN_TABS = {
+    football: [['summary', 'taraf', 'Taraf'], ['stats', 'gol', 'Gol'], ['lineup', 'korner', 'Korner'],
+        ['odds', 'kartofsayt', 'Kart/Ofsayt'], ['comments', 'benzer', 'Benzer']],
+    basketball: [['summary', 'taraf', 'Taraf'], ['stats', 'toplam', 'Toplam'], ['lineup', 'oyuncu', 'Oyuncu'],
+        ['odds', 'kadro', 'Kadro']]
+};
 
 /* Maç sayfasının normal sekme adları (geri dönmek için) */
 const DETAIL_LABELS = {};
 document.querySelectorAll('#detailTabs button').forEach(b => { DETAIL_LABELS[b.dataset.tab] = b.textContent; });
 
+/* analysis: null (normal maç sayfası), 'football' ya da 'basketball' */
+let anSheetSport = 'football';
+
 function setDetailMode(analysis) {
-    detailSheet.classList.toggle('an-mode', analysis);
+    if (analysis)
+        anSheetSport = analysis;
+    detailSheet.classList.toggle('an-mode', !!analysis);
+    detailSheet.classList.toggle('an-nba', analysis === 'basketball');
     document.querySelectorAll('#detailTabs button').forEach(b => {
-        const an = AN_TABS.find(t => t[0] === b.dataset.tab);
-        b.textContent = analysis ? an[2] : DETAIL_LABELS[b.dataset.tab];
+        const an = analysis && AN_TABS[analysis].find(t => t[0] === b.dataset.tab);
+        b.textContent = analysis ? (an ? an[2] : '') : DETAIL_LABELS[b.dataset.tab];
     });
 }
 
-/* Beş bölme maç sayfasının beş sekmesine yerleşir (doküman gelmediyse "Yükleniyor…") */
+/* Bölmeler maç sayfasının sekmelerine yerleşir (doküman gelmediyse "Yükleniyor…") */
 function fillAnPanes(m) {
 
     const temp = document.createElement('div');
     if (m)
-        temp.innerHTML = renderAnSheet(m);
+        temp.innerHTML = anSheetSport === 'basketball' ? renderNbaSheet(m) : renderAnSheet(m);
 
-    AN_TABS.forEach(([page, pane]) => {
+    AN_TABS[anSheetSport].forEach(([page, pane]) => {
         const target = detailSheet.querySelector('.tab-page[data-page="' + page + '"] .an-pane');
         const source = temp.querySelector('[data-pane="' + pane + '"]');
         target.innerHTML = m ? (source ? source.innerHTML : '') : '<p class="tab-empty">Yükleniyor…</p>';
     });
 }
 
-/* card: listedeki kart (üst alan bundan çizilir), ayrıntılar maçın dokümanından */
+/* card: listedeki kart (üst alan bundan çizilir), ayrıntılar maçın dokümanından (analiz_futbol ya da analiz_nba) */
 function openAnSheet(card) {
 
     const key = card.key;
-    anSheetKey = key;
+    const kind = card.nba ? 'basketball' : 'football';
+    const collection = AN_DOCS[kind].mac;
+    anSheetKey = collection + '/' + key;
     detailId = null;
 
     const when = new Date(card.ts * 1000);
@@ -8004,25 +8771,25 @@ function openAnSheet(card) {
     status.textContent = 'ANALİZ';
     status.className = '';
 
-    const path = 'analiz_futbol/' + key;
+    setDetailMode(kind);
+
+    const path = collection + '/' + key;
     const stored = storedAnDoc(path);
     if (stored !== undefined)
-        anDetails.set(key, stored);
+        anDetails.set(path, stored);
 
-    fillAnPanes(anDetails.get(key));
+    fillAnPanes(anDetails.get(path));
 
-    if (!anDetails.has(key)) {
-        loadFs().then(ok => ok ? fs.getDoc(fs.doc(db, 'analiz_futbol', key)) : Promise.reject()).then(snap => {
+    if (!anDetails.has(path)) {
+        loadFs().then(ok => ok ? fs.getDoc(fs.doc(db, collection, key)) : Promise.reject()).then(snap => {
             /* Yükleme zamanı saklanmaz (sitede kullanılmıyor) */
             const { yuklendi, ...data } = snap.exists() ? snap.data() : {};
-            anDetails.set(key, data);
+            anDetails.set(path, data);
             saveAnDoc(path, data);
-            if (anSheetKey === key)
+            if (anSheetKey === path)
                 fillAnPanes(data);
         }, () => {});
     }
-
-    setDetailMode(true);
 
     applyDetailLift();
 
@@ -8811,6 +9578,7 @@ const LAYER_HIDERS = {
     detail: hideDetail,
     oddsPage: hideOddsPage,
     profile: hideProfile,
+    karne: hideKarne,
     confirm: hideConfirm,
     calendar: hideCalendar
 };
@@ -10303,6 +11071,11 @@ function setDetailTab(name, keepScroll) {
         page.scrollTop = 0;
 }
 
+/* Görünen sekmeler: NBA analizinde dört (Yorumlar yerindeki sekme gizli) */
+function detailTabList() {
+    return detailSheet.classList.contains('an-nba') ? DETAIL_TABS.slice(0, 4) : DETAIL_TABS;
+}
+
 function placeDetailTrack(dragPx) {
     const index = DETAIL_TABS.indexOf(detailTab);
     detailTrack.style.transform =
@@ -10350,8 +11123,8 @@ detailBody.addEventListener('touchmove', event => {
     if (!tabSwipe.horizontal)
         return;
 
-    const index = DETAIL_TABS.indexOf(detailTab);
-    const atEdge = (index === 0 && dx > 0) || (index === DETAIL_TABS.length - 1 && dx < 0);
+    const index = detailTabList().indexOf(detailTab);
+    const atEdge = (index === 0 && dx > 0) || (index === detailTabList().length - 1 && dx < 0);
 
     tabSwipe.dx = dx;
     placeDetailTrack(atEdge ? dx * 0.25 : dx);
@@ -10379,10 +11152,11 @@ function endTabSwipe() {
         distance > width * TAB_SWIPE_RATIO ||
         (distance > width * TAB_FLICK_RATIO && speed > 0.3);
 
-    const next = DETAIL_TABS.indexOf(detailTab) + (swipe.dx < 0 ? 1 : -1);
+    const tabs = detailTabList();
+    const next = tabs.indexOf(detailTab) + (swipe.dx < 0 ? 1 : -1);
 
-    if (enough && next >= 0 && next < DETAIL_TABS.length)
-        setDetailTab(DETAIL_TABS[next], true);
+    if (enough && next >= 0 && next < tabs.length)
+        setDetailTab(tabs[next], true);
     else
         placeDetailTrack(0);
 }
