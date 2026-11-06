@@ -3,20 +3,11 @@ rules_version = '2';
 /*
  * Firestore kuralları
  * Uygulama yalnızca okur (zil kaydı hariç); yazmayı sunucu yapar (sunucu bu kurallara takılmaz).
- * gun, ozet ve maclar dokümanlarını yönetici (yonetim.html, elle düzeltme) de güncelleyebilir.
+ * maclar dokümanlarını yönetici (yonetim.html, elle düzeltme) de güncelleyebilir.
+ * Gün listesi ve Özet R2'de (Firestore'da değil).
  */
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    match /gun/{gun} {
-      allow read: if true;
-      allow update: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
-    }
-
-    match /ozet/{gun} {
-      allow read: if true;
-      allow update: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
-    }
 
     match /maclar/{mac} {
       allow read: if true;

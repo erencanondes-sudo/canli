@@ -5,20 +5,12 @@
     "gun": {
       "$gun": {
         ".read": true,
-        ".indexOn": ".value",
-        "$no": {
-          ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
-          ".validate": "newData.isString()"
-        }
+        ".indexOn": ".value"
       }
     },
     "olay": {
       "$gun": {
-        ".read": true,
-        "$anahtar": {
-          ".write": "auth != null && auth.uid === 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'",
-          ".validate": "newData.isString()"
-        }
+        ".read": true
       }
     },
     "takim": {
