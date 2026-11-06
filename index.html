@@ -7948,8 +7948,9 @@ startData();
 /* =================================================
    MESAJLAR (maç sayfası, Yorumlar): sunucu/VERITABANI.md → "Mesajlar"
    -------------------------------------------------
-   Okuma herkese açık: Yorumlar sekmesi açılınca maçın son 10 mesajı canlı dinlenir,
-   "Daha fazla göster" ile 10'ar artar (en fazla 100). Yazmak, oy vermek ve şikayet için
+   Okuma herkese açık: Yorumlar sekmesi açılınca maçın son 10 mesajı canlı dinlenir.
+   "Daha fazla göster" yalnızca daha eski 10 mesajı bir kez okur (en fazla 100); eldekiler yeniden inmez.
+   Eski mesajlar canlı değildir (beğeni sayısı ve başkasının sildiği mesaj, Yorumlar yeniden açılınca güncellenir). Yazmak, oy vermek ve şikayet için
    Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir).
    Sınırlar (Realtime Database kuralları da denetler): mesaj 100 karakter, günde 20 mesaj,
    bir mesajda oy en fazla 2 kez değiştirilir, rumuz haftada bir değişir.
@@ -7972,7 +7973,8 @@ const CM_ICONS = {
     flag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>'
 };
 
-const cm = { match: null, limit: CM_PAGE, off: null, list: null, open: null, replyTo: null };
+/* live: canlı dinlenen son 10 (yeniden eskiye), older: sonradan okunan eskiler, list: ikisi birlikte */
+const cm = { match: null, off: null, live: null, older: [], noMore: false, loadingMore: false, list: null, open: null, replyTo: null };
 let blocked = new Set(readJSON(BLOCK_KEY, []));
 let myVotes = readJSON(VOTE_KEY, {});
 let myReports = new Set(readJSON(REPORT_KEY, []));
@@ -8318,7 +8320,6 @@ function startComments(id) {
         return;
     stopComments();
     cm.match = id;
-    cm.limit = CM_PAGE;
     cmNote('');
     loginNext = null;
     document.getElementById('cmLogin').hidden = true;
@@ -8332,16 +8333,53 @@ function listenComments() {
     cm.off = null;
     if (!rd || !cm.match)
         return;
-    const query = rt.query(rt.ref(rd, 'mesaj/' + cm.match), rt.limitToLast(cm.limit));
+    const query = rt.query(rt.ref(rd, 'mesaj/' + cm.match), rt.limitToLast(CM_PAGE));
     cm.off = rt.onValue(query, snap => {
         const list = [];
         snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
-        cm.list = list.reverse();
-        renderComments();
+        list.reverse();
+        /* Yeni mesaj gelince son 10'dan taşan mesaj (en eskiden de eski) eskilere geçer; silinen geçmez */
+        const oldest = list.length ? list[list.length - 1].id : '';
+        if (cm.live && list.length >= CM_PAGE)
+            cm.older = cm.live.filter(m => m.id < oldest && !list.some(n => n.id === m.id)).concat(cm.older);
+        if (!cm.live && list.length < CM_PAGE)
+            cm.noMore = true;
+        cm.live = list;
+        mergeComments();
     }, () => {
-        cm.list = [];
-        renderComments();
+        cm.live = [];
+        mergeComments();
     });
+}
+
+function mergeComments() {
+    cm.list = cm.live ? cm.live.concat(cm.older) : null;
+    renderComments();
+}
+
+/* Daha eski 10 mesaj bir kez okunur */
+async function moreComments() {
+    if (cm.loadingMore || !cm.list || !cm.list.length)
+        return;
+    const match = cm.match;
+    cm.loadingMore = true;
+    try {
+        const query = rt.query(rt.ref(rd, 'mesaj/' + match), rt.orderByKey(),
+            rt.endBefore(cm.list[cm.list.length - 1].id), rt.limitToLast(CM_PAGE));
+        const snap = await rt.get(query);
+        if (cm.match !== match)
+            return;
+        const list = [];
+        snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
+        cm.older = cm.older.concat(list.reverse());
+        if (list.length < CM_PAGE)
+            cm.noMore = true;
+        mergeComments();
+    } catch (error) {
+        cmNote('Mesajlar yüklenemedi.');
+    } finally {
+        cm.loadingMore = false;
+    }
 }
 
 function stopComments() {
@@ -8349,6 +8387,9 @@ function stopComments() {
         cm.off();
     cm.off = null;
     cm.match = null;
+    cm.live = null;
+    cm.older = [];
+    cm.noMore = false;
     cm.list = null;
     cm.open = null;
 }
@@ -8385,9 +8426,9 @@ function renderComments() {
         list.forEach(m => box.appendChild(commentItem(m)));
     }
 
-    const full = cm.list && cm.list.length >= cm.limit;
-    document.getElementById('cmMore').hidden = !full || cm.limit >= CM_MAX;
-    document.getElementById('cmLimit').hidden = !(full && cm.limit >= CM_MAX);
+    const more = !!cm.list && !cm.noMore && cm.list.length >= CM_PAGE;
+    document.getElementById('cmMore').hidden = !more || cm.list.length >= CM_MAX;
+    document.getElementById('cmLimit').hidden = !(more && cm.list.length >= CM_MAX);
 }
 
 function commentItem(m) {
@@ -8604,7 +8645,9 @@ async function deleteComment(m) {
             ['mesaj/' + match + '/' + m.id]: null,
             ['mesajlarim/' + me.uid + '/' + match + '/' + m.id]: null
         });
+        cm.older = cm.older.filter(o => o.id !== m.id);
         cm.open = null;
+        mergeComments();
     } catch (error) {
         cmNote('Mesaj silinemedi.');
     }
@@ -8644,10 +8687,7 @@ cmInput.addEventListener('keydown', event => {
 });
 document.getElementById('cmSend').addEventListener('click', sendComment);
 
-document.getElementById('cmMore').addEventListener('click', () => {
-    cm.limit = Math.min(CM_MAX, cm.limit + CM_PAGE);
-    listenComments();
-});
+document.getElementById('cmMore').addEventListener('click', moreComments);
 
 renderAccountMenu();
 

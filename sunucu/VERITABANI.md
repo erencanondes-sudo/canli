@@ -230,7 +230,7 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için 
 
 | Yer | Ne | Kim yazar | Kim okur |
 |---|---|---|---|
-| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), g: gün no, y: yanıtlanan mesaj (Yanıtla ile), b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı, "Daha fazla göster" ile 10'ar (en fazla 100) |
+| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), g: gün no, y: yanıtlanan mesaj (Yanıtla ile), b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı; "Daha fazla göster" daha eski 10 mesajı bir kez okur (en fazla 100, eldekiler yeniden inmez) |
 | `sayac/{kimlik}` | `{ g: gün no, n: o gün yazılan mesaj }`. Gün no = (zaman + 3 saat) / 1 gün. En fazla 20; mesajla aynı anda 1 artar, silinemez | Kullanıcı | Kullanıcının kendisi |
 | `oy/{maç}/{mesaj}/{kimlik}` | `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi mesajına oy verilemez | Kullanıcı | Kullanıcının kendisi, sunucu (sayım) |
 | `kuyruk/{...}` | `{ m: maç, i: mesaj, u: kimlik }`: yeni mesaj ve oy. Sunucu işleyip siler | Kullanıcı | Sunucu |
