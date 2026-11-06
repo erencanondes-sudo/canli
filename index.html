@@ -2396,18 +2396,26 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Kadro: üstte görünüm düğmeleri (Saha Dizilişi / Oyuncu Listesi) */
+/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge */
 .lineup-switch {
     display: flex;
-    gap: .5em;
-    margin-bottom: .9em;
+    gap: .2em;
+    margin-bottom: .7em;
+    padding: .2em;
+    border-radius: .75rem;
+    background: #1c2433;
 }
 
 .lineup-switch button {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5em;
     padding: .55em .4em;
-    border: .0625rem solid rgba(255, 255, 255, .08);
-    border-radius: 2em;
-    background: linear-gradient(180deg, #2a3446, #1c2433);
+    border: .0625rem solid transparent;
+    border-radius: .6rem;
+    background: none;
     font: inherit;
     font-size: .875rem;
     font-weight: 700;
@@ -2415,11 +2423,24 @@ body.has-layer .ac-kapa svg {
     cursor: pointer;
 }
 
+.lineup-switch button::before {
+    content: '';
+    flex: none;
+    width: 1.35em;
+    height: 1.35em;
+    background: currentColor;
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
+}
+
+.lineup-switch button:first-child { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M2 5h20v14H2z M12 5v14 M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M2 9h3v6H2 M22 9h-3v6h3%22/%3E%3C/svg%3E"); }
+.lineup-switch button:last-child  { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M9 6h12 M9 12h12 M9 18h12 M3.5 6h.01 M3.5 12h.01 M3.5 18h.01%22/%3E%3C/svg%3E"); }
+
 /* Seçili: sekmelerdeki gibi parlak mavi */
 .lineup-switch button.on {
     border-color: #6cc2ff;
-    background: linear-gradient(180deg, #1f5fd6, #12409a);
-    box-shadow: 0 0 .6rem rgba(40, 140, 255, .55);
+    background: linear-gradient(180deg, #2f7cf0, #1a52c4);
+    box-shadow: 0 0 .6rem rgba(40, 140, 255, .45);
     color: #fff;
 }
 
@@ -2429,7 +2450,7 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Saha: ev sahibi üst yarıda, deplasman alt yarıda */
-.pitch + .pitch-team + .lineup-title {
+.pitch + .lineup-title {
     margin-top: 1.2em;
 }
 
@@ -2437,56 +2458,71 @@ body.has-layer .ac-kapa svg {
     margin-top: .4em;
 }
 
+/* Sahanın üstünde iki takım: ev sahibi solda, deplasman sağda; adın altında diziliş */
+.pitch-teams {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .5em;
+    margin-bottom: .6em;
+}
+
 .pitch-team {
     display: flex;
     align-items: center;
     gap: .5em;
-    padding: .5em .1em;
-    font-size: 1rem;
-    font-weight: 800;
-    color: white;
     min-width: 0;
 }
 
-.pitch-team span {
+.pitch-team.away {
+    flex-direction: row-reverse;
+    text-align: right;
+}
+
+.pitch-team .crest {
+    font-size: .8rem;
+}
+
+.pitch-team div {
     min-width: 0;
+    line-height: 1.2;
+}
+
+.pitch-team b {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 800;
+    color: white;
 }
 
 .pitch-team small {
-    flex: none;
-    margin-left: auto;
-    white-space: nowrap;
-    padding: .2em .6em;
-    border: 1px solid rgba(120, 180, 255, .3);
-    border-radius: .5em;
-    background: #13233d;
-    font-size: .875em;
-    font-weight: 800;
-    color: white;
+    display: block;
+    font-size: .875rem;
+    font-weight: 700;
+    color: #98a4b8;
 }
 
 .pitch {
     position: relative;
     aspect-ratio: 68 / 105;
-    border: .125rem solid rgba(120, 230, 120, .55);
-    border-radius: .9em;
+    border: .125rem solid rgba(255, 255, 255, .6);
+    border-radius: .6em;
     overflow: hidden;
     background:
-        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255, 255, 255, .06), transparent 70%),
-        repeating-linear-gradient(#2f9a3e 0 7%, #2a8c38 7% 14%);
-    box-shadow: 0 0 .8rem rgba(80, 220, 100, .3);
+        radial-gradient(ellipse 90% 70% at 50% 50%, rgba(255, 255, 255, .05), transparent 75%),
+        repeating-linear-gradient(#2e9139 0 5%, #28832f 5% 10%);
+    box-shadow: 0 .15rem .6rem rgba(0, 0, 0, .35);
 }
 
 .pitch i {
     position: absolute;
-    border: .1rem solid rgba(255, 255, 255, .5);
+    border: .12rem solid rgba(255, 255, 255, .85);
 }
 
 .pitch .p-out { inset: 2.5%; }
-.pitch .p-mid { left: 2.5%; right: 2.5%; top: 50%; height: 0; border-width: .1rem 0 0; }
+.pitch .p-mid { left: 2.5%; right: 2.5%; top: 50%; height: 0; border-width: .12rem 0 0; }
 .pitch .p-circle { left: 50%; top: 50%; width: 26%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
 .pitch .p-box { left: 21%; width: 58%; height: 15%; }
 .pitch .p-goal { left: 36%; width: 28%; height: 5.5%; }
@@ -2502,35 +2538,53 @@ body.has-layer .ac-kapa svg {
     transform: translate(-50%, -50%);
 }
 
+/* Forma: rengi --shirt'ten gelir; numara ortada */
 .pp-shirt {
     position: relative;
     /* Dar ekranda saha küçüldükçe biraz küçülür */
-    width: min(2.05rem, 9vw);
-    height: min(2.05rem, 9vw);
+    width: min(2.4rem, 10.5vw);
+    height: min(2.15rem, 9.4vw);
     display: grid;
     place-items: center;
-    border-radius: 50%;
-    font-size: min(.875rem, 3.9vw);
+    padding-top: .15em;
+    font-size: min(.9375rem, 4.1vw);
     font-weight: 800;
-    text-shadow: 0 1px .15rem rgba(0, 0, 0, .45);
-    box-shadow:
-        inset 0 .35rem .45rem rgba(255, 255, 255, .32),
-        inset 0 -.25rem .35rem rgba(0, 0, 0, .22),
-        0 0 0 .12rem rgba(255, 255, 255, .35),
-        0 .15rem .4rem rgba(0, 0, 0, .45);
-    filter: saturate(1.25);
+    /* İnce açık kenar (sahayla aynı renkteki formalar da seçilsin) ve gölge */
+    filter: drop-shadow(0 0 .06rem rgba(255, 255, 255, .75)) drop-shadow(0 .1rem .15rem rgba(0, 0, 0, .45));
 }
 
+.pp-shirt::before,
+.pp-shirt::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 36%22%3E%3Cpath d=%22M13 1.5L4 6 .5 14.5 6.5 17.5 8.5 14.6V34.5H31.5V14.6L33.5 17.5 39.5 14.5 36 6 27 1.5C25.8 4.6 23.2 6.5 20 6.5S14.2 4.6 13 1.5Z%22/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 36%22%3E%3Cpath d=%22M13 1.5L4 6 .5 14.5 6.5 17.5 8.5 14.6V34.5H31.5V14.6L33.5 17.5 39.5 14.5 36 6 27 1.5C25.8 4.6 23.2 6.5 20 6.5S14.2 4.6 13 1.5Z%22/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
+.pp-shirt::before {
+    background: var(--shirt);
+}
+
+/* Formanın üstü hafif parlak, altı hafif koyu */
+.pp-shirt::after {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, .15));
+}
+
+/* Ad: koyu yarı saydam etiket içinde beyaz */
 .pp-name {
     max-width: 100%;
-    margin-top: .2em;
+    margin-top: .15em;
+    padding: .1em .4em;
+    border-radius: .3rem;
+    background: rgba(10, 30, 18, .72);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: min(.7rem, 3.2vw);
-    font-weight: 700;
+    font-weight: 600;
     color: #fff;
-    text-shadow: 0 1px .2rem rgba(0, 0, 0, .8);
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
@@ -2651,6 +2705,24 @@ body.has-layer .ac-kapa svg {
     color: #9aa0ab;
 }
 
+/* Kadro sekmesi koyu zeminde: Oyuncu Listesi ve yedekler açık yazılı */
+#detailSheet .tab-page[data-page="lineup"] .lineup-head,
+#detailSheet .tab-page[data-page="lineup"] .lineup-player b {
+    color: white;
+}
+
+#detailSheet .tab-page[data-page="lineup"] .lineup-player {
+    border-bottom-color: rgba(255, 255, 255, .1);
+    color: #e3ebf7;
+}
+
+#detailSheet .tab-page[data-page="lineup"] .lineup-formation,
+#detailSheet .tab-page[data-page="lineup"] .lineup-title,
+#detailSheet .tab-page[data-page="lineup"] .lineup-instead,
+#detailSheet .tab-page[data-page="lineup"] .lineup-player small {
+    color: #98a4b8;
+}
+
 .tab-empty {
     margin: 0;
     font-size: .875rem;
@@ -2673,7 +2745,8 @@ body.has-layer .ac-kapa svg {
     padding-top: .5rem;
 }
 
-/* Özet kartı sekme kutusu genişliğinde */
+/* Özet ve Kadro sekme kutusu genişliğinde */
+#detailSheet:not(.an-mode) .tab-page[data-page="lineup"],
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"] {
     padding-left: .3rem;
     padding-right: .3rem;
@@ -3112,6 +3185,12 @@ body.has-layer .ac-kapa svg {
     min-width: 0;
 }
 
+/* Kalkan arma (maç sayfasındaki gibi), küçük */
+.an-team .sb-crest {
+    flex: none;
+    width: 1.75em;
+}
+
 .an-team span:last-child {
     min-width: 0;
     overflow: hidden;
@@ -3202,18 +3281,22 @@ body.has-layer .ac-kapa svg {
     font-style: normal;
 }
 
+/* Ofsayt: yan hakem bayrağı (sopa ve çapraz kırmızı / sarı bayrak) */
+.an-offside {
+    display: inline-block;
+    width: .8em;
+    height: 1em;
+    background:
+        linear-gradient(135deg, #e5372b 50%, #f5c518 50%) .14em .05em / .66em .5em no-repeat,
+        linear-gradient(#5b6170, #5b6170) 0 0 / .12em 100% no-repeat;
+}
+
 .an-yellow {
     display: inline-block;
     width: .55em;
     height: .8em;
     border-radius: .12em;
     background: #f5c518;
-}
-
-.an-hint {
-    flex: none;
-    font-weight: 700;
-    color: #1a73e8;
 }
 
 /* Kart açılınca */
@@ -7516,8 +7599,8 @@ function anCard(m) {
         '<div class="an-strip"><div class="an-chips">' +
             '<span class="an-chip"><span>🚩 Korner:</span> <em></em></span>' +
             '<span class="an-chip"><span class="an-yellow"></span> <span>Kart:</span> <em></em></span>' +
-            '<span class="an-chip"><span>📐 Ofsayt:</span> <em></em></span>' +
-        '</div><span class="an-hint">Detay ▾</span></div>' +
+            '<span class="an-chip"><span class="an-offside"></span> <span>Ofsayt:</span> <em></em></span>' +
+        '</div></div>' +
         '<div class="an-expand"><h4>📌 Maç Analizi & Taktik Nedenler:</h4>' +
             '<ul class="an-reasons"></ul><div class="an-subs"></div>' +
             '<button class="an-deep">📊 Detaylı Analiz</button></div>';
@@ -7532,7 +7615,7 @@ function anCard(m) {
 
     ['home', 'away'].forEach(side => {
         const el = card.querySelector('.an-team[data-side="' + side + '"]');
-        el.appendChild(crest(teamLook(m[side])));
+        el.appendChild(shieldCrest(teamLook(m[side])));
         const name = document.createElement('span');
         name.textContent = teamLabel(m[side]);
         el.appendChild(name);
@@ -7560,13 +7643,13 @@ function anCard(m) {
 
     /* Aynı anda tek kart açık */
     /*
-     * Açılan kart en üste, şeridin hemen altına gelir.
+     * Açılan kart önce kayıp en üste, şeridin hemen altına gelir, sonra açılır.
      * Kapanan kartın üst kenarı olduğu yerde kalır.
      */
     card.addEventListener('click', () => {
 
-        /* Kapanma hareketi sürerken basılırsa bekle */
-        if (card.classList.contains('closing'))
+        /* Açılma ya da kapanma hareketi sürerken basılırsa bekle */
+        if (card.classList.contains('closing') || card.classList.contains('opening'))
             return;
 
         const open = !card.classList.contains('open');
@@ -7578,8 +7661,12 @@ function anCard(m) {
         });
 
         if (open) {
-            foldAnCard(card, true);
-            scrollAnCardTop(card);
+            card.classList.add('opening');
+            scrollAnCardTop(card, () => {
+                card.classList.remove('opening');
+                /* Sayfanın sonundaki kart açılmadan en üste çıkamaz: açıldıktan sonra kalan kısmı kayar */
+                foldAnCard(card, true, () => scrollAnCardTop(card));
+            });
         } else {
             foldAnCard(card, false, () => {
                 homeMain.scrollTop += card.getBoundingClientRect().top - topBefore;
@@ -7595,18 +7682,15 @@ function anCard(m) {
     return card;
 }
 
-/* Kart anında açılır (yukarı kayarken büyümesin diye), 0.15 saniyede küçülerek kapanır */
+/* Kart 0.1 saniyede büyüyerek açılır (yukarı çıktıktan sonra), 0.15 saniyede küçülerek kapanır */
 function foldAnCard(card, open, done) {
 
     const expand = card.querySelector('.an-expand');
-    card.querySelector('.an-hint').textContent = open ? 'Kapat ▴' : 'Detay ▾';
 
-    if (open) {
+    if (open)
         card.classList.add('open');
-        return;
-    }
-
-    card.classList.add('closing');
+    else
+        card.classList.add('closing');
 
     const css = getComputedStyle(expand);
     const full = {
@@ -7614,6 +7698,11 @@ function foldAnCard(card, open, done) {
         paddingTop: css.paddingTop, borderTopWidth: css.borderTopWidth, overflow: 'hidden'
     };
     const none = { height: 0, marginTop: 0, paddingTop: 0, borderTopWidth: 0, overflow: 'hidden' };
+
+    if (open) {
+        expand.animate([none, full], { duration: 100, easing: 'ease-out' }).onfinish = done || null;
+        return;
+    }
 
     const anim = expand.animate([full, none], { duration: 150, easing: 'ease-out', fill: 'forwards' });
 
@@ -7626,22 +7715,31 @@ function foldAnCard(card, open, done) {
 }
 
 /*
- * Açılan kart yavaşça kayıp en üste, şeridin hemen altına gelir (0.6 sn).
- * Üstte kapanan kart varsa hedef her karede yeniden ölçülür.
+ * Açılan kart yavaşça kayıp en üste, şeridin hemen altına gelir (0.4 sn; zaten oradaysa beklemez).
+ * Üstte kapanan kart varsa hedef her karede yeniden ölçülür. done: kayma bitince çağrılır.
  */
 let anScrollRun = 0;
 
-function scrollAnCardTop(card) {
+function scrollAnCardTop(card, done) {
 
     const run = ++anScrollRun;
     const start = homeMain.scrollTop;
     const begin = performance.now();
 
+    /* Gidilecek yol yoksa (en üstte ya da sayfanın sonunda) hemen bitir */
+    const max = homeMain.scrollHeight - homeMain.clientHeight;
+    const goal = Math.min(max, start + card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top);
+    if (Math.abs(goal - start) < 2) {
+        if (done)
+            done();
+        return;
+    }
+
     (function step(now) {
         if (run !== anScrollRun)
             return;
 
-        const t = Math.min(1, (now - begin) / 600);
+        const t = Math.min(1, (now - begin) / 400);
         const ease = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         const target = homeMain.scrollTop +
             card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top;
@@ -7650,6 +7748,8 @@ function scrollAnCardTop(card) {
 
         if (t < 1)
             requestAnimationFrame(step);
+        else if (done)
+            done();
     })(begin);
 }
 
@@ -9616,24 +9716,32 @@ function renderLineup(match) {
     else renderPlayerList(match, box, events);
 }
 
-function pitchTeam(team, formation) {
-    const head = document.createElement('div');
-    head.className = 'pitch-team';
-    head.appendChild(crest(team));
-    const name = document.createElement('span');
-    name.textContent = team.mid || team.name;
-    head.appendChild(name);
-    const form = document.createElement('small');
-    form.textContent = formation || '';
-    head.appendChild(form);
-    return head;
+/* Sahanın üstünde iki takım: ev sahibi solda, deplasman sağda; adın altında diziliş */
+function pitchTeams(match) {
+    const row = document.createElement('div');
+    row.className = 'pitch-teams';
+    [match.home, match.away].forEach((team, side) => {
+        const head = document.createElement('div');
+        head.className = 'pitch-team' + (side ? ' away' : '');
+        head.appendChild(crest(team));
+        const text = document.createElement('div');
+        const name = document.createElement('b');
+        name.textContent = team.mid || team.name;
+        const form = document.createElement('small');
+        form.textContent = (match.lineup[side] || [])[0] || '';
+        text.appendChild(name);
+        text.appendChild(form);
+        head.appendChild(text);
+        row.appendChild(head);
+    });
+    return row;
 }
 
 function renderPitch(match, box, events) {
 
     const colors = shirtColors(match);
 
-    box.appendChild(pitchTeam(match.home, (match.lineup[0] || [])[0]));
+    box.appendChild(pitchTeams(match));
 
     const pitch = document.createElement('div');
     pitch.className = 'pitch';
@@ -9667,7 +9775,7 @@ function renderPitch(match, box, events) {
             const shirt = document.createElement('div');
             shirt.className = 'pp-shirt';
             const color = r === 1 ? colors[side].keeper : colors[side].field;
-            shirt.style.background = color.bg;
+            shirt.style.setProperty('--shirt', color.bg);
             shirt.style.color = color.fg;
             shirt.textContent = number === null ? '' : number;
 
@@ -9707,7 +9815,6 @@ function renderPitch(match, box, events) {
     });
 
     box.appendChild(pitch);
-    box.appendChild(pitchTeam(match.away, (match.lineup[1] || [])[0]));
 
     /* Sahanın altında iki takımın yedekleri */
     if (![0, 1].some(side => ((match.lineup[side] || [])[3] || []).length)) return;
