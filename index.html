@@ -4503,7 +4503,7 @@ const heldRows = new Map();      /* gün → Map(maç no → satır) (RTDB'den g
 let scoresReady = false;         /* bir önceki çizimde canlı veri tazeydi */
 let scoresSettled = false;       /* bu çizimdeki skor değişimleri gerçek değişim sayılır */
 const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
-const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet: Firestore + RTDB günlüğü) */
+const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet: R2 + RTDB günlüğü) */
 const eventKeys = new Map();     /* gün → işlenen son günlük anahtarı */
 const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
@@ -4590,12 +4590,8 @@ async function startData() {
     try {
         const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
         const app = await import(base + 'firebase-app.js');
-        [fs, rt] = await Promise.all([
-            import(base + 'firebase-firestore.js'),
-            import(base + 'firebase-database.js')
-        ]);
+        rt = await import(base + 'firebase-database.js');
         fbApp = app.initializeApp(FIREBASE_AYAR);
-        db = fs.getFirestore(fbApp);
         rd = rt.getDatabase(fbApp);
     } catch (error) {
         dataError = true;
@@ -4633,6 +4629,33 @@ async function startData() {
 ================================================= */
 
 let fbApp = null;
+
+/*
+ * Firestore kütüphanesi açılışta beklenmez: bugünün listesi (R2) ve canlı satırlar (RTDB) gelince
+ * arka planda iner (indirmek okuma sayılmaz). Daha önce gerekirse (maç, oran, analiz, zil) o an iner.
+ * İnince true, inemezse false döner (yalnızca Firestore'dan gelen bölümler gelmez).
+ */
+let fsLoading = null;
+
+function loadFs() {
+    if (!fsLoading)
+        fsLoading = import('https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/firebase-firestore.js').then(lib => {
+            fs = lib;
+            db = fs.getFirestore(fbApp);
+            return true;
+        }, () => {
+            fsLoading = null;
+            return false;
+        });
+    return fsLoading;
+}
+
+/* Bugünün listesi ve canlı satırları geldiyse Firestore kütüphanesi arka planda iner */
+function preloadFs() {
+    const today = days.get(TODAY);
+    if (!fsLoading && fbApp && today && today.loaded && (today.fresh || !today.live))
+        loadFs();
+}
 let bildirimHazir = null;
 let zilTimer = null;
 let izinSoruluyor = false;
@@ -4640,7 +4663,7 @@ let izinSoruluyor = false;
 const ZIL_SON_KEY = 'canliSkorZilSon';
 
 function bildirimVar() {
-    return !!BILDIRIM_ANAHTARI && !!db && 'Notification' in window &&
+    return !!BILDIRIM_ANAHTARI && !!fbApp && 'Notification' in window &&
         'serviceWorker' in navigator && location.protocol === 'https:';
 }
 
@@ -4729,6 +4752,8 @@ function deviceId() {
 async function zilYaz() {
     try {
         const { uid, token, person } = await bildirimHazirla();
+        if (!(await loadFs()))
+            throw new Error('Firestore yüklenemedi');
         const list = Array.from(savedIds).filter(id => /^\d+$/.test(id)).slice(-100);
         const device = deviceId();
         const key = device + '|' + uid + '|' + (person || '') + '|' + token + '|' + list.join(',');
@@ -5305,11 +5330,13 @@ function openDay(day) {
         dayRows.set(day, new Map(Object.entries(rows || {})));
         state.loaded = true;
         refreshViews();
+        preloadFs();
     };
 
     const failed = () => {
         state.loaded = true;
         refreshViews();
+        preloadFs();
     };
 
     const takeLive = snap => {
@@ -5386,6 +5413,7 @@ function commitLive() {
     });
     if (changed)
         refreshViews();
+    preloadFs();
 }
 
 /*
@@ -5428,8 +5456,19 @@ function watchDetail(match) {
     unwatchDetail();
 
     /* Biten maçın dokümanında olaylar da var (istatistik vermeyen liglerde de) */
-    if (!db || !(leagueHasDetail(match.league.id) || match.status === 'done'))
+    if (!fbApp || !(leagueHasDetail(match.league.id) || match.status === 'done'))
         return;
+
+    /* Firestore kütüphanesi henüz inmediyse inince başlanır (bu arada maç kapanırsa başlanmaz) */
+    if (!db) {
+        let cancelled = false;
+        detailUnsub = () => { cancelled = true; };
+        loadFs().then(ok => {
+            if (ok && !cancelled)
+                watchDetail(match);
+        });
+        return;
+    }
 
     const id = match.id;
 
@@ -5465,7 +5504,7 @@ function unwatchDetail() {
 /* Uygulama arka plana geçince dinleme durur, öne gelince sürer */
 document.addEventListener('visibilitychange', () => {
 
-    if (!db)
+    if (!rd)
         return;
 
     /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
@@ -6981,8 +7020,13 @@ function cachedDoc(path, onLoad) {
     const entry = DOC_CACHE.get(path);
     if (entry && (entry.loading || Date.now() - entry.at < DOC_TTL))
         return entry.data;
-    if (!db)
+    if (!db) {
+        loadFs().then(ok => {
+            if (ok)
+                (onLoad || refreshViews)();
+        });
         return entry ? entry.data : undefined;
+    }
 
     const next = { at: Date.now(), data: entry ? entry.data : undefined, loading: true };
     DOC_CACHE.set(path, next);
@@ -7867,8 +7911,8 @@ function openAnSheet(card) {
 
     fillAnPanes(anDetails.get(key));
 
-    if (!anDetails.has(key) && db) {
-        fs.getDoc(fs.doc(db, 'analiz_futbol', key)).then(snap => {
+    if (!anDetails.has(key)) {
+        loadFs().then(ok => ok ? fs.getDoc(fs.doc(db, 'analiz_futbol', key)) : Promise.reject()).then(snap => {
             /* Yükleme zamanı saklanmaz (sitede kullanılmıyor) */
             const { yuklendi, ...data } = snap.exists() ? snap.data() : {};
             anDetails.set(key, data);
