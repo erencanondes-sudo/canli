@@ -2789,18 +2789,13 @@ body.has-layer .ac-kapa svg {
 
 /* Çerçeve yarı şeritleriyle aynı lacivert; köşeler düz */
 /* Satır zemini: ana sayfa zemini (#f4f5f7) ile maç satırı (beyaz) arası */
-/* Özet boşken: stadyum görseli, ikon, başlık, çizgi, açıklama (olay gelince kalkar) */
-#detailSheet:not(.an-mode) .tab-page[data-page="summary"]:has(.sum-empty) {
-    background:
-        radial-gradient(ellipse 70% 22% at 50% 78%, rgba(0, 46, 96, .9), transparent 100%),
-        #01142c;
-}
-.sum-empty {
+/* Özet, İstatistik, Kadro boşken: stadyum görseli, ikon, başlık, çizgi, açıklama (içerik gelince kalkar) */
+.empty-hero {
     position: relative;
     padding: 28% 1rem 1.5rem;
     text-align: center;
 }
-.sum-empty::before {
+.empty-hero::before {
     content: '';
     position: absolute;
     left: -.3rem;
@@ -2812,10 +2807,10 @@ body.has-layer .ac-kapa svg {
     mask-image: linear-gradient(180deg, transparent 0%, black 18%, black 60%, transparent 100%);
     pointer-events: none;
 }
-.sum-empty > * {
+.empty-hero > * {
     position: relative;
 }
-.sum-empty-icon {
+.empty-hero-icon {
     display: grid;
     place-items: center;
     width: 5.25rem;
@@ -2826,24 +2821,24 @@ body.has-layer .ac-kapa svg {
     background: rgba(8, 24, 52, .85);
     box-shadow: 0 0 1.1rem rgba(47, 140, 255, .55), inset 0 0 .9rem rgba(47, 140, 255, .3);
 }
-.sum-empty-icon svg {
+.empty-hero-icon svg {
     width: 2.6rem;
     height: 2.6rem;
 }
-.sum-empty h3 {
+.empty-hero h3 {
     margin: 0;
     font-size: min(1.375rem, 5.3vw);
     font-weight: 800;
     color: white;
 }
-.sum-empty hr {
+.empty-hero hr {
     width: 80%;
     height: 2px;
     margin: .75rem auto;
     border: 0;
     background: linear-gradient(90deg, transparent, rgba(47, 140, 255, .55) 30%, #6fb6ff 50%, rgba(47, 140, 255, .55) 70%, transparent);
 }
-.sum-empty p {
+.empty-hero p {
     max-width: 20em;
     margin: 0 auto;
     font-size: .9375rem;
@@ -3048,8 +3043,8 @@ body.has-layer .ac-kapa svg {
 #detailSheet:not(.an-mode) .tab-page[data-page="lineup"],
 .os-page {
     background:
-        radial-gradient(ellipse 90% 30% at 50% 100%, rgba(30, 120, 50, .45), transparent 70%),
-        linear-gradient(180deg, #0b1424 0%, #0c1a2d 60%, #0d2a1b 100%);
+        radial-gradient(ellipse 70% 22% at 50% 78%, rgba(0, 46, 96, .9), transparent 100%),
+        #01142c;
 }
 
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"] .tab-empty,
@@ -11386,19 +11381,40 @@ function sbTeam(el, team) {
     el.appendChild(name);
 }
 
+/* Sekme boşken: stadyum görselli ikon, başlık, çizgi, açıklama */
+const HERO_ICONS = {
+    list: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/>' +
+        '<path d="M11 10h5M11 14h5M11 18h5"/><circle cx="8.3" cy="10" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="14" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="18" r=".5" fill="#e8f1ff"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+    stats: '<path d="M4 20h16"/><rect x="5.5" y="12" width="3" height="8" rx=".5"/><rect x="10.5" y="7" width="3" height="13" rx=".5"/><rect x="15.5" y="10" width="3" height="10" rx=".5"/>',
+    lineup: '<path d="M9 3.5 4 6l-1.5 4.5 3 1V20.5h13V11.5l3-1L20 6l-5-2.5a3 3 0 0 1-6 0z"/>'
+};
+function emptyHero(icon, title, text) {
+    const el = document.createElement('div');
+    el.className = 'empty-hero';
+    el.innerHTML = '<div class="empty-hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8f1ff" stroke-width="1.5" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' + HERO_ICONS[icon] + '</svg></div><h3></h3><hr><p></p>';
+    el.querySelector('h3').textContent = title;
+    el.querySelector('p').textContent = text;
+    return el;
+}
+
 function renderSummary(match) {
 
     const box = document.getElementById('summaryBox');
     box.textContent = '';
 
     if (!match.events) {
-        const p = document.createElement('p');
-        p.className = 'tab-empty';
-        p.textContent =
-            match.status === 'upcoming' ? 'Maç ' + formatDate(match.date) + ' ' + formatTime(match.date) + ' saatinde başlayacak.' :
-            detailId === match.id && !matchDetails.has(match.id) ? 'Yükleniyor…' :
-            'Özet bilgisi düzenlenecek.';
-        box.appendChild(p);
+        if (match.status === 'upcoming')
+            box.appendChild(emptyHero('clock', 'Maç henüz başlamadı.',
+                'Başlama saati ' + formatDate(match.date) + ' ' + formatTime(match.date) + '. Gol, kart ve değişiklikler maç başlayınca burada görünecek.'));
+        else if (detailId === match.id && !matchDetails.has(match.id)) {
+            const p = document.createElement('p');
+            p.className = 'tab-empty';
+            p.textContent = 'Yükleniyor…';
+            box.appendChild(p);
+        } else
+            box.appendChild(emptyHero('list', 'Özet bilgisi düzenlenecek.', 'Maçın golleri, kartları ve değişiklikleri eklendiğinde burada görünecek.'));
         return;
     }
 
@@ -11421,17 +11437,8 @@ function renderSummary(match) {
         box.appendChild(first);
     }
 
-    if (!events.length) {
-        const empty = document.createElement('div');
-        empty.className = 'sum-empty';
-        empty.innerHTML =
-            '<div class="sum-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8f1ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
-            '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/>' +
-            '<path d="M11 10h5M11 14h5M11 18h5"/><circle cx="8.3" cy="10" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="14" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="18" r=".5" fill="#e8f1ff"/></svg></div>' +
-            '<h3>Henüz önemli bir olay yok.</h3><hr>' +
-            '<p>Maça ait kart, gol, değişiklik veya kritik bir gelişme bulunmuyor.</p>';
-        box.appendChild(empty);
-    }
+    if (!events.length)
+        box.appendChild(emptyHero('list', 'Henüz önemli bir olay yok.', 'Maça ait kart, gol, değişiklik veya kritik bir gelişme bulunmuyor.'));
 
     events.forEach(event => {
 
@@ -11512,12 +11519,9 @@ function renderStats(match) {
     box.textContent = '';
 
     if (!match.stats || !match.stats[0] || !match.stats[1]) {
-        const p = document.createElement('p');
-        p.className = 'tab-empty';
-        p.textContent = leagueHasDetail(match.league.id)
-            ? 'İstatistikler maç başlayınca görünecek.'
-            : 'Bu lig için istatistik verisi yok.';
-        box.appendChild(p);
+        box.appendChild(leagueHasDetail(match.league.id)
+            ? emptyHero('stats', 'İstatistikler henüz yok.', 'Topla oynama, şut ve korner gibi istatistikler maç başlayınca burada görünecek.')
+            : emptyHero('stats', 'İstatistik verisi yok.', 'Bu lig için maç istatistikleri sağlanmıyor.'));
         return;
     }
 
@@ -11730,12 +11734,9 @@ function renderLineup(match) {
     box.textContent = '';
 
     if (!match.lineup || !match.lineup.some(Boolean)) {
-        const p = document.createElement('p');
-        p.className = 'tab-empty';
-        p.textContent = leagueHasDetail(match.league.id)
-            ? 'Kadrolar maçtan yaklaşık 1 saat önce açıklanır.'
-            : 'Bu lig için kadro verisi yok.';
-        box.appendChild(p);
+        box.appendChild(leagueHasDetail(match.league.id)
+            ? emptyHero('lineup', 'Kadrolar henüz açıklanmadı.', 'İlk 11\'ler ve yedekler maçtan yaklaşık 1 saat önce burada görünecek.')
+            : emptyHero('lineup', 'Kadro verisi yok.', 'Bu lig için kadro bilgisi sağlanmıyor.'));
         return;
     }
 
