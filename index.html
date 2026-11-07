@@ -3997,6 +3997,258 @@ body.has-layer .ac-kapa svg {
 }
 
 .karne-row > i i { display: block; height: 100%; background: #0c7a58; }
+
+/* =====================================================
+   AI KUPONU: robot paneli (spor, gün, maç sayısı, oran), bekleme animasyonu, kupon
+===================================================== */
+#kpPanelWrap { overflow: hidden; }
+#kpPanelWrap.collapsed { height: 0; }
+
+#kpPanel {
+    margin-bottom: .75rem;
+    padding: .85em .9em .9em;
+    border-radius: 1rem;
+    background: white;
+    font-size: .875rem;
+    color: #1d2340;
+}
+
+.kp-head { display: flex; align-items: center; gap: .6em; margin-bottom: .7em; }
+.kp-head b { display: block; font-size: 1.05em; font-weight: 800; }
+.kp-head small { display: flex; align-items: center; gap: .35em; font-size: .8em; font-weight: 600; color: #6b7080; }
+
+.kp-avatar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2em;
+    height: 2.2em;
+    border-radius: .7em;
+    background: #1d2340;
+}
+
+.kp-avatar svg { width: 1.2em; height: 1.2em; }
+
+.kp-live {
+    width: .45em;
+    height: .45em;
+    border-radius: 50%;
+    background: #0c7a58;
+    animation: blink 1.2s ease-in-out infinite;
+}
+
+.kp-block { margin-top: .75em; }
+
+.kp-label {
+    display: flex;
+    justify-content: space-between;
+    gap: .5em;
+    margin-bottom: .35em;
+    font-size: .8em;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #6b7080;
+}
+
+.kp-label b { font-weight: 800; text-transform: none; color: #1d2340; }
+
+.kp-row { display: flex; gap: .3em; }
+
+.kp-row button,
+#kpMore,
+.kp-light {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 2.5em;
+    padding: 0 .3em;
+    border: .0625rem solid #d5d8de;
+    border-radius: .8em;
+    background: white;
+    font-size: .9em;
+    font-weight: 800;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+.kp-row button.active,
+#kpMore.active {
+    border-color: #1d2340;
+    background: #1d2340;
+    color: white;
+}
+
+#kpMore { flex: 1.3 1 0; }
+
+.kp-odd-row { display: flex; align-items: center; gap: .6em; }
+#kpSlider { flex: 1; min-width: 0; accent-color: #1d2340; }
+
+.kp-odd-num {
+    display: flex;
+    align-items: center;
+    gap: .35em;
+    padding: .25em .5em;
+    border: .0625rem solid #d5d8de;
+    border-radius: .7em;
+    font-size: .8em;
+    font-weight: 800;
+    color: #6b7080;
+}
+
+#kpOdd {
+    width: 3.6em;
+    border: none;
+    font: inherit;
+    font-size: 1.15em;
+    font-weight: 800;
+    color: #1d2340;
+    text-align: right;
+}
+
+.kp-presets { margin-top: .45em; }
+.kp-presets button { height: 2.1em; }
+
+.kp-actions { display: flex; gap: .4em; margin-top: .9em; }
+
+#kpRun,
+.kp-actions .kp-light { height: 2.8em; font-size: .95em; }
+
+#kpRun {
+    flex: 1.4 1 0;
+    border: none;
+    border-radius: .8em;
+    background: #1d2340;
+    font-weight: 800;
+    color: white;
+}
+
+#kpRun:disabled, .kp-light:disabled { opacity: .45; }
+
+/* Kupon oluşunca üstte kalan özet */
+#kpBar {
+    margin-bottom: .75rem;
+    padding: .7em .9em;
+    border-radius: 1rem;
+    background: white;
+    font-size: .875rem;
+}
+
+.kp-bar-top { display: flex; align-items: center; justify-content: space-between; gap: .5em; font-size: .88em; color: #6b7080; }
+.kp-bar-top b { color: #1d2340; }
+
+.kp-bar-top em {
+    flex: none;
+    padding: .15em .55em;
+    border-radius: .45em;
+    background: #e3f5ed;
+    font-style: normal;
+    font-weight: 800;
+    color: #08583e;
+}
+
+#kpBar .kp-actions { margin-top: .55em; }
+
+/* Bekleme */
+.kp-wait {
+    padding: 1.1em .9em;
+    border-radius: 1rem;
+    background: white;
+    font-size: .875rem;
+    text-align: center;
+    color: #1d2340;
+}
+
+.kp-ring { position: relative; width: 3.6em; height: 3.6em; margin: 0 auto .6em; }
+.kp-ring svg { width: 100%; height: 100%; }
+.kp-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .78em; font-weight: 800; }
+.kp-arc-o { transform-origin: 29px 29px; animation: kpSpin 1.1s linear infinite; }
+.kp-arc-i { transform-origin: 29px 29px; animation: kpSpin 1.6s linear infinite reverse; }
+
+@keyframes kpSpin { to { transform: rotate(360deg); } }
+
+.kp-wait-title { font-weight: 800; }
+.kp-wait-step { min-height: 1.4em; margin-top: .25em; font-size: .88em; font-weight: 600; color: #6b7080; }
+
+.kp-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: .3em; margin: .6em 0; }
+
+.kp-steps span {
+    padding: .15em .5em;
+    border-radius: .45em;
+    background: #f1f3f7;
+    font-size: .78em;
+    font-weight: 700;
+    color: #8c9bae;
+}
+
+.kp-steps span.active { background: #e6effc; color: #154596; }
+.kp-steps span.done { background: #e3f5ed; color: #08583e; }
+
+.kp-track { height: .4em; border-radius: 99em; background: #e3e8f0; overflow: hidden; }
+.kp-track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1d2340, #0c7a58); }
+
+.kp-wait-meta { display: flex; justify-content: space-between; margin-top: .45em; font-size: .82em; font-weight: 600; color: #6b7080; }
+.kp-wait-meta b { color: #1d2340; }
+
+/* Kupon */
+.kp-ticket {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .7em;
+    margin-bottom: .75em;
+    padding: .8em .9em;
+    border-radius: 1rem;
+    background: #1d2340;
+    font-size: .875rem;
+    color: #e3ebf7;
+}
+
+.kp-ticket small { display: block; font-size: .8em; font-weight: 800; text-transform: uppercase; color: #9fb3d9; }
+.kp-ticket span { font-size: .88em; }
+.kp-ticket span b { color: white; }
+
+.kp-total {
+    flex: none;
+    padding: .35em .75em;
+    border-radius: .75em;
+    background: rgba(255, 255, 255, .1);
+    text-align: center;
+}
+
+.kp-total b { display: block; font-size: 1.45em; font-weight: 800; color: #fde68a; }
+
+.kp-note {
+    margin-bottom: .75em;
+    padding: .6em .8em;
+    border: 1px solid #e3d09e;
+    border-radius: .8em;
+    background: #fcf8ec;
+    font-size: .82rem;
+    line-height: 1.45;
+    color: #5a4410;
+}
+
+.kp-leg { cursor: default; }
+.kp-leg.locked { border-color: #0c7a58; }
+.kp-leg .an-concl { font-size: .9em; }
+
+.kp-leg-actions { display: flex; gap: .3em; margin-top: .65em; }
+
+.kp-leg-actions button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: .5em .3em;
+    border: 1px solid #d5d8de;
+    border-radius: .7em;
+    background: white;
+    font-size: .85em;
+    font-weight: 800;
+    color: #555a66;
+    white-space: nowrap;
+}
+
+.kp-leg.locked .kp-lock { border-color: #0c7a58; background: #e3f5ed; color: #08583e; }
+.kp-leg-actions .kp-deep { border-color: #cfe0ff; background: #eef4ff; color: #1a56db; }
 /* =====================================================
    GOL BİLDİRİMİ (uygulama içi): en üstte, tam genişlik, 100px
 ===================================================== */
@@ -4401,7 +4653,52 @@ body.has-layer .ac-kapa svg {
                 <div id="mySaved"></div>
             </div>
             <div class="home-page" data-page="ai">
-                <p class="home-empty">Ai kuponları yakında burada olacak.</p>
+                <!-- Kupon oluşunca: kriter özeti, Kriterleri Düzenle ve Alternatif Üret -->
+                <div id="kpBar" hidden>
+                    <div class="kp-bar-top"><span>Aktif kriter: <b id="kpBarText"></b></span><em>Kupon hazır</em></div>
+                    <div class="kp-actions"><button class="kp-light" id="kpEdit">Kriterleri Düzenle</button><button class="kp-light" id="kpAltBar">Alternatif Üret</button></div>
+                </div>
+                <!-- Robot paneli: spor, gün, maç sayısı, oran -->
+                <div id="kpPanelWrap"><div id="kpPanel">
+                    <div class="kp-head">
+                        <span class="kp-avatar" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3.5 14.5L7.5 10.2L11.2 12.6L16.5 6.2" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="10.2" r="1.5" fill="#fff"/><circle cx="11.2" cy="12.6" r="1.5" fill="#fff"/><circle cx="16.5" cy="6.2" r="2" fill="#5eead4"/></svg></span>
+                        <div><b>AI Kupon Robotu</b><small><i class="kp-live"></i><span id="kpStatus">Yükleniyor…</span></small></div>
+                    </div>
+                    <div class="kp-row kp-pools" id="kpPools">
+                        <button data-pool="all" class="active">Tümü (<span>0</span>)</button>
+                        <button data-pool="futbol">Futbol (<span>0</span>)</button>
+                        <button data-pool="nba">NBA (<span>0</span>)</button>
+                    </div>
+                    <div class="kp-block">
+                        <div class="kp-label"><span>Tarih Seçimi</span><b id="kpDateLbl"></b></div>
+                        <div class="kp-row" id="kpDays"></div>
+                    </div>
+                    <div class="kp-block">
+                        <div class="kp-label"><span>Maç Sayısı (1 – 10)</span><b id="kpCountLbl">3 Maç</b></div>
+                        <div class="kp-row" id="kpCounts">
+                            <button data-cnt="1">1 Maç</button><button data-cnt="2">2 Maç</button>
+                            <button data-cnt="3" class="active">3 Maç</button><button data-cnt="4">4 Maç</button>
+                            <select id="kpMore" aria-label="5-10 maç"><option value="">5–10 ▾</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+                        </div>
+                    </div>
+                    <div class="kp-block">
+                        <div class="kp-label"><span>Oran</span><b id="kpOddLbl"></b></div>
+                        <div class="kp-odd-row">
+                            <input type="range" id="kpSlider" min="0" max="1000" step="1">
+                            <label class="kp-odd-num"><span>ORAN</span><input type="number" id="kpOdd" min="1" max="1000" step="0.5" inputmode="decimal"></label>
+                        </div>
+                        <div class="kp-row kp-presets" id="kpPresets">
+                            <button data-odd="2">2</button><button data-odd="3.5">3.5</button><button data-odd="5">5</button>
+                            <button data-odd="10">10</button><button data-odd="25">25</button><button data-odd="50">50</button>
+                        </div>
+                    </div>
+                    <div class="kp-actions">
+                        <button id="kpRun">Kuponu Oluştur</button>
+                        <button class="kp-light" id="kpAlt">Alternatif Üret</button>
+                    </div>
+                </div></div>
+                <!-- Bekleme animasyonu ya da kupon -->
+                <div id="kpResult"></div>
             </div>
             <div class="home-page" data-page="analysis">
                 <!-- Gün satırı: bugün ve sonraki 3 gün (altında analiz sayısı), sağda Ligler ve Başarı Karnesi; hepsi tek satır -->
@@ -7996,6 +8293,8 @@ function readAnVersion() {
         anVersion = version;
         if (anShown)
             anRedraw();
+        if (kpShown)
+            kpRefresh();
     };
     rt.get(rt.ref(rd, 'analiz_surum')).then(snap => done(snap.val() ?? null), () => done(null));
 }
@@ -8016,6 +8315,7 @@ function saveAnDoc(path, data) {
         const [collection, id] = key.split('/');
         const doc = anStore.docs[key] || {};
         if (((collection === 'analiz_gun' || collection === 'analiz_nba_gun') && id < TODAY) ||
+            (collection === 'kupon_gun' && id < kpClock().todayIso) ||
             ((collection === 'analiz_futbol' || collection === 'analiz_nba') && doc.ts && doc.ts * 1000 < Date.now() - 86400000))
             delete anStore.docs[key];
     });
@@ -8881,6 +9181,666 @@ function openAnSheet(card) {
     detailSheet.classList.add('open');
     layerOpened('detail');
 }
+
+
+/* =================================================
+   AI KUPONU (sunucu/VERITABANI.md → "Analiz" → kupon_gun)
+   -------------------------------------------------
+   Havuz: yönetim sayfasının analiz dosyasından yazdığı kupon_gun/{takvim günü} dokümanları (futbol ve NBA
+   birlikte; her maçın hazır tercihleri). Sekme ilk açılınca seçili günlerinkiler okunur (Bugün seçiliyse
+   ertesi günün 06:30'a kadarki maçları için ertesi gün de); analiz sürümüyle telefonda saklanır.
+   Kupon tamamen telefonda kurulur (analiz panelindeki robotun yöntemi aynen): rastgele maç ve tercih,
+   maçların oranları birbirine yakın (±%20, bulunamazsa %25 / %32), toplam oran hedefin ±%15 bandında,
+   son kuponlardaki maçlar mümkünse tekrar etmez; sabitlenen maçlar korunur, tek maç değiştirilebilir.
+   Başlamış (1 dakikadan az kalan) maçlar havuza girmez. Maça basınca Detaylı Analiz açılır.
+================================================= */
+const KP_WAIT = 5000;          /* ilk kupon bekleme animasyonu */
+const KP_FAST_WAIT = 1000;     /* sonraki kuponlar */
+const KP_MAX_REL = 0.20;       /* kupondaki oranların ortalamaya en fazla uzaklığı */
+const KP_DEV_MAX = 0.15;       /* toplam oranın hedeften en fazla uzaklığı */
+const KP_DEV_MIN = 0.022;      /* hedefe birebir yapışmasın */
+const KP_RECENT_KEY = 'aiKuponSonMaclar';
+const KP_SLIDER_MAX = 50;
+
+let kpShown = false;
+const kp = { pool: 'all', days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false, fullWaitDone: false };
+
+/* Türkiye saatiyle takvim günü ve saat */
+function kpClock() {
+    const now = Date.now();
+    const tr = new Date(now + 3 * 3600000);
+    return { nowSec: Math.floor(now / 1000), todayIso: tr.toISOString().slice(0, 10), hm: tr.toISOString().slice(11, 16) };
+}
+
+const kpShift = (iso, n) => new Date(new Date(iso + 'T12:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
+
+function kpDayLabel(iso, clock) {
+    if (iso === clock.todayIso) return 'Bugün';
+    if (iso === kpShift(clock.todayIso, 1)) return 'Yarın';
+    return DAYS[new Date(iso + 'T12:00:00').getDay()];
+}
+
+/* Okunması gereken günler: seçililer; Bugün seçiliyse ertesi gün de (gece maçları) */
+function kpNeededDays(clock) {
+    const set = new Set(kp.selected);
+    if (kp.selected.includes(clock.todayIso))
+        set.add(kpShift(clock.todayIso, 1));
+    return Array.from(set);
+}
+
+/* Havuz dokümanı (okunuyorsa undefined) */
+function kpDoc(day) {
+    if (!kpShown || anVersion === undefined)
+        return undefined;
+    const path = 'kupon_gun/' + day;
+    const stored = storedAnDoc(path);
+    if (stored !== undefined)
+        return stored;
+    return cachedDoc(path, () => {
+        saveAnDoc(path, (DOC_CACHE.get(path) || {}).data);
+        kpRefresh();
+    });
+}
+
+/* Başlamamış (en az 1 dakika var) maç */
+function kpUpcoming(m, clock) {
+    if (m.ts && m.ts <= clock.nowSec + 60)
+        return false;
+    if (!m.date_iso || m.date_iso < clock.todayIso)
+        return false;
+    return m.date_iso !== clock.todayIso || (!!m.time_tr && m.time_tr > clock.hm);
+}
+
+/* Seçili günlerde mi (Bugün seçiliyken 06:30'dan sonra bu gecenin 06:30'a kadarki maçları da) */
+function kpInDays(m, clock) {
+    if (kp.selected.includes(m.date_iso))
+        return true;
+    return kp.selected.includes(clock.todayIso) && clock.hm >= '06:30' &&
+        m.date_iso === kpShift(clock.todayIso, 1) && (m.time_tr || '') <= '06:30';
+}
+
+/* Havuzdaki bütün maçlar (okunanlar); okunmamış gün varsa null */
+function kpAllMatches(clock) {
+    const docs = kpNeededDays(clock).map(kpDoc);
+    if (docs.some(d => d === undefined))
+        return null;
+    const list = [];
+    docs.forEach(data => Object.entries(data || {}).forEach(([key, m]) => list.push({
+        key: key, sport: m.s === 'n' ? 'nba' : 'futbol', nba: m.s === 'n', ts: m.ts, date_iso: m.d, time_tr: m.t,
+        league: m.league, home: m.home, away: m.away, prob: m.prob, opts: m.opts || []
+    })));
+    return list;
+}
+
+/* Kupona girebilecek maçlar (seçili spor ve günler, başlamamış); sayıları ve durum yazısını da günceller */
+function kpActive() {
+    const clock = kpClock();
+    const all = kpAllMatches(clock);
+    const live = (all || []).filter(m => kpUpcoming(m, clock) && kpInDays(m, clock));
+    const foot = live.filter(m => !m.nba), nba = live.filter(m => m.nba);
+    const counts = document.querySelectorAll('#kpPools span');
+    counts[0].textContent = live.length;
+    counts[1].textContent = foot.length;
+    counts[2].textContent = nba.length;
+    const pool = kp.pool === 'futbol' ? foot : kp.pool === 'nba' ? nba : live;
+    document.getElementById('kpStatus').textContent = !all ? 'Maçlar yükleniyor…' :
+        clock.hm + ' itibarıyla başlamamış maç sayısı ' + pool.length;
+    return all ? pool : null;
+}
+
+const kpKey = m => m.sport + ':' + m.home + '-' + m.away + ':' + m.date_iso;
+
+function kpShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+/* Oranların ortalamaya en uzak olanının uzaklığı (oran) */
+function kpMaxRel(legs) {
+    if (legs.length <= 1)
+        return 0;
+    const mean = legs.reduce((s, l) => s + l.opt.odd, 0) / legs.length;
+    return Math.max(...legs.map(l => Math.abs(l.opt.odd - mean) / mean));
+}
+
+/* Son kuponlarda gösterilen maçlar (en fazla 22, telefonda) */
+let kpRecentMem = [];
+function kpRecent() {
+    const saved = readJSON(KP_RECENT_KEY, null);
+    return new Set(Array.isArray(saved) ? saved : kpRecentMem);
+}
+
+function kpRemember(legs) {
+    const fresh = legs.map(l => kpKey(l.match || l)).filter(Boolean);
+    kpRecentMem = fresh.concat(Array.from(kpRecent()).filter(k => !fresh.includes(k))).slice(0, 22);
+    writeJSON(KP_RECENT_KEY, kpRecentMem);
+}
+
+/* Kupon adayları: [[{ match, oIdx, opt }...], ...] (yöntem: analiz panelindeki robot) */
+function kpSolve(matches, N, target) {
+    if (!matches.length)
+        return [];
+    const n = Math.min(N, matches.length);
+    const targetLog = Math.log(Math.max(1.15, target));
+    const idealLeg = Math.pow(Math.max(1.15, target), 1 / n);
+    const recent = kpRecent();
+
+    const items = [];
+    kpShuffle(matches).forEach((m, mIdx) => {
+        const isRecent = recent.has(kpKey(m));
+        kpShuffle(m.opts.map((o, i) => [o, i])).forEach(([o, oIdx]) => {
+            if (o.odd && o.odd >= 1.18)
+                items.push({ mIdx, oIdx, match: m, opt: o, odd: o.odd, logOdd: Math.log(o.odd), isRecent });
+        });
+    });
+    if (!items.length)
+        return [];
+
+    const inBand = it => {
+        const d = Math.abs(it.odd - target) / target;
+        return d >= KP_DEV_MIN && d <= KP_DEV_MAX;
+    };
+
+    if (n === 1) {
+        const all = kpShuffle(items);
+        const fallback = all.slice().sort((a, b) =>
+            (Math.abs(a.odd - target) / target + Math.random() * .15) - (Math.abs(b.odd - target) / target + Math.random() * .15));
+        return kpShuffle(all.filter(it => !it.isRecent && inBand(it))).concat(kpShuffle(all.filter(inBand)), fallback)
+            .slice(0, 30).map(it => [it]);
+    }
+
+    function search(tol) {
+        const mults = kpShuffle([.86, .885, .91, .935, .96, 1.04, 1.07, 1.10, 1.13]);
+        const centers = mults.map(x => Math.pow(Math.max(1.15, target * x), 1 / n));
+        kpShuffle(Array.from(new Set(items.map(x => Number(x.odd.toFixed(2)))))
+            .sort((a, b) => Math.abs(Math.log(a) - Math.log(idealLeg)) - Math.abs(Math.log(b) - Math.log(idealLeg)))
+            .slice(0, 18)).forEach(o => centers.push(o));
+
+        const fresh = [], any = [], out = [];
+        const seen = new Set();
+
+        const register = legs => {
+            if (kpMaxRel(legs) > tol)
+                return;
+            const sorted = legs.slice().sort((a, b) => (a.match.ts - b.match.ts) || (a.mIdx - b.mIdx));
+            const sig = sorted.map(l => l.mIdx + ':' + l.oIdx).join('|');
+            if (seen.has(sig))
+                return;
+            seen.add(sig);
+            let total = 1, sumLog = 0, recentCount = 0;
+            sorted.forEach(l => { total *= l.odd; sumLog += l.logOdd; if (l.isRecent) recentCount++; });
+            const rel = Math.abs(total - target) / target;
+            const entry = { legs: sorted, dist: Math.abs(sumLog - targetLog) + recentCount * .5 + Math.random() * .35 };
+            if (rel >= KP_DEV_MIN && rel <= KP_DEV_MAX)
+                (recentCount ? any : fresh).push(entry);
+            else
+                out.push(entry);
+        };
+
+        centers.forEach(center => {
+            const minO = center * (1 - tol), maxO = center * (1 + tol);
+            const byMatch = new Map();
+            items.forEach(it => {
+                if (it.odd < minO || it.odd > maxO)
+                    return;
+                if (!byMatch.has(it.mIdx))
+                    byMatch.set(it.mIdx, []);
+                byMatch.get(it.mIdx).push(it);
+            });
+            if (byMatch.size < n)
+                return;
+            const buckets = Array.from(byMatch.values());
+
+            /* Rastgele maç ve tercih */
+            for (let t = 0; t < (n <= 4 ? 140 : 90); t++) {
+                const legs = [], used = new Set();
+                while (legs.length < n && used.size < buckets.length) {
+                    const r = Math.floor(Math.random() * buckets.length);
+                    if (used.has(r))
+                        continue;
+                    used.add(r);
+                    legs.push(buckets[r][Math.floor(Math.random() * buckets[r].length)]);
+                }
+                if (legs.length === n)
+                    register(legs);
+            }
+
+            /* Hedef banda yönlendirilmiş rastgele (son iki maç hedefe göre) */
+            for (let g = 0; g < (n >= 4 ? 55 : 25); g++) {
+                const goal = Math.max(Math.pow(1.18, n), target * mults[g % mults.length]);
+                const shuffled = kpShuffle(buckets);
+                const legs = [];
+                let prod = 1;
+                for (let step = 0; step < n; step++) {
+                    const want = Math.max(minO, Math.min(maxO, Math.pow(Math.max(1.15, goal / prod), 1 / (n - step))));
+                    const bucket = shuffled[step];
+                    const pick = step < n - 2 ? bucket[Math.floor(Math.random() * bucket.length)]
+                        : kpShuffle(bucket).sort((a, b) => Math.abs(a.odd - want) - Math.abs(b.odd - want))[Math.floor(Math.random() * Math.min(2, bucket.length))];
+                    legs.push(pick);
+                    prod *= pick.odd;
+                }
+                register(legs);
+            }
+        });
+
+        const good = kpShuffle(fresh).concat(kpShuffle(any));
+        if (good.length)
+            return good.slice(0, 40).map(x => x.legs);
+        out.sort((a, b) => a.dist - b.dist);
+        return kpShuffle(out.slice(0, 20)).map(x => x.legs);
+    }
+
+    let res = search(KP_MAX_REL);
+    if (!res.length) res = search(.25);
+    if (!res.length) res = search(.32);
+    return res;
+}
+
+/* Sabitlenen maçlar korunarak adaylar */
+function kpSolveLocked(pool, N, target) {
+    const clock = kpClock();
+    const inPool = new Set(pool.map(kpKey));
+    const locked = kp.coupon.filter(l => l.locked && kpUpcoming(l.match, clock) && inPool.has(kpKey(l.match)));
+    if (!locked.length)
+        return { allLocked: false, candidates: kpSolve(pool, N, target) };
+    if (locked.length >= N)
+        return { allLocked: true, candidates: [locked.slice(0, N)] };
+    const rem = N - locked.length;
+    const prod = locked.reduce((s, l) => s * l.opt.odd, 1);
+    const keys = new Set(locked.map(l => kpKey(l.match)));
+    const restPool = pool.filter(m => !keys.has(kpKey(m)));
+    const rest = restPool.length ? kpSolve(restPool, rem, Math.max(Math.pow(1.18, rem), target / Math.max(1, prod))) : [];
+    if (!rest.length)
+        return { allLocked: false, candidates: [locked] };
+    return { allLocked: false, candidates: rest.map(rc => locked.map(l => ({ ...l, locked: true }))
+        .concat(rc.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: false })))
+        .sort((a, b) => (a.match.ts || 0) - (b.match.ts || 0))) };
+}
+
+/* Tek maçı değiştir: diğerlerine uyan, hedefi tutturan rastgele bir tercih (son değiştirilenler geri gelmez) */
+let kpSwapped = [];
+function kpReplace(idx) {
+    if (kp.waiting || kpUnfolding)
+        return;
+    const legs = kp.coupon;
+    const cur = legs[idx];
+    const pool = kpActive() || [];
+    const curKey = kpKey(cur.match);
+    const others = legs.filter((_, i) => i !== idx);
+    const otherKeys = new Set(others.map(l => kpKey(l.match)));
+    let avail = pool.filter(m => !otherKeys.has(kpKey(m)) && kpKey(m) !== curKey);
+    if (!avail.length)
+        avail = pool.filter(m => !otherKeys.has(kpKey(m)));
+    if (!avail.length) {
+        kp.toast = 'Seçili günlerde değiştirilebilecek başka başlamamış maç bulunamadı.';
+        kpRender();
+        return;
+    }
+    const prod = others.reduce((s, l) => s * l.opt.odd, 1);
+    const mean = others.length ? others.reduce((s, l) => s + l.opt.odd, 0) / others.length : Math.max(1.25, kp.target);
+    const want = Math.max(1.18, kp.target / Math.max(1, prod));
+    const cands = [];
+    avail.forEach(m => {
+        const key = kpKey(m);
+        m.opts.forEach((o, oIdx) => {
+            if (!o.odd || o.odd < 1.18 || (key === curKey && o.pick === cur.opt.pick))
+                return;
+            const rel = others.length ? Math.abs(o.odd - mean) / mean : 0;
+            cands.push({ match: m, oIdx, opt: o, key,
+                score: Math.abs(Math.log(o.odd) - Math.log(want)) + (rel > .25 ? (rel - .25) * 2.2 : 0) +
+                    (kpSwapped.includes(key) ? .65 : 0) + Math.random() * .14 });
+        });
+    });
+    if (!cands.length) {
+        kp.toast = 'Uygun oranlı başka tercih bulunamadı; gün seçimini genişletebilirsin.';
+        kpRender();
+        return;
+    }
+    cands.sort((a, b) => a.score - b.score);
+    const chosen = cands[Math.floor(Math.random() * Math.min(5, cands.length))];
+    kpSwapped = [chosen.key].concat(kpSwapped.filter(k => k !== chosen.key)).slice(0, 12);
+    kp.coupon = legs.map((l, i) => i === idx ? { match: chosen.match, oIdx: chosen.oIdx, opt: chosen.opt, locked: false } : l);
+    kp.toast = '';
+    kpRemember([chosen]);
+    kpRender();
+}
+
+/* ---------- Kontroller ---------- */
+const kpOddText = v => v < 10 && v % 1 ? v.toFixed(2) : String(v);
+const kpSliderToOdd = v => { const r = Math.pow(KP_SLIDER_MAX, Math.max(0, Math.min(1000, Number(v))) / 1000); return r < 10 ? Math.round(r * 2) / 2 : Math.round(r); };
+const kpOddToSlider = o => Math.round(Math.log(Math.max(1, Math.min(KP_SLIDER_MAX, Number(o) || 1))) / Math.log(KP_SLIDER_MAX) * 1000);
+
+function kpSyncOdd(fromInput) {
+    const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
+    document.getElementById('kpOddLbl').textContent = kpOddText(kp.target) + ' Oran (maç başı ~' + per + ')';
+    if (!fromInput)
+        document.getElementById('kpOdd').value = kp.target;
+    document.getElementById('kpSlider').value = kpOddToSlider(kp.target);
+    document.querySelectorAll('#kpPresets button').forEach(b => b.classList.toggle('active', Math.abs(Number(b.dataset.odd) - kp.target) < .05));
+}
+
+function kpSyncCount() {
+    document.getElementById('kpCountLbl').textContent = kp.count + ' Maç';
+    document.querySelectorAll('#kpCounts button').forEach(b => b.classList.toggle('active', Number(b.dataset.cnt) === kp.count));
+    const more = document.getElementById('kpMore');
+    more.value = kp.count >= 5 ? String(kp.count) : '';
+    more.classList.toggle('active', kp.count >= 5);
+    kpSyncOdd();
+}
+
+let kpToday = '';
+/* Günler: bugün ve sonraki 3 gün. İlk açılışta bugün (başlamamış maçı yoksa ilk dolu gün) */
+function kpInitDays(keep) {
+    const clock = kpClock();
+    kpToday = clock.todayIso;
+    kp.days = [0, 1, 2, 3].map(i => kpShift(clock.todayIso, i));
+    if (keep)
+        kp.selected = kp.selected.filter(d => kp.days.includes(d));
+    else
+        kp.selected = [kp.days[0]];
+}
+
+function kpSyncDays() {
+    const clock = kpClock();
+    const box = document.getElementById('kpDays');
+    box.textContent = '';
+    kp.days.forEach(iso => {
+        const b = document.createElement('button');
+        b.textContent = kpDayLabel(iso, clock);
+        b.classList.toggle('active', kp.selected.includes(iso));
+        b.addEventListener('click', () => {
+            if (kp.waiting || kpUnfolding)
+                return;
+            kp.selected = kp.selected.includes(iso) ? kp.selected.filter(d => d !== iso) : kp.selected.concat(iso).sort();
+            kp.toast = '';
+            kpRefresh();
+        });
+        box.appendChild(b);
+    });
+    const labels = kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock));
+    document.getElementById('kpDateLbl').textContent = !labels.length ? 'Gün seçilmedi' :
+        labels.length === 4 ? '4 Gün · Tüm günler' : labels.length + ' Gün · ' + labels.join(', ');
+}
+
+/* Gün, sayılar ve (başlamış maç varsa) kupon güncellenir */
+function kpRefresh() {
+    if (!kpShown)
+        return;
+    kpInitDays(kpToday === kpClock().todayIso);
+    kpSyncDays();
+    const pool = kpActive();
+    const clock = kpClock();
+    if (pool && kp.coupon.some(l => !kpUpcoming(l.match, clock)) && !kp.waiting) {
+        const cands = kpSolveLocked(pool, kp.count, kp.target).candidates;
+        const pick = cands.length ? cands[Math.floor(Math.random() * Math.min(cands.length, 8))] : [];
+        kpRemember(pick);
+        kp.coupon = pick.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: !!c.locked }));
+        kpRender();
+    }
+}
+
+document.querySelectorAll('#kpPools button').forEach(b => b.addEventListener('click', () => {
+    if (kp.waiting)
+        return;
+    kp.pool = b.dataset.pool;
+    document.querySelectorAll('#kpPools button').forEach(x => x.classList.toggle('active', x === b));
+    kpActive();
+}));
+
+document.querySelectorAll('#kpCounts button').forEach(b => b.addEventListener('click', () => {
+    if (kp.waiting)
+        return;
+    kp.count = Number(b.dataset.cnt);
+    kpSyncCount();
+}));
+
+document.getElementById('kpMore').addEventListener('change', event => {
+    const n = parseInt(event.target.value, 10);
+    if (kp.waiting || !(n >= 5 && n <= 10))
+        return;
+    kp.count = n;
+    kpSyncCount();
+});
+
+document.getElementById('kpSlider').addEventListener('input', event => {
+    if (kp.waiting)
+        return;
+    kp.target = Math.max(1, Math.min(1000, kpSliderToOdd(event.target.value)));
+    kpSyncOdd();
+});
+
+document.getElementById('kpOdd').addEventListener('input', event => {
+    const v = parseFloat(event.target.value);
+    if (kp.waiting || isNaN(v))
+        return;
+    kp.target = Math.max(1, Math.min(1000, v));
+    kpSyncOdd(true);
+});
+
+document.querySelectorAll('#kpPresets button').forEach(b => b.addEventListener('click', () => {
+    if (kp.waiting)
+        return;
+    kp.target = Number(b.dataset.odd);
+    kpSyncOdd();
+}));
+
+/* ---------- Panelin kapanıp açılması ---------- */
+const kpWrap = document.getElementById('kpPanelWrap');
+const kpPanel = document.getElementById('kpPanel');
+const kpBar = document.getElementById('kpBar');
+let kpUnfolding = false;
+
+function kpCollapse() {
+    const pool = kp.pool === 'futbol' ? 'Futbol' : kp.pool === 'nba' ? 'NBA' : 'Tümü';
+    document.getElementById('kpBarText').textContent = pool + ' · ' + document.getElementById('kpDateLbl').textContent +
+        ' · ' + kp.count + ' Maç · Hedef ' + kpOddText(kp.target) + ' Oran';
+    kpWrap.classList.add('collapsed');
+    kpBar.hidden = false;
+}
+
+/* Kriterleri Düzenle: panel yaylı açılır (0.46 sn) */
+document.getElementById('kpEdit').addEventListener('click', () => {
+    if (kp.waiting || kpUnfolding)
+        return;
+    kpUnfolding = true;
+    kpBar.hidden = true;
+    homeMain.scrollTo({ top: 0, behavior: 'smooth' });
+    kpWrap.classList.remove('collapsed');
+    const full = kpPanel.offsetHeight;
+    kpWrap.style.height = '0px';
+    const start = performance.now();
+    (function step(now) {
+        const u = Math.min(1, (now - start) / 460);
+        const ease = 1 - Math.pow(1 - u, 3.6);
+        kpWrap.style.height = (full * ease).toFixed(1) + 'px';
+        kpPanel.style.opacity = (.25 + .75 * Math.min(1, u * 1.35)).toFixed(3);
+        kpPanel.style.transform = 'translateY(' + (-.875 * (1 - ease)).toFixed(3) + 'rem)';
+        if (u < 1)
+            return requestAnimationFrame(step);
+        kpWrap.style.height = '';
+        kpPanel.style.opacity = '';
+        kpPanel.style.transform = '';
+        kpUnfolding = false;
+    })(start);
+});
+
+/* ---------- Kupon üretme (ilk kez 5 sn, sonra 1 sn hesaplanıyor gösterilir) ---------- */
+function kpGenerate(next) {
+    if (kp.waiting || kpUnfolding)
+        return;
+    kp.toast = '';
+    const pool = kpActive();
+    if (!pool)
+        return;
+    const solved = kpSolveLocked(pool, kp.count, kp.target);
+    if (solved.allLocked && next) {
+        kp.toast = 'Kupondaki bütün maçlar sabit. Yeni alternatif için en az bir maçın sabitlemesini kaldır.';
+        kpRender();
+        return;
+    }
+    kp.generated = true;
+    const cands = solved.candidates;
+    if (!cands.length) {
+        kp.coupon = [];
+        kpRender();
+        return;
+    }
+    const chosen = cands[Math.floor(Math.random() * Math.min(cands.length, 8))];
+    kpRemember(chosen);
+    kp.coupon = chosen.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: !!c.locked }));
+
+    const wait = next || kp.fullWaitDone ? KP_FAST_WAIT : KP_WAIT;
+    kp.fullWaitDone = true;
+    kp.waiting = true;
+    document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = true; });
+
+    const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
+    const box = document.getElementById('kpResult');
+    box.innerHTML =
+        '<div class="kp-wait"><div class="kp-ring"><svg viewBox="0 0 58 58" fill="none" aria-hidden="true">' +
+        '<circle cx="29" cy="29" r="24" stroke="#dbe2ec" stroke-width="3.2"/><circle cx="29" cy="29" r="17.5" stroke="#e8edf4" stroke-width="2.4"/>' +
+        '<path class="kp-arc-o" d="M29 5 A24 24 0 0 1 53 29" stroke="#1d2340" stroke-width="3.4" stroke-linecap="round"/>' +
+        '<path class="kp-arc-i" d="M29 46.5 A17.5 17.5 0 0 1 11.5 29" stroke="#0c7a58" stroke-width="2.6" stroke-linecap="round"/></svg>' +
+        '<b id="kpPct">%0</b></div><div class="kp-wait-title">' + (wait <= 1200 ? 'Alternatif kombinasyon hesaplanıyor' : 'Optimum kupon kombinasyonu hesaplanıyor') + '</div>' +
+        '<div class="kp-wait-step" id="kpStep"></div><div class="kp-steps" id="kpSteps"><span>1. Bülten Filtresi</span><span>2. Oran Dengesi</span>' +
+        '<span>3. Model Güveni</span><span>4. Doğrulama</span></div><div class="kp-track"><i id="kpFill"></i></div>' +
+        '<div class="kp-wait-meta"><span>Hedef: <b>' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran</b></span><span id="kpTimer"></span></div></div>';
+
+    const texts = ['Başlamamış karşılaşmalar filtreleniyor…', 'Maç başı ~' + per + ' oran dengesinde uyumlu tercihler eşleştiriliyor…',
+        'Model olasılığı ve güven tutarlılığı kontrol ediliyor…', 'Kombinasyon doğrulandı, kupon hazırlanıyor…'];
+    const start = performance.now();
+    (function tick(now) {
+        const p = Math.min(1, (now - start) / wait);
+        const stage = p < .25 ? 0 : p < .55 ? 1 : p < .85 ? 2 : 3;
+        document.getElementById('kpFill').style.width = (p * 100).toFixed(1) + '%';
+        document.getElementById('kpPct').textContent = '%' + Math.round(p * 100);
+        document.getElementById('kpTimer').textContent = (Math.max(0, wait * (1 - p)) / 1000).toFixed(1) + ' sn';
+        document.getElementById('kpStep').textContent = texts[stage];
+        document.querySelectorAll('#kpSteps span').forEach((s, i) => {
+            s.classList.toggle('done', i < stage || p >= .99);
+            s.classList.toggle('active', i === stage && p < .99);
+        });
+        if (p < 1)
+            return requestAnimationFrame(tick);
+        kp.waiting = false;
+        document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = false; });
+        kpCollapse();
+        kpRender();
+        homeMain.scrollTo({ top: 0, behavior: 'smooth' });
+    })(start);
+}
+
+document.getElementById('kpRun').addEventListener('click', () => kpGenerate(false));
+document.getElementById('kpAlt').addEventListener('click', () => kpGenerate(true));
+document.getElementById('kpAltBar').addEventListener('click', () => kpGenerate(true));
+
+/* ---------- Kupon ---------- */
+const KP_TABS = { taraf: 'summary', gol: 'stats', korner: 'lineup', kartofsayt: 'odds', toplam: 'stats', oyuncu: 'lineup' };
+
+/* Detaylı Analiz'de tercihin sekmesi */
+function kpTab(m, o) {
+    const cat = String(o.cat || '').toLocaleLowerCase('tr');
+    const pk = String(o.pick || '').toLocaleUpperCase('tr');
+    if (m.nba)
+        return cat.includes('oyuncu') || cat === 'prop' ? 'oyuncu' : cat.includes('toplam') || /^\d/.test(pk.trim()) ? 'toplam' : 'taraf';
+    if (cat.includes('korner') || pk.includes('KORNER')) return 'korner';
+    if (cat.includes('kart') || cat.includes('ofsayt') || pk.includes('KART') || pk.includes('OFSAYT')) return 'kartofsayt';
+    if (cat.includes('gol') || pk.includes('GOL') || pk.includes('KG ') || pk.includes('ÜST') || pk.includes('ALT')) return 'gol';
+    return 'taraf';
+}
+
+function kpLeg(l, idx) {
+    const m = l.match, o = l.opt;
+    const e = escapeHTML;
+    const stars = Math.max(0, Math.min(5, Number(o.stars) || 0));
+    const card = document.createElement('div');
+    card.className = 'an-card kp-leg' + (l.locked ? ' locked' : '');
+    card.innerHTML =
+        '<div class="an-head"><span class="oc-league">' + AN_FLAG(m.league) + '<span></span></span><span class="an-when"></span></div>' +
+        '<div class="an-body"><div class="an-teams"><div class="an-team" data-side="home"></div><div class="an-team" data-side="away"></div></div>' +
+        '<div class="an-pick ' + anTheme(o.pick, o.cat) + (stars === 5 ? ' star-5' : '') + '"><small>' + e(o.cat || 'Hazır Tercih') + '</small>' +
+        '<b>' + e(o.pick) + '</b><span class="an-stars">' + '★'.repeat(stars) + '<i>' + '★'.repeat(5 - stars) + '</i></span>' +
+        (anConf(stars) ? '<span class="an-conf">' + anConf(stars) + '</span>' : '') +
+        '<span class="an-odd">Oran ' + Number(o.odd).toFixed(2) + '</span></div></div>' +
+        anProbHTML(m.prob, teamLook(m.home).short, teamLook(m.away).short) +
+        (o.why ? '<div class="an-concl">' + boldHTML(o.why) + '</div>' : '') +
+        '<div class="kp-leg-actions"><button class="kp-lock">' + (l.locked ? '✓ Sabitlendi' : 'Sabitle') + '</button>' +
+        '<button class="kp-swap">Değiştir</button><button class="kp-deep">Detaylı Analiz</button></div>';
+    card.querySelector('.oc-league span').textContent = m.league;
+    const when = new Date(m.ts * 1000);
+    card.querySelector('.an-when').textContent = formatDate(when) + ' ' + formatTime(when);
+    ['home', 'away'].forEach(side => {
+        const el = card.querySelector('.an-team[data-side="' + side + '"]');
+        el.appendChild(shieldCrest(teamLook(m[side])));
+        const name = document.createElement('span');
+        name.textContent = teamLabel(m[side]);
+        el.appendChild(name);
+    });
+    card.querySelector('.kp-lock').addEventListener('click', () => {
+        l.locked = !l.locked;
+        kp.toast = '';
+        kpRender();
+    });
+    card.querySelector('.kp-swap').addEventListener('click', () => kpReplace(idx));
+    card.querySelector('.kp-deep').addEventListener('click', () => {
+        openAnSheet({ key: m.key, ts: m.ts, league: m.league, home: m.home, away: m.away, nba: m.nba });
+        setDetailTab(KP_TABS[kpTab(m, o)] || 'summary');
+    });
+    return card;
+}
+
+function kpRender() {
+    const clock = kpClock();
+    kp.coupon = kp.coupon.filter(l => kpUpcoming(l.match, clock));
+    const legs = kp.coupon;
+    const box = document.getElementById('kpResult');
+    box.textContent = '';
+    const note = html => {
+        const p = document.createElement('div');
+        p.className = 'kp-note';
+        p.innerHTML = html;
+        box.appendChild(p);
+    };
+
+    if (!legs.length) {
+        if (kp.generated)
+            note(!kp.selected.length ? '<b>Gün seçilmedi:</b> Kupon için yukarıdan en az bir gün seç.'
+                : '<b>' + clock.hm + '</b> itibarıyla seçilen günlerde başlamamış maç yok. Başka bir gün ya da spor seçebilirsin.');
+        return;
+    }
+
+    const total = legs.reduce((s, l) => s * l.opt.odd, 1);
+    const avg = legs.reduce((s, l) => s + l.opt.odd, 0) / legs.length;
+    const prob = Math.round(legs.reduce((s, l) => s + (l.opt.prob || 55), 0) / legs.length);
+    const locked = legs.filter(l => l.locked).length;
+
+    const ticket = document.createElement('div');
+    ticket.className = 'kp-ticket';
+    ticket.innerHTML = '<div><small>Kupon Özeti · ' + legs.length + ' Maç' + (locked ? ' · ' + locked + ' Sabit' : '') + '</small>' +
+        '<span>Maç başı ort. oran <b>' + avg.toFixed(2) + '</b> · Ort. ihtimal <b>%' + prob + '</b></span></div>' +
+        '<div class="kp-total"><small>Toplam Oran</small><b>' + total.toFixed(2) + '</b></div>';
+    box.appendChild(ticket);
+
+    if (kp.toast)
+        note(escapeHTML(kp.toast));
+    if (legs.length < kp.count)
+        note('<b>Not:</b> Seçilen günlerde uygun <b>' + legs.length + ' maç</b> bulunduğu için ' + legs.length + ' maçlık kupon oluşturuldu. Daha fazla maç için gün ekleyebilirsin.');
+    else if (kp.target > total * 1.45 && total < kp.target)
+        note('<b>Not:</b> Dengeli oran dağılımı korunarak ' + legs.length + ' maçta ulaşılabilen en yüksek oran <b>' + total.toFixed(2) + '</b>; en yakın kupon sunuldu. Daha yüksek oran için maç sayısını artırabilirsin.');
+    else if (kp.target < total * .72 && total > kp.target)
+        note('<b>Not:</b> ' + legs.length + ' maçın dengeli oranlarının çarpımı en az <b>' + total.toFixed(2) + '</b> olduğundan hedefe en yakın kupon oluşturuldu.');
+
+    legs.forEach((l, i) => box.appendChild(kpLeg(l, i)));
+}
+
+kpInitDays(false);
+kpSyncCount();
+setInterval(kpRefresh, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) kpRefresh(); });
 
 renderDays();
 anRedraw();
@@ -9889,6 +10849,13 @@ function setHomeModeView(mode) {
         anShown = true;
         readAnVersion();
         anRedraw();
+    }
+
+    /* AI Kuponu havuzu sekme ilk açılınca okunur */
+    if (mode === 'ai' && !kpShown) {
+        kpShown = true;
+        readAnVersion();
+        kpRefresh();
     }
 
     homeModeBox.querySelectorAll('button').forEach(button => {

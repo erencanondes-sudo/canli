@@ -31,14 +31,14 @@ service cloud.firestore {
     }
 
     /*
-     * Analizler: maç, gün, lig ve dizin dokümanları. Herkes okur; yalnızca yönetici (yonetim.html ile) yazar.
-     * analiz_futbol, analiz_nba, analiz_gun, analiz_nba_gun, analiz_lig, analiz_nba_lig, analiz_dizin
+     * Analizler: maç, gün, lig ve dizin dokümanları; AI Kuponu havuzu. Herkes okur; yalnızca yönetici (yonetim.html ile) yazar.
+     * analiz_futbol, analiz_nba, analiz_gun, analiz_nba_gun, analiz_lig, analiz_nba_lig, analiz_dizin, kupon_gun
      */
     match /{koleksiyon}/{belge} {
       allow read: if koleksiyon in ['analiz_futbol', 'analiz_nba', 'analiz_gun', 'analiz_nba_gun',
-                                    'analiz_lig', 'analiz_nba_lig', 'analiz_dizin'];
+                                    'analiz_lig', 'analiz_nba_lig', 'analiz_dizin', 'kupon_gun'];
       allow write: if koleksiyon in ['analiz_futbol', 'analiz_nba', 'analiz_gun', 'analiz_nba_gun',
-                                     'analiz_lig', 'analiz_nba_lig', 'analiz_dizin']
+                                     'analiz_lig', 'analiz_nba_lig', 'analiz_dizin', 'kupon_gun']
         && request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
     }
 
