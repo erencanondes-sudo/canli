@@ -816,6 +816,15 @@ button {
     box-shadow: inset .2rem 0 0 #e53935;
 }
 
+/*
+ * Şerit üstteki ve alttaki ayraç çizgisinin üstünden de geçsin (kesintisiz):
+ * canlı satırın alt çizgisi ve bir önceki satırın alt çizgisi (canlı satırın üstü) solda kırmızı başlar.
+ */
+.score-row:has(> .score-status.live)::after,
+.score-row:has(+ .score-row > .score-status.live)::after {
+    background: linear-gradient(90deg, #e53935 0 .2rem, #e6e9f0 .2rem);
+}
+
 /* Sabah maçının altındaki küçük not ("*02.11 pazartesi sabah") */
 .score-note {
     grid-column: 1 / -1;
