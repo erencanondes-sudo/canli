@@ -3322,13 +3322,6 @@ body.has-layer .ac-kapa svg {
     display: block;
 }
 
-.an-expand h4 {
-    margin: 0;
-    font-size: .95em;
-    font-weight: 800;
-    color: #1d2340;
-}
-
 .an-reasons {
     margin: .3em 0 .6em 1.1em;
     padding: 0;
@@ -3581,18 +3574,7 @@ body.has-layer .ac-kapa svg {
 .an-result.lost { background: #fceeef; border-color: #e9bfc4; color: #992230; }
 .an-result.done { background: #f1f3f7; border-color: #e3e8f0; color: #2d3f56; }
 
-/* Açılan kısım: kadro bilgisi, uyarılar, gerekçe ve sonucu */
-.an-lineup {
-    display: inline-block;
-    margin: .35em 0 .45em;
-    padding: .12em .55em;
-    border-radius: .45em;
-    background: #eef4ff;
-    font-size: .85em;
-    font-weight: 700;
-    color: #1a56db;
-}
-
+/* Açılan kısım: uyarılar, gerekçe ve sonucu */
 .an-badges {
     display: flex;
     flex-wrap: wrap;
@@ -8310,8 +8292,7 @@ function anCard(m) {
 
     const extra = m.nba
         ? ((m.badges || []).length ? '<div class="an-badges">' + m.badges.map(b => '<span>' + e(b) + '</span>').join('') + '</div>' : '')
-        : (m.lineup_label ? '<span class="an-lineup">' + e(m.lineup_label) + '</span>' : '') +
-          '<div class="an-subs">' + (m.sub_boxes || []).map(b =>
+        : '<div class="an-subs">' + (m.sub_boxes || []).map(b =>
               '<div class="an-sub"><span>' + e(b.label) + '</span><b>' + e(b.val ?? '–') + '</b></div>').join('') + '</div>';
 
     card.innerHTML =
@@ -8326,7 +8307,7 @@ function anCard(m) {
         anProbHTML(m.prob, m.nba ? teamLook(m.home).short : '', m.nba ? teamLook(m.away).short : '') +
         anResultHTML(m.result) +
         '<div class="an-strip"><div class="an-chips">' + chips + '</div></div>' +
-        '<div class="an-expand"><h4>📌 Maç Özeti</h4>' + extra +
+        '<div class="an-expand">' + extra +
             anReasonsHTML(m.nba ? m.reasons : m.card_reasons) +
             '<button class="an-deep">📊 Detaylı Analiz</button></div>';
 
@@ -8647,7 +8628,10 @@ function renderAnSheet(m) {
 
     const t = m.taraf || {}, g = m.gol || {}, k = m.korner || {}, c = m.kart || {}, o = m.ofsayt || {};
     const why = m.neden || {}, tp = m.tepki || {};
-    const prob = anProbHTML([t.probH, t.probD, t.probA].every(v => v != null) ? [t.probH, t.probD, t.probA] : null, m.home_code || '', m.away_code || '');
+    /* İhtimal çubuğu takım kısaltması olmadan (MS 1 %24) */
+    const prob = anProbHTML([t.probH, t.probD, t.probA].every(v => v != null) ? [t.probH, t.probD, t.probA] : null, '', '');
+    /* Taraf tercihinde yalnızca tercih kalır: "MS 1 Leeds" → "MS 1" (1X, X2, 12, X de) */
+    const side = v => typeof v === 'string' ? v.replace(/^((?:MS\s*)?(?:1X|X2|12|1|2|X))(?=\s*[(\-–·:]|\s+\D).*$/i, '$1') : v;
     const ppg = (v, r) => v == null ? 'Veri yok' : anNum2(v) + (r ? ' <span class="an-muted">(#' + r + ')</span>' : '');
     const pane = key => 'data-pane="' + key + '"';
 
@@ -8655,7 +8639,7 @@ function renderAnSheet(m) {
       <div ${pane('taraf')}>
         <div class="sec-card">
           <div class="sec-title"><span>Taraf Tercihleri</span></div>
-          <div class="picks-2col">${anBox('green', 'Öne Çıkan Taraf', t.mainPick, true)}${anBox('amber', 'Cesur Tercih', t.cesurPick)}${anBox('red', 'Kesinlikle Oynamam', t.neverPick)}</div>
+          <div class="picks-2col">${anBox('green', 'Öne Çıkan Taraf', side(t.mainPick), true)}${anBox('amber', 'Cesur Tercih', side(t.cesurPick))}${anBox('red', 'Kesinlikle Oynamam', side(t.neverPick))}</div>
           ${prob}
         </div>
         ${anWhy(why.taraf)}
