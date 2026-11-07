@@ -4263,6 +4263,20 @@ body.has-layer .ac-kapa svg {
 }
 
 .kp-leg { cursor: default; }
+
+/* Tek maç değiştirilirken: kartın yerinde, aynı boyda */
+.kp-leg.kp-swapping {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .35em;
+    overflow: hidden;
+    text-align: center;
+}
+
+.kp-swapping .kp-ring { margin: 0; }
+.kp-swapping .kp-track { width: 80%; }
 .kp-leg.locked { border-color: #0c7a58; }
 .kp-leg .an-concl { font-size: .9em; }
 
@@ -9226,9 +9240,10 @@ function openAnSheet(card) {
    maçların oranları birbirine yakın (±%20, bulunamazsa %25 / %32), toplam oran hedefin ±%15 bandında,
    son kuponlardaki maçlar mümkünse tekrar etmez; sabitlenen maçlar korunur, tek maç değiştirilebilir.
    Başlamış (1 dakikadan az kalan) maçlar havuza girmez. Maça basınca Detaylı Analiz açılır.
+   Kupon ve alternatif 5 sn, tek maç değiştirme 3 sn (kartın yerinde, aynı boyda) "hesaplanıyor" gösterir.
 ================================================= */
-const KP_WAIT = 5000;          /* ilk kupon bekleme animasyonu */
-const KP_FAST_WAIT = 1000;     /* sonraki kuponlar */
+const KP_WAIT = 5000;          /* kupon (ve alternatif) bekleme animasyonu */
+const KP_SWAP_WAIT = 3000;     /* tek maç değiştirme animasyonu (kartın yerinde) */
 const KP_MAX_REL = 0.20;       /* kupondaki oranların ortalamaya en fazla uzaklığı */
 const KP_DEV_MAX = 0.15;       /* toplam oranın hedeften en fazla uzaklığı */
 const KP_DEV_MIN = 0.022;      /* hedefe birebir yapışmasın */
@@ -9236,7 +9251,7 @@ const KP_RECENT_KEY = 'aiKuponSonMaclar';
 const KP_SLIDER_MAX = 50;
 
 let kpShown = false;
-const kp = { sports: ['futbol', 'nba'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false, fullWaitDone: false };
+const kp = { sports: ['futbol', 'nba'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false };
 
 /* Türkiye saatiyle takvim günü ve saat */
 function kpClock() {
@@ -9537,10 +9552,40 @@ function kpReplace(idx) {
     cands.sort((a, b) => a.score - b.score);
     const chosen = cands[Math.floor(Math.random() * Math.min(5, cands.length))];
     kpSwapped = [chosen.key].concat(kpSwapped.filter(k => k !== chosen.key)).slice(0, 12);
-    kp.coupon = legs.map((l, i) => i === idx ? { match: chosen.match, oIdx: chosen.oIdx, opt: chosen.opt, locked: false } : l);
     kp.toast = '';
     kpRemember([chosen]);
-    kpRender();
+
+    /* Kartın yerinde, aynı boyda bekleme (sayfa kaymaz); bitince yeni maç */
+    const card = document.querySelectorAll('#kpResult .kp-leg')[idx];
+    kp.waiting = true;
+    document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar, #kpResult button').forEach(b => { b.disabled = true; });
+    const finish = () => {
+        kp.waiting = false;
+        kp.coupon = kp.coupon.map((l, i) => i === idx ? { match: chosen.match, oIdx: chosen.oIdx, opt: chosen.opt, locked: false } : l);
+        document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = false; });
+        kpRender();
+    };
+    if (!card)
+        return finish();
+    const height = card.offsetHeight;
+    card.className = 'an-card kp-leg kp-swapping';
+    card.style.height = height + 'px';
+    card.innerHTML = '<div class="kp-ring"><svg viewBox="0 0 58 58" fill="none" aria-hidden="true">' +
+        '<circle cx="29" cy="29" r="24" stroke="#dbe2ec" stroke-width="3.2"/><circle cx="29" cy="29" r="17.5" stroke="#e8edf4" stroke-width="2.4"/>' +
+        '<path class="kp-arc-o" d="M29 5 A24 24 0 0 1 53 29" stroke="#1d2340" stroke-width="3.4" stroke-linecap="round"/>' +
+        '<path class="kp-arc-i" d="M29 46.5 A17.5 17.5 0 0 1 11.5 29" stroke="#0c7a58" stroke-width="2.6" stroke-linecap="round"/></svg>' +
+        '<b>%0</b></div><div class="kp-wait-title">Yeni maç aranıyor</div>' +
+        '<div class="kp-wait-step">Kupondaki diğer maçların oranlarına uyan tercih seçiliyor…</div><div class="kp-track"><i></i></div>';
+    const pct = card.querySelector('.kp-ring b'), fill = card.querySelector('.kp-track i');
+    const start = performance.now();
+    (function tick(now) {
+        const p = Math.min(1, (now - start) / KP_SWAP_WAIT);
+        pct.textContent = '%' + Math.round(p * 100);
+        fill.style.width = (p * 100).toFixed(1) + '%';
+        if (p < 1)
+            return requestAnimationFrame(tick);
+        finish();
+    })(start);
 }
 
 /* ---------- Kontroller ---------- */
@@ -9705,9 +9750,9 @@ const kpBar = document.getElementById('kpBar');
 let kpUnfolding = false;
 
 function kpCollapse() {
-    const pool = kp.sports.length === 2 ? 'Futbol ve NBA' : kp.sports.length ? (kp.sports[0] === 'nba' ? 'NBA' : 'Futbol') : 'Spor seçilmedi';
-    document.getElementById('kpBarText').textContent = pool + ' · ' + document.getElementById('kpDateLbl').textContent +
-        ' · ' + kp.count + ' Maç · Hedef ' + kpOddText(kp.target) + ' Oran';
+    const clock = kpClock();
+    const days = kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock)).join(', ');
+    document.getElementById('kpBarText').textContent = days + ' · ' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran';
     kpWrap.classList.add('collapsed');
     kpBar.hidden = false;
 }
@@ -9763,8 +9808,7 @@ function kpGenerate(next) {
     kpRemember(chosen);
     kp.coupon = chosen.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: !!c.locked }));
 
-    const wait = next || kp.fullWaitDone ? KP_FAST_WAIT : KP_WAIT;
-    kp.fullWaitDone = true;
+    const wait = KP_WAIT;
     kp.waiting = true;
     document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = true; });
 
@@ -9775,7 +9819,7 @@ function kpGenerate(next) {
         '<circle cx="29" cy="29" r="24" stroke="#dbe2ec" stroke-width="3.2"/><circle cx="29" cy="29" r="17.5" stroke="#e8edf4" stroke-width="2.4"/>' +
         '<path class="kp-arc-o" d="M29 5 A24 24 0 0 1 53 29" stroke="#1d2340" stroke-width="3.4" stroke-linecap="round"/>' +
         '<path class="kp-arc-i" d="M29 46.5 A17.5 17.5 0 0 1 11.5 29" stroke="#0c7a58" stroke-width="2.6" stroke-linecap="round"/></svg>' +
-        '<b id="kpPct">%0</b></div><div class="kp-wait-title">' + (wait <= 1200 ? 'Alternatif kombinasyon hesaplanıyor' : 'Optimum kupon kombinasyonu hesaplanıyor') + '</div>' +
+        '<b id="kpPct">%0</b></div><div class="kp-wait-title">' + (next ? 'Alternatif kombinasyon hesaplanıyor' : 'Optimum kupon kombinasyonu hesaplanıyor') + '</div>' +
         '<div class="kp-wait-step" id="kpStep"></div><div class="kp-steps" id="kpSteps"><span>1. Bülten Filtresi</span><span>2. Oran Dengesi</span>' +
         '<span>3. Model Güveni</span><span>4. Doğrulama</span></div><div class="kp-track"><i id="kpFill"></i></div>' +
         '<div class="kp-wait-meta"><span>Hedef: <b>' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran</b></span><span id="kpTimer"></span></div></div>';
