@@ -795,12 +795,12 @@ button {
     color: #1d2340;
 }
 
-/* Satır arası çizgi: kenarlara değmez, içeriden başlar (son satırda yok) */
+/* Satır arası çizgi: kenardan kenara (son satırda yok) */
 .score-row::after {
     content: '';
     position: absolute;
-    left: .8em;
-    right: .8em;
+    left: 0;
+    right: 0;
     bottom: 0;
     height: 1px;
     background: #e6e9f0;
