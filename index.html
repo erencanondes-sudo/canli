@@ -4183,7 +4183,15 @@ body.has-layer .ac-kapa svg {
 }
 
 .kp-bar-top { display: flex; align-items: center; justify-content: space-between; gap: .5em; font-size: .88em; color: #6b7080; }
-.kp-bar-top b { color: #1d2340; }
+.kp-crit { display: flex; flex-wrap: wrap; align-items: center; gap: .3em; }
+#kpBarText { display: contents; }
+
+#kpBarText b {
+    padding: .15em .5em;
+    border-radius: .45em;
+    background: #eef0f4;
+    color: #1d2340;
+}
 
 .kp-bar-top em {
     flex: none;
@@ -4718,7 +4726,7 @@ body.has-layer .ac-kapa svg {
             <div class="home-page" data-page="ai">
                 <!-- Kupon oluşunca: kriter özeti, Kriterleri Düzenle ve Alternatif Üret -->
                 <div id="kpBar" hidden>
-                    <div class="kp-bar-top"><span>Aktif kriter: <b id="kpBarText"></b></span><em>Kupon hazır</em></div>
+                    <div class="kp-bar-top"><span class="kp-crit">Kriter: <span id="kpBarText"></span></span><em>Kupon hazır</em></div>
                     <div class="kp-actions"><button class="kp-light" id="kpEdit">Kriterleri Düzenle</button><button class="kp-light" id="kpAltBar">Alternatif Üret</button></div>
                 </div>
                 <!-- Robot paneli: spor, gün, maç sayısı, oran -->
@@ -9782,8 +9790,9 @@ let kpUnfolding = false;
 
 function kpCollapse() {
     const clock = kpClock();
-    const days = kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock)).join(', ');
-    document.getElementById('kpBarText').textContent = days + ' · ' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran';
+    const parts = kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock))
+        .concat(kp.count + ' Maç', kpOddText(kp.target) + ' Oran');
+    document.getElementById('kpBarText').innerHTML = parts.map(t => '<b>' + t + '</b>').join('');
     kpWrap.classList.add('collapsed');
     kpBar.hidden = false;
 }
