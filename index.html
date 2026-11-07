@@ -79,22 +79,16 @@ button {
     flex-direction: column;
 }
 
+/*
+ * Ana sayfa: üstte sekmeler sabit, altında yan yana sayfalar.
+ * Maç sayfasındaki sekmeler gibi her sayfa kendi içinde yukarı aşağı kayar.
+ */
 #homeMain {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    /*
-     * Kaydırma çubuğunun yeri hep ayrılır: içerik kısa ya da uzun
-     * olsun genişlik değişmez, üstteki alan büyüyüp küçülmez.
-     */
-    scrollbar-gutter: stable;
-
-    /* Yukarı aşağı kaydırma tarayıcıda, sağa sola kaydırma bizde. */
-    touch-action: pan-y;
-
-    /* Alttaki boşluk: son kart alttaki düğmenin arkasında kalmasın. */
-    padding: .75rem var(--side-gap) 11.25rem;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /*
@@ -167,12 +161,9 @@ button {
     pointer-events: none;
 }
 
-/* Sekmelerle reklam arası yalnızca şerit kadar: sabit 16px */
-#homeMain {
-    padding-top: 0;
-}
-
 #homeTitleRow {
+    flex: none;
+    padding: 0 var(--side-gap);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1459,28 +1450,20 @@ button {
 }
 
 /*
- * ANA SAYFANIN DÖRT SAYFASI
- * Yan yana dururlar; şerit sağa sola kayarak seçili olanı gösterir.
+ * ANA SAYFANIN BEŞ SAYFASI (maç sayfasındaki sekmelerle aynı yöntem)
+ * Yan yana dururlar, hepsi hep çizili; şerit sağa sola kayarak seçili olanı gösterir.
  * Parmakla çekilirken yandaki sayfa da görünür.
  */
 #homePager {
-    overflow-x: clip;
-
-    /*
-     * Kırpma alanı iki yana biraz taşar (içerik aynı yerde kalır);
-     * böylece Canlı Skor'daki geniş lig kutuları kesilmez.
-     */
-    margin: 0 max(-2.5vw, -.75em);
-    padding: 0 min(2.5vw, .75em);
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 #homeTrack {
-    --page-gap: 3em;
-
     display: flex;
-    align-items: flex-start;
-    gap: var(--page-gap);
-    width: calc(500% + 4 * var(--page-gap));
+    width: 500%;
+    height: 100%;
 
     /* Kayma yeri JavaScript'te doğrudan transform ile verilir (placeHomeTrack) */
     transition: transform .28s ease;
@@ -1488,23 +1471,24 @@ button {
 
 #homeMain.swiping #homeTrack {
     transition: none;
-    will-change: transform;
 }
 
 .home-page {
     flex: none;
-    width: calc((100% - 4 * var(--page-gap)) / 5);
+    width: 20%;
+    height: 100%;
     min-width: 0;
-}
+    overflow-y: auto;
+    overflow-x: hidden;
 
-/*
- * Geçiş yokken görünmeyen sayfalar yer kaplamaz.
- * Parmakla kaydırırken yalnızca iki yandaki sayfalar (.near) açılır, hepsi değil.
- */
-#homeTrack:not(.both) .home-page:not(.current):not(.near) {
-    height: 0;
-    overflow: hidden;
-    visibility: hidden;
+    /* Yukarı aşağı kaydırma tarayıcıda, sağa sola kaydırma bizde. */
+    touch-action: pan-y;
+
+    /*
+     * Yan boşluk --side-gap ile aynı, ama ekran genişliğine göre (100vw): sayfanın içinde
+     * % şeridin genişliğine göre hesaplanırdı. Alttaki boşluk: son kart düğmenin arkasında kalmasın.
+     */
+    padding: 0 max(16px, calc((100vw - var(--content-width)) / 2)) 11.25rem;
 }
 
 .home-empty {
@@ -4347,7 +4331,7 @@ body.has-layer .ac-kapa svg {
         <button id="menuBtn" aria-label="Menü">☰</button>
 
         <div id="homePager">
-        <div id="homeTrack" style="--page: 0">
+        <div id="homeTrack">
             <div class="home-page current" data-page="live">
             <!-- CANLI SKOR ARAÇLARI: gün seçimi, canlı / ligler / arama -->
             <div id="liveTools">
@@ -8392,7 +8376,7 @@ function anCard(m) {
             });
         } else {
             foldAnCard(card, false, () => {
-                homeMain.scrollTop += card.getBoundingClientRect().top - topBefore;
+                anPage.scrollTop += card.getBoundingClientRect().top - topBefore;
             });
         }
     });
@@ -8445,10 +8429,13 @@ function foldAnCard(card, open, done) {
  */
 let anScrollRun = 0;
 
+/* Analiz sayfası kendi içinde kayar */
+const anPage = document.querySelector('.home-page[data-page="analysis"]');
+
 function scrollAnCardTop(card, done) {
 
     const run = ++anScrollRun;
-    const start = homeMain.scrollTop;
+    const start = anPage.scrollTop;
 
     let shrink = 0;
     document.querySelectorAll('.an-card.closing').forEach(other => {
@@ -8458,9 +8445,9 @@ function scrollAnCardTop(card, done) {
         }
     });
 
-    const max = homeMain.scrollHeight - homeMain.clientHeight - shrink;
+    const max = anPage.scrollHeight - anPage.clientHeight - shrink;
     const goal = Math.max(0, Math.min(max,
-        start + card.getBoundingClientRect().top - homeMain.getBoundingClientRect().top - shrink));
+        start + card.getBoundingClientRect().top - anPage.getBoundingClientRect().top - shrink));
 
     if (Math.abs(goal - start) < 2) {
         if (done)
@@ -8468,7 +8455,7 @@ function scrollAnCardTop(card, done) {
         return;
     }
 
-    homeMain.scrollTo({ top: goal, behavior: 'smooth' });
+    anPage.scrollTo({ top: goal, behavior: 'smooth' });
 
     /* Bitişi bekle: hedefe vardı, kayma durdu (5 kare aynı yer) ya da 1 sn geçti */
     const begin = performance.now();
@@ -8477,7 +8464,7 @@ function scrollAnCardTop(card, done) {
     (function wait() {
         if (run !== anScrollRun)
             return;
-        const now = homeMain.scrollTop;
+        const now = anPage.scrollTop;
         still = Math.abs(now - last) < .5 ? still + 1 : 0;
         last = now;
         if (Math.abs(now - goal) < 1.5 || still >= 5 || performance.now() - begin > 1000) {
@@ -9869,7 +9856,6 @@ const homeTrack = document.getElementById('homeTrack');
 const homeModeBox = document.getElementById('homeModeBox');
 
 let homeMode = 'live';
-let homeTrackTimer = null;
 
 /* Görünümü değiştirir (geri tuşuyla dönerken de kullanılır). */
 function setHomeModeView(mode) {
@@ -9893,31 +9879,13 @@ function setHomeModeView(mode) {
         page.classList.toggle('current', page.dataset.page === mode);
     });
 
-    /*
-     * Kayarken iki sayfa da görünsün; bitince diğerleri gizlenir.
-     * Parmakla kaydırmada gereken sayfalar zaten açık (.near); düğmeyle geçişte hepsi açılır.
-     */
-    if (!homeTrack.querySelector('.home-page.near'))
-        homeTrack.classList.add('both');
     placeHomeTrack(0);
-
-    clearTimeout(homeTrackTimer);
-    homeTrackTimer = setTimeout(() => {
-        if (!homeSwipe) {
-            homeTrack.classList.remove('both');
-            homeTrack.querySelectorAll('.home-page.near').forEach(page => page.classList.remove('near'));
-        }
-    }, 320);
 }
 
-/*
- * Şeridin yeri: seçili sayfa + parmağın kaydırdığı kadar.
- * Doğrudan transform verilir; CSS değişkeni kullanılmaz (değişken her karede bütün
- * sayfaların stilini yeniden hesaplatıyordu, kaydırma takılıyordu).
- */
+/* Şeridin yeri: seçili sayfa + parmağın kaydırdığı kadar (maç sayfasındaki sekmeler gibi) */
 function placeHomeTrack(px) {
-    homeTrack.style.transform = 'translateX(calc(' + HOME_ORDER.indexOf(homeMode) +
-        ' * (-100% / 5 - var(--page-gap) / 5) + ' + px + 'px))';
+    homeTrack.style.transform =
+        'translateX(calc(' + (-HOME_ORDER.indexOf(homeMode) * 20) + '% + ' + px + 'px))';
 }
 
 /*
@@ -9927,8 +9895,6 @@ function placeHomeTrack(px) {
 function setHomeMode(mode) {
 
     setHomeModeView(mode);
-    /* Sayfa çok aşağıdaysa sekme düğmelerinin hizasına gelir (üst resim kaydırılan alanın dışında) */
-    homeMain.scrollTop = Math.min(homeMain.scrollTop, homeTrack.offsetTop - homeMain.offsetTop - 12);
 
     if (mode === 'live')
         layerClosed('homeMode');
@@ -9980,15 +9946,8 @@ homeMain.addEventListener('touchmove', event => {
 
         homeSwipe.horizontal = Math.abs(dx) > Math.abs(dy);
 
-        if (homeSwipe.horizontal) {
+        if (homeSwipe.horizontal)
             homeMain.classList.add('swiping');
-            /* Yalnızca iki yandaki sayfalar açılır */
-            const index = HOME_ORDER.indexOf(homeMode);
-            homeTrack.querySelectorAll('.home-page').forEach((page, i) => {
-                if (Math.abs(i - index) === 1)
-                    page.classList.add('near');
-            });
-        }
     }
 
     if (!homeSwipe.horizontal)
@@ -10001,15 +9960,7 @@ homeMain.addEventListener('touchmove', event => {
 
     placeHomeTrack(atEdge ? dx * 0.25 : dx);
 
-    /*
-     * Yana kaydırırken sayfa yukarı aşağı kaymasın. Yoksa parmak kalkınca
-     * sayfa bir süre kendi kendine kayar; telefon o sırada yapılan ilk
-     * dokunuşu (örneğin mavi topa) kaymayı durdurmaya harcar.
-     */
-    if (event.cancelable)
-        event.preventDefault();
-
-}, { passive: false });
+}, { passive: true });
 
 function endHomeSwipe() {
 
@@ -10119,10 +10070,11 @@ document.addEventListener('click', event => {
 
 }, true);
 
-homeMain.addEventListener('scroll', () => {
+/* Sayfalar kendi içinde kayar: kayan sayfayı yakalamak için "capture" */
+homeTrack.addEventListener('scroll', () => {
     if (homeMenu.classList.contains('open'))
         closeHomeMenu();
-});
+}, true);
 
 
 /* =================================================
