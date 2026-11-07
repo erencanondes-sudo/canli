@@ -9252,7 +9252,21 @@ function openAnSheet(card) {
    Başlamış (1 dakikadan az kalan) maçlar havuza girmez. Maça basınca Detaylı Analiz açılır.
    Kupon ve alternatif 5 sn, tek maç değiştirme 3 sn (kartın yerinde, aynı boyda) "hesaplanıyor" gösterir.
 ================================================= */
-const KP_WAIT = 5000;          /* kupon (ve alternatif) bekleme animasyonu */
+/* Kupon (ve alternatif) bekleme animasyonu: süre 3–7 sn arası rastgele; çubuk hızlı başlar, yavaşlar,
+   bir süre durur, sonra hızlanıp biter. Duraklama yeri ve süreleri her seferinde rastgele. */
+function kpCurve() {
+    const a = .35 + Math.random() * .35;
+    const t1 = .15 + Math.random() * .1, t2 = t1 + .15 + Math.random() * .1, t3 = t2 + .1 + Math.random() * .15;
+    const pts = [[0, 0], [t1, a * .75], [t2, a], [t3, a], [1, 1]];
+    return t => {
+        let i = 1;
+        while (i < pts.length - 1 && t > pts[i][0]) i++;
+        const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+        const k = Math.min(1, Math.max(0, (t - x0) / (x1 - x0)));
+        const e = i === pts.length - 1 ? k * k : k * k * (3 - 2 * k);
+        return y0 + (y1 - y0) * e;
+    };
+}
 const KP_SWAP_WAIT = 3000;     /* tek maç değiştirme animasyonu (kartın yerinde) */
 const KP_MAX_REL = 0.20;       /* kupondaki oranların ortalamaya en fazla uzaklığı */
 const KP_DEV_MAX = 0.15;       /* toplam oranın hedeften en fazla uzaklığı */
@@ -9821,7 +9835,7 @@ function kpGenerate(next) {
     kpRemember(chosen);
     kp.coupon = chosen.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: !!c.locked }));
 
-    const wait = KP_WAIT;
+    const wait = 3000 + Math.random() * 4000, curve = kpCurve();
     kp.waiting = true;
     document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = true; });
 
@@ -9835,23 +9849,22 @@ function kpGenerate(next) {
         '<b id="kpPct">%0</b></div><div class="kp-wait-title">' + (next ? 'Alternatif kombinasyon hesaplanıyor' : 'Optimum kupon kombinasyonu hesaplanıyor') + '</div>' +
         '<div class="kp-wait-step" id="kpStep"></div><div class="kp-steps" id="kpSteps"><span>1. Bülten Filtresi</span><span>2. Oran Dengesi</span>' +
         '<span>3. Model Güveni</span><span>4. Doğrulama</span></div><div class="kp-track"><i id="kpFill"></i></div>' +
-        '<div class="kp-wait-meta"><span>Hedef: <b>' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran</b></span><span id="kpTimer"></span></div></div>';
+        '<div class="kp-wait-meta"><span>Hedef: <b>' + kp.count + ' Maç · ' + kpOddText(kp.target) + ' Oran</b></span></div></div>';
 
     const texts = ['Başlamamış karşılaşmalar filtreleniyor…', 'Maç başı ~' + per + ' oran dengesinde uyumlu tercihler eşleştiriliyor…',
         'Model olasılığı ve güven tutarlılığı kontrol ediliyor…', 'Kombinasyon doğrulandı, kupon hazırlanıyor…'];
     const start = performance.now();
     (function tick(now) {
-        const p = Math.min(1, (now - start) / wait);
+        const t = Math.min(1, (now - start) / wait), p = curve(t);
         const stage = p < .25 ? 0 : p < .55 ? 1 : p < .85 ? 2 : 3;
         document.getElementById('kpFill').style.width = (p * 100).toFixed(1) + '%';
         document.getElementById('kpPct').textContent = '%' + Math.round(p * 100);
-        document.getElementById('kpTimer').textContent = (Math.max(0, wait * (1 - p)) / 1000).toFixed(1) + ' sn';
         document.getElementById('kpStep').textContent = texts[stage];
         document.querySelectorAll('#kpSteps span').forEach((s, i) => {
             s.classList.toggle('done', i < stage || p >= .99);
             s.classList.toggle('active', i === stage && p < .99);
         });
-        if (p < 1)
+        if (t < 1)
             return requestAnimationFrame(tick);
         kp.waiting = false;
         document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = false; });
