@@ -4056,6 +4056,8 @@ body.has-layer .ac-kapa svg {
     color: #6b7080;
 }
 
+.kp-block:not(#kpOddBlock) .kp-label { margin-bottom: .7em; }
+
 .kp-label b { font-weight: 800; text-transform: none; color: #1d2340; }
 
 .kp-row { display: flex; gap: .3em; }
@@ -4150,7 +4152,7 @@ body.has-layer .ac-kapa svg {
     text-align: right;
 }
 
-.kp-presets { margin-top: .45em; }
+.kp-presets { margin-top: .56em; }
 .kp-presets button { height: 2.1em; }
 
 .kp-actions { display: flex; gap: .4em; margin-top: .9em; }
@@ -4158,8 +4160,10 @@ body.has-layer .ac-kapa svg {
 #kpRun,
 .kp-actions .kp-light { height: 2.8em; font-size: .95em; }
 
+#kpRunRow { justify-content: center; margin-top: 1.25em; }
+
 #kpRun {
-    flex: 1.4 1 0;
+    flex: 0 1 70%;
     border: none;
     border-radius: .8em;
     background: #1d2340;
@@ -4750,9 +4754,8 @@ body.has-layer .ac-kapa svg {
                             <button data-odd="10">10</button><button data-odd="25">25</button><button data-odd="50">50</button>
                         </div>
                     </div>
-                    <div class="kp-actions">
+                    <div class="kp-actions" id="kpRunRow">
                         <button id="kpRun">Kuponu Oluştur</button>
-                        <button class="kp-light" id="kpAlt">Alternatif Üret</button>
                     </div>
                 </div></div>
                 <!-- Bekleme animasyonu ya da kupon -->
@@ -9583,11 +9586,11 @@ function kpReplace(idx) {
     /* Kartın yerinde, aynı boyda bekleme (sayfa kaymaz); bitince yeni maç */
     const card = document.querySelectorAll('#kpResult .kp-leg')[idx];
     kp.waiting = true;
-    document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar, #kpResult button').forEach(b => { b.disabled = true; });
+    document.querySelectorAll('#kpRun, #kpAltBar, #kpResult button').forEach(b => { b.disabled = true; });
     const finish = () => {
         kp.waiting = false;
         kp.coupon = kp.coupon.map((l, i) => i === idx ? { match: chosen.match, oIdx: chosen.oIdx, opt: chosen.opt, locked: false } : l);
-        document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = false; });
+        document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = false; });
         kpRender();
     };
     if (!card)
@@ -9838,7 +9841,7 @@ function kpGenerate(next) {
 
     const wait = 3000 + Math.random() * 4000, curve = kpCurve();
     kp.waiting = true;
-    document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = true; });
+    document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = true; });
 
     const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
     const box = document.getElementById('kpResult');
@@ -9868,7 +9871,7 @@ function kpGenerate(next) {
         if (t < 1)
             return requestAnimationFrame(tick);
         kp.waiting = false;
-        document.querySelectorAll('#kpRun, #kpAlt, #kpAltBar').forEach(b => { b.disabled = false; });
+        document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = false; });
         kpCollapse();
         kpRender();
         homeMain.scrollTo({ top: 0, behavior: 'smooth' });
@@ -9876,7 +9879,6 @@ function kpGenerate(next) {
 }
 
 document.getElementById('kpRun').addEventListener('click', () => kpGenerate(false));
-document.getElementById('kpAlt').addEventListener('click', () => kpGenerate(true));
 document.getElementById('kpAltBar').addEventListener('click', () => kpGenerate(true));
 
 /* ---------- Kupon ---------- */
