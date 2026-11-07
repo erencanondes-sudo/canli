@@ -9880,7 +9880,7 @@ function kpLeg(l, idx) {
         '<b>' + e(o.pick) + '</b><span class="an-stars">' + '★'.repeat(stars) + '<i>' + '★'.repeat(5 - stars) + '</i></span>' +
         (anConf(stars) ? '<span class="an-conf">' + anConf(stars) + '</span>' : '') +
         '<span class="an-odd">Oran ' + Number(o.odd).toFixed(2) + '</span></div></div>' +
-        anProbHTML(m.prob, teamLook(m.home).short, teamLook(m.away).short) +
+        anProbHTML(m.prob, m.nba ? teamLook(m.home).short : '', m.nba ? teamLook(m.away).short : '') +
         (o.why ? '<div class="an-concl">' + boldHTML(o.why) + '</div>' : '') +
         '<div class="kp-leg-actions"><button class="kp-lock">' + (l.locked ? '✓ Sabitlendi' : 'Sabitle') + '</button>' +
         '<button class="kp-swap">Değiştir</button><button class="kp-deep">Detaylı Analiz</button></div>';
