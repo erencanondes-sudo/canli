@@ -4081,7 +4081,41 @@ body.has-layer .ac-kapa svg {
 #kpMore { flex: 1.3 1 0; }
 
 .kp-odd-row { display: flex; align-items: center; gap: .6em; }
-#kpSlider { flex: 1; min-width: 0; accent-color: #1d2340; }
+/* Oran çubuğu: ince iz, büyük top; dokunma alanı çubuğun tüm yüksekliği */
+#kpSlider {
+    flex: 1;
+    min-width: 0;
+    height: 2.4em;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: none;
+}
+
+#kpSlider::-webkit-slider-runnable-track { height: .35em; border-radius: 99em; background: #d5d8de; }
+#kpSlider::-moz-range-track { height: .35em; border-radius: 99em; background: #d5d8de; }
+
+#kpSlider::-webkit-slider-thumb {
+    width: 1.6em;
+    height: 1.6em;
+    margin-top: -.625em;
+    border: .2em solid white;
+    border-radius: 50%;
+    background: #1d2340;
+    box-shadow: 0 .1em .35em rgba(0, 0, 0, .3);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+#kpSlider::-moz-range-thumb {
+    width: 1.2em;
+    height: 1.2em;
+    border: .2em solid white;
+    border-radius: 50%;
+    background: #1d2340;
+    box-shadow: 0 .1em .35em rgba(0, 0, 0, .3);
+}
 
 .kp-odd-num {
     display: flex;
@@ -4665,9 +4699,8 @@ body.has-layer .ac-kapa svg {
                         <div><b>AI Kupon Robotu</b><small><i class="kp-live"></i><span id="kpStatus">Yükleniyor…</span></small></div>
                     </div>
                     <div class="kp-row kp-pools" id="kpPools">
-                        <button data-pool="all" class="active">Tümü (<span>0</span>)</button>
-                        <button data-pool="futbol">Futbol (<span>0</span>)</button>
-                        <button data-pool="nba">NBA (<span>0</span>)</button>
+                        <button data-pool="futbol" class="active">Futbol (<span>0</span>)</button>
+                        <button data-pool="nba" class="active">NBA (<span>0</span>)</button>
                     </div>
                     <div class="kp-block">
                         <div class="kp-label"><span>Tarih Seçimi</span><b id="kpDateLbl"></b></div>
@@ -9203,7 +9236,7 @@ const KP_RECENT_KEY = 'aiKuponSonMaclar';
 const KP_SLIDER_MAX = 50;
 
 let kpShown = false;
-const kp = { pool: 'all', days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false, fullWaitDone: false };
+const kp = { sports: ['futbol', 'nba'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false, fullWaitDone: false };
 
 /* Türkiye saatiyle takvim günü ve saat */
 function kpClock() {
@@ -9230,9 +9263,12 @@ function kpNeededDays(clock) {
 
 /* Havuz dokümanı (okunuyorsa undefined) */
 function kpDoc(day) {
+    return kpRead('kupon_gun/' + day);
+}
+
+function kpRead(path) {
     if (!kpShown || anVersion === undefined)
         return undefined;
-    const path = 'kupon_gun/' + day;
     const stored = storedAnDoc(path);
     if (stored !== undefined)
         return stored;
@@ -9272,17 +9308,15 @@ function kpAllMatches(clock) {
     return list;
 }
 
-/* Kupona girebilecek maçlar (seçili spor ve günler, başlamamış); sayıları ve durum yazısını da günceller */
+/* Kupona girebilecek maçlar (seçili sporlar ve günler, başlamamış); sayıları ve durum yazısını da günceller */
 function kpActive() {
     const clock = kpClock();
     const all = kpAllMatches(clock);
     const live = (all || []).filter(m => kpUpcoming(m, clock) && kpInDays(m, clock));
-    const foot = live.filter(m => !m.nba), nba = live.filter(m => m.nba);
     const counts = document.querySelectorAll('#kpPools span');
-    counts[0].textContent = live.length;
-    counts[1].textContent = foot.length;
-    counts[2].textContent = nba.length;
-    const pool = kp.pool === 'futbol' ? foot : kp.pool === 'nba' ? nba : live;
+    counts[0].textContent = live.filter(m => !m.nba).length;
+    counts[1].textContent = live.filter(m => m.nba).length;
+    const pool = live.filter(m => kp.sports.includes(m.sport));
     document.getElementById('kpStatus').textContent = !all ? 'Maçlar yükleniyor…' :
         clock.hm + ' itibarıyla başlamamış maç sayısı ' + pool.length;
     return all ? pool : null;
@@ -9544,13 +9578,46 @@ function kpInitDays(keep) {
         kp.selected = [kp.days[0]];
 }
 
+/*
+ * Günün maç sayısı (seçili sporlarda, başlamamış): günün havuzu telefondaysa ondan (Bugün'e bu gecenin maçları da girer),
+ * değilse dizindeki sayıdan (analiz_dizin/futbol → kupon: { tarih: [futbol, NBA] }; yükleme anındaki sayı).
+ */
+function kpDayCount(iso, clock) {
+    const peek = day => {
+        const path = 'kupon_gun/' + day;
+        const stored = storedAnDoc(path);
+        if (stored !== undefined)
+            return stored;
+        const entry = DOC_CACHE.get(path);
+        return entry && !entry.loading ? entry.data : undefined;
+    };
+    const days = iso === clock.todayIso ? [iso, kpShift(iso, 1)] : [iso];
+    const docs = days.map(peek);
+    if (docs.every(d => d !== undefined)) {
+        let n = 0;
+        docs.forEach(data => Object.values(data || {}).forEach(m => {
+            const match = { ts: m.ts, date_iso: m.d, time_tr: m.t };
+            const inDay = m.d === iso || (iso === clock.todayIso && clock.hm >= '06:30' && m.d === days[1] && (m.t || '') <= '06:30');
+            if (inDay && kp.sports.includes(m.s === 'n' ? 'nba' : 'futbol') && kpUpcoming(match, clock))
+                n++;
+        }));
+        return n;
+    }
+    const index = kpRead('analiz_dizin/futbol');
+    if (!index || !index.kupon)
+        return null;
+    const counts = index.kupon[iso] || [0, 0];
+    return (kp.sports.includes('futbol') ? counts[0] : 0) + (kp.sports.includes('nba') ? counts[1] : 0);
+}
+
 function kpSyncDays() {
     const clock = kpClock();
     const box = document.getElementById('kpDays');
     box.textContent = '';
     kp.days.forEach(iso => {
         const b = document.createElement('button');
-        b.textContent = kpDayLabel(iso, clock);
+        const count = kpDayCount(iso, clock);
+        b.textContent = kpDayLabel(iso, clock) + (count == null ? '' : ' (' + count + ')');
         b.classList.toggle('active', kp.selected.includes(iso));
         b.addEventListener('click', () => {
             if (kp.waiting || kpUnfolding)
@@ -9583,11 +9650,14 @@ function kpRefresh() {
     }
 }
 
+/* Futbol ve NBA günler gibi: basınca eklenir, seçili olana basınca çıkar */
 document.querySelectorAll('#kpPools button').forEach(b => b.addEventListener('click', () => {
     if (kp.waiting)
         return;
-    kp.pool = b.dataset.pool;
-    document.querySelectorAll('#kpPools button').forEach(x => x.classList.toggle('active', x === b));
+    const sport = b.dataset.pool;
+    kp.sports = kp.sports.includes(sport) ? kp.sports.filter(x => x !== sport) : kp.sports.concat(sport);
+    b.classList.toggle('active', kp.sports.includes(sport));
+    kpSyncDays();
     kpActive();
 }));
 
@@ -9635,7 +9705,7 @@ const kpBar = document.getElementById('kpBar');
 let kpUnfolding = false;
 
 function kpCollapse() {
-    const pool = kp.pool === 'futbol' ? 'Futbol' : kp.pool === 'nba' ? 'NBA' : 'Tümü';
+    const pool = kp.sports.length === 2 ? 'Futbol ve NBA' : kp.sports.length ? (kp.sports[0] === 'nba' ? 'NBA' : 'Futbol') : 'Spor seçilmedi';
     document.getElementById('kpBarText').textContent = pool + ' · ' + document.getElementById('kpDateLbl').textContent +
         ' · ' + kp.count + ' Maç · Hedef ' + kpOddText(kp.target) + ' Oran';
     kpWrap.classList.add('collapsed');
