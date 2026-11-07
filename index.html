@@ -1480,25 +1480,28 @@ button {
     display: flex;
     align-items: flex-start;
     gap: var(--page-gap);
-    width: calc(400% + 3 * var(--page-gap));
-    transform: translateX(calc(
-        var(--page, 0) * (-100% / 4 - var(--page-gap) / 4) + var(--swipe-x, 0px)
-    ));
+    width: calc(500% + 4 * var(--page-gap));
+
+    /* Kayma yeri JavaScript'te doğrudan transform ile verilir (placeHomeTrack) */
     transition: transform .28s ease;
 }
 
 #homeMain.swiping #homeTrack {
     transition: none;
+    will-change: transform;
 }
 
 .home-page {
     flex: none;
-    width: calc((100% - 3 * var(--page-gap)) / 4);
+    width: calc((100% - 4 * var(--page-gap)) / 5);
     min-width: 0;
 }
 
-/* Geçiş yokken görünmeyen sayfalar yer kaplamaz. */
-#homeTrack:not(.both) .home-page:not(.current) {
+/*
+ * Geçiş yokken görünmeyen sayfalar yer kaplamaz.
+ * Parmakla kaydırırken yalnızca iki yandaki sayfalar (.near) açılır, hepsi değil.
+ */
+#homeTrack:not(.both) .home-page:not(.current):not(.near) {
     height: 0;
     overflow: hidden;
     visibility: hidden;
@@ -1798,14 +1801,14 @@ button {
 }
 
 /* Kayıtlı Maçlarım / Kuponlarım düğmeleri (ana sayfadaki sekmeler gibi) */
-#myTabs {
+#myTabs, #savedTabs {
     display: flex;
     gap: .35em;
     margin-bottom: .625rem;
     font-size: min(1rem, 3.4vw);
 }
 
-#myTabs button {
+#myTabs button, #savedTabs button {
     flex: 1;
     padding: .55em .3em;
     border: 1px solid #d5d8de;
@@ -1816,7 +1819,7 @@ button {
     color: #444;
 }
 
-#myTabs button.active {
+#myTabs button.active, #savedTabs button.active {
     border-color: #1a73e8;
     background: #eef4ff;
     color: #1a73e8;
@@ -4333,7 +4336,7 @@ body.has-layer .ac-kapa svg {
         <div id="homeTitleRow">
             <div id="homeModeBox">
                 <button data-mode="live" class="active">Canlı Skor</button>
-                <button id="modeSaved">Maçlarım</button>
+                <button data-mode="saved">Maçlarım</button>
                 <button data-mode="ai">Ai Kuponu</button>
                 <button data-mode="analysis">Analiz</button>
                 <button data-mode="odds">Oranlar</button>
@@ -4398,6 +4401,20 @@ body.has-layer .ac-kapa svg {
             </div>
 
                 <div id="liveList"></div>
+            </div>
+            <!-- Maçlarım: Kayıtlı Maçlarım (Kayıtlı Oranlarım alttan açılan pencerede) -->
+            <div class="home-page" data-page="saved">
+                <div id="savedTabs">
+                    <button data-my="saved" class="active">Kayıtlı Maçlarım</button>
+                    <button data-my="coupons">Kayıtlı Oranlarım</button>
+                </div>
+                <!-- Lige göre | Zamana göre ............ Temizle -->
+                <div id="savedTools" class="tool-row">
+                    <button class="tb-time active" data-order="league">Lige göre</button>
+                    <button class="tb-time" data-order="time">Zamana göre</button>
+                    <button id="savedClear">Temizle</button>
+                </div>
+                <div id="mySaved"></div>
             </div>
             <div class="home-page" data-page="ai">
                 <p class="home-empty">Ai kuponları yakında burada olacak.</p>
@@ -4465,22 +4482,13 @@ body.has-layer .ac-kapa svg {
     <main id="myMain">
 
         <div id="myTabs">
-            <button data-my="saved" class="active">Kayıtlı Maçlarım</button>
-            <button data-my="coupons">Kayıtlı Oranlarım</button>
+            <button data-my="saved">Kayıtlı Maçlarım</button>
+            <button data-my="coupons" class="active">Kayıtlı Oranlarım</button>
         </div>
 
         <div id="myPager">
         <div id="myTrack" style="--page: 0">
-            <div class="my-page current" data-my="saved">
-                <!-- Lige göre | Zamana göre ............ Temizle -->
-                <div id="savedTools" class="tool-row">
-                    <button class="tb-time active" data-order="league">Lige göre</button>
-                    <button class="tb-time" data-order="time">Zamana göre</button>
-                    <button id="savedClear">Temizle</button>
-                </div>
-                <div id="mySaved"></div>
-            </div>
-            <div class="my-page" data-my="coupons">
+            <div class="my-page current" data-my="coupons">
                 <div id="myCoupons"></div>
             </div>
         </div>
@@ -7298,11 +7306,12 @@ document.getElementById('savedClear').addEventListener('click', () => {
     );
 });
 
-const MY_ORDER = ['saved', 'coupons'];
+/* Pencerede yalnızca Kayıtlı Oranlarım var; Kayıtlı Maçlarım ana sayfada */
+const MY_ORDER = ['coupons'];
 const myMain = document.getElementById('myMain');
 const myTrack = document.getElementById('myTrack');
 
-let myPage = 'saved';
+let myPage = 'coupons';
 let myTrackTimer = null;
 let mySwipe = null;
 
@@ -7328,8 +7337,22 @@ function setMyPage(name) {
     }, 320);
 }
 
+/* Penceredeki "Kayıtlı Maçlarım": pencere kapanır, ana sayfadaki Maçlarım açılır */
 document.querySelectorAll('#myTabs button').forEach(button => {
-    button.addEventListener('click', () => setMyPage(button.dataset.my));
+    button.addEventListener('click', () => {
+        if (button.dataset.my === 'saved') {
+            showTab('home');
+            setHomeMode('saved');
+        } else {
+            setMyPage(button.dataset.my);
+        }
+    });
+});
+
+/* Ana sayfadaki "Kayıtlı Oranlarım": alttan pencere açılır */
+document.querySelector('#savedTabs [data-my="coupons"]').addEventListener('click', () => {
+    setMyPageInstant('coupons');
+    showTab('empty');
 });
 
 /* Parmakla yana kaydırma (ana sayfadakiyle aynı his) */
@@ -9730,13 +9753,8 @@ function setTab(name) {
     clearTimeout(settleTimer);
 
     settleTimer = setTimeout(() => {
-        if (name !== 'empty') {
+        if (name !== 'empty')
             emptyLayer.classList.remove('raised');
-            if (pageBeforeCoupon) {
-                setMyPageInstant(pageBeforeCoupon);
-                pageBeforeCoupon = null;
-            }
-        }
     }, 340);
 
     document.body.dataset.tab = name;
@@ -9812,11 +9830,7 @@ function setMyPageInstant(name) {
     myMain.classList.remove('swiping');
 }
 
-/*
- * Sarı top Kayıtlı Oranlarım'ı açar / kapatır. Pencere kapanınca önceki sekmeye
- * dönülür; mavi top her zamanki gibi çalışır.
- */
-let pageBeforeCoupon = null;
+/* Sarı top Kayıtlı Oranlarım'ı açar / kapatır; mavi top her zamanki gibi çalışır. */
 
 document.getElementById('couponBall').addEventListener('click', () => {
 
@@ -9839,17 +9853,16 @@ document.getElementById('couponBall').addEventListener('click', () => {
     }
 
     emptyLayer.classList.toggle('raised', detailOpen);
-    pageBeforeCoupon = myPage;
     setMyPageInstant('coupons');
     showTab('empty');
 });
 
 
 /* =================================================
-   ANA SAYFANIN DÖRT SAYFASI
+   ANA SAYFANIN BEŞ SAYFASI
 ================================================= */
 
-const HOME_ORDER = ['live', 'ai', 'analysis', 'odds'];
+const HOME_ORDER = ['live', 'saved', 'ai', 'analysis', 'odds'];
 
 const homeMain = document.getElementById('homeMain');
 const homeTrack = document.getElementById('homeTrack');
@@ -9880,15 +9893,31 @@ function setHomeModeView(mode) {
         page.classList.toggle('current', page.dataset.page === mode);
     });
 
-    /* Kayarken iki sayfa da görünsün; bitince diğerleri gizlenir. */
-    homeTrack.classList.add('both');
-    homeTrack.style.setProperty('--page', index);
+    /*
+     * Kayarken iki sayfa da görünsün; bitince diğerleri gizlenir.
+     * Parmakla kaydırmada gereken sayfalar zaten açık (.near); düğmeyle geçişte hepsi açılır.
+     */
+    if (!homeTrack.querySelector('.home-page.near'))
+        homeTrack.classList.add('both');
+    placeHomeTrack(0);
 
     clearTimeout(homeTrackTimer);
     homeTrackTimer = setTimeout(() => {
-        if (!homeSwipe)
+        if (!homeSwipe) {
             homeTrack.classList.remove('both');
+            homeTrack.querySelectorAll('.home-page.near').forEach(page => page.classList.remove('near'));
+        }
     }, 320);
+}
+
+/*
+ * Şeridin yeri: seçili sayfa + parmağın kaydırdığı kadar.
+ * Doğrudan transform verilir; CSS değişkeni kullanılmaz (değişken her karede bütün
+ * sayfaların stilini yeniden hesaplatıyordu, kaydırma takılıyordu).
+ */
+function placeHomeTrack(px) {
+    homeTrack.style.transform = 'translateX(calc(' + HOME_ORDER.indexOf(homeMode) +
+        ' * (-100% / 5 - var(--page-gap) / 5) + ' + px + 'px))';
 }
 
 /*
@@ -9917,9 +9946,6 @@ const TAB_FLICK_RATIO = 0.04;
 
 let homeSwipe = null;
 
-function setHomeSwipeX(px) {
-    homeTrack.style.setProperty('--swipe-x', px + 'px');
-}
 
 homeMain.addEventListener('touchstart', event => {
 
@@ -9956,7 +9982,12 @@ homeMain.addEventListener('touchmove', event => {
 
         if (homeSwipe.horizontal) {
             homeMain.classList.add('swiping');
-            homeTrack.classList.add('both');
+            /* Yalnızca iki yandaki sayfalar açılır */
+            const index = HOME_ORDER.indexOf(homeMode);
+            homeTrack.querySelectorAll('.home-page').forEach((page, i) => {
+                if (Math.abs(i - index) === 1)
+                    page.classList.add('near');
+            });
         }
     }
 
@@ -9968,7 +9999,7 @@ homeMain.addEventListener('touchmove', event => {
     const index = HOME_ORDER.indexOf(homeMode);
     const atEdge = (index === 0 && dx > 0) || (index === HOME_ORDER.length - 1 && dx < 0);
 
-    setHomeSwipeX(atEdge ? dx * 0.25 : dx);
+    placeHomeTrack(atEdge ? dx * 0.25 : dx);
 
     /*
      * Yana kaydırırken sayfa yukarı aşağı kaymasın. Yoksa parmak kalkınca
@@ -10002,8 +10033,6 @@ function endHomeSwipe() {
         (distance > width * TAB_FLICK_RATIO && speed > 0.3);
 
     const next = HOME_ORDER[HOME_ORDER.indexOf(homeMode) + (swipe.dx < 0 ? 1 : -1)];
-
-    setHomeSwipeX(0);
 
     if (enough && next)
         setHomeMode(next);
@@ -10054,18 +10083,11 @@ homeMenu.querySelectorAll('button[data-go]').forEach(button => {
     });
 });
 
-/* Kayıtlı Maçlarım: menüden ve üstteki "Maçlarım" sekmesinden açılır */
-function openSavedPage() {
-    setMyPageInstant('saved');
-    showTab('empty');
-}
-
+/* Menüdeki Kayıtlı Maçlarım: ana sayfadaki Maçlarım sayfası */
 document.getElementById('menuSaved').addEventListener('click', () => {
     closeHomeMenu();
-    openSavedPage();
+    setHomeMode('saved');
 });
-
-document.getElementById('modeSaved').addEventListener('click', openSavedPage);
 
 document.getElementById('menuClose').addEventListener('click', closeHomeMenu);
 
