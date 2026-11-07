@@ -4038,7 +4038,11 @@ body.has-layer .ac-kapa svg {
     animation: blink 1.2s ease-in-out infinite;
 }
 
-.kp-block { margin-top: .75em; }
+.kp-block {
+    margin-top: .75em;
+    padding-top: .75em;
+    border-top: 1px solid #eef0f4;
+}
 
 .kp-label {
     display: flex;
@@ -4093,8 +4097,14 @@ body.has-layer .ac-kapa svg {
     touch-action: none;
 }
 
-#kpSlider::-webkit-slider-runnable-track { height: .35em; border-radius: 99em; background: #d5d8de; }
+#kpSlider::-webkit-slider-runnable-track {
+    height: .35em;
+    border-radius: 99em;
+    background: linear-gradient(to right, #1d2340 var(--kp-fill, 0%), #d5d8de var(--kp-fill, 0%));
+}
+
 #kpSlider::-moz-range-track { height: .35em; border-radius: 99em; background: #d5d8de; }
+#kpSlider::-moz-range-progress { height: .35em; border-radius: 99em; background: #1d2340; }
 
 #kpSlider::-webkit-slider-thumb {
     width: 1.6em;
@@ -4714,21 +4724,21 @@ body.has-layer .ac-kapa svg {
                     </div>
                     <div class="kp-row kp-pools" id="kpPools">
                         <button data-pool="futbol" class="active">Futbol (<span>0</span>)</button>
-                        <button data-pool="nba" class="active">NBA (<span>0</span>)</button>
+                        <button data-pool="nba">NBA (<span>0</span>)</button>
                     </div>
                     <div class="kp-block">
                         <div class="kp-label"><span>Tarih Seçimi</span><b id="kpDateLbl"></b></div>
                         <div class="kp-row" id="kpDays"></div>
                     </div>
                     <div class="kp-block">
-                        <div class="kp-label"><span>Maç Sayısı (1 – 10)</span><b id="kpCountLbl">3 Maç</b></div>
+                        <div class="kp-label"><span>Maç Sayısı</span><b id="kpCountLbl">3 Maç</b></div>
                         <div class="kp-row" id="kpCounts">
                             <button data-cnt="1">1 Maç</button><button data-cnt="2">2 Maç</button>
                             <button data-cnt="3" class="active">3 Maç</button><button data-cnt="4">4 Maç</button>
                             <select id="kpMore" aria-label="5-10 maç"><option value="">5–10 ▾</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
                         </div>
                     </div>
-                    <div class="kp-block">
+                    <div class="kp-block" id="kpOddBlock">
                         <div class="kp-label"><span>Oran</span><b id="kpOddLbl"></b></div>
                         <div class="kp-odd-row">
                             <input type="range" id="kpSlider" min="0" max="1000" step="1">
@@ -9251,7 +9261,7 @@ const KP_RECENT_KEY = 'aiKuponSonMaclar';
 const KP_SLIDER_MAX = 50;
 
 let kpShown = false;
-const kp = { sports: ['futbol', 'nba'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false };
+const kp = { sports: ['futbol'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false };
 
 /* Türkiye saatiyle takvim günü ve saat */
 function kpClock() {
@@ -9595,10 +9605,13 @@ const kpOddToSlider = o => Math.round(Math.log(Math.max(1, Math.min(KP_SLIDER_MA
 
 function kpSyncOdd(fromInput) {
     const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
-    document.getElementById('kpOddLbl').textContent = kpOddText(kp.target) + ' Oran (maç başı ~' + per + ')';
+    document.getElementById('kpOddLbl').textContent = 'Maç başı ~' + per;
     if (!fromInput)
         document.getElementById('kpOdd').value = kp.target;
-    document.getElementById('kpSlider').value = kpOddToSlider(kp.target);
+    const slider = document.getElementById('kpSlider');
+    slider.value = kpOddToSlider(kp.target);
+    /* Topun solu dolu renk */
+    slider.style.setProperty('--kp-fill', (slider.value / 10) + '%');
     document.querySelectorAll('#kpPresets button').forEach(b => b.classList.toggle('active', Math.abs(Number(b.dataset.odd) - kp.target) < .05));
 }
 
@@ -11017,7 +11030,7 @@ let homeSwipe = null;
 homeMain.addEventListener('touchstart', event => {
 
     /* Gün düğmeleri kendi içinde yana kayar; sayfa değişmez. */
-    if (event.touches.length !== 1 || event.target.closest('#liveTools, .tool-row, #oddsSearchBox, #anDayRow, #anSearchRow')) {
+    if (event.touches.length !== 1 || event.target.closest('#liveTools, .tool-row, #oddsSearchBox, #anDayRow, #anSearchRow, #kpOddBlock')) {
         homeSwipe = null;
         return;
     }
