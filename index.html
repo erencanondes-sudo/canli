@@ -2785,6 +2785,24 @@ body.has-layer .ac-kapa svg {
     color: #1d2340;
 }
 
+/* VAR ile iptal edilen gol: soluk ve üstü çizili, yanında kırmızı "VAR iptal" */
+.event-label.goal-cancelled {
+    color: #8a8f9c;
+    text-decoration: line-through;
+}
+
+.var-tag {
+    padding: .05em .4em;
+    border-radius: .35em;
+    background: #fdecec;
+    font-size: .8em;
+    font-style: normal;
+    font-weight: 800;
+    color: #c62828;
+    text-decoration: none;
+    display: inline-block;
+}
+
 .card-icon {
     display: inline-block;
     width: .7em;
@@ -4977,17 +4995,35 @@ const DONE_CODES = new Set(['FT', 'AET', 'PEN']);
 const OTHER_LABELS = { PST: 'ERT', CANC: 'İPT', ABD: 'YRD', AWD: 'HÜK', WO: 'HÜK' };
 
 /* Olaylardan yalnızca goller ve kartlar (kaçan penaltı gol değildir) */
+/*
+ * Özet: goller ve kartlar. VAR ile iptal edilen gol (API golü silmeyip "Goal cancelled" /
+ * "Goal Disallowed - …" olayı ekler) iptal olarak işaretlenir: aynı taraftaki, VAR dakikasına kadarki
+ * son iptal edilmemiş gol (oyuncu adı varsa aynı oyuncunun).
+ */
 function rowEvents(list) {
+    const at = e => (e[0] || 0) * 100 + (e[1] || 0);
+    const goals = list.filter(e => e[3] === 'g' && e[4] !== 'kp');
+    const cancelled = new Set();
+    list.filter(e => e[3] === 'v' && /goal (cancelled|disallowed)/i.test(e[4] || '')).forEach(v => {
+        const match = goals.filter(g => !cancelled.has(g) && g[2] === v[2] && at(g) <= at(v) && (!v[5] || !g[5] || g[5] === v[5]))
+            .sort((a, b) => at(b) - at(a))[0];
+        if (match)
+            cancelled.add(match);
+    });
     return list
         .filter(e => (e[3] === 'g' && e[4] !== 'kp') || e[3] === 'k')
-        .map(([minute, extra, side, type, detail, player]) => ({
-            side: side === 1 ? 'away' : 'home',
-            type: type === 'g' ? 'goal' : detail === 's' ? 'yellow' : 'red',
-            detail: detail,
-            minute: minute,
-            extra: extra,
-            player: player
-        }));
+        .map(e => {
+            const [minute, extra, side, type, detail, player] = e;
+            return {
+                side: side === 1 ? 'away' : 'home',
+                type: type === 'g' ? 'goal' : detail === 's' ? 'yellow' : 'red',
+                detail: detail,
+                minute: minute,
+                extra: extra,
+                player: player,
+                cancelled: cancelled.has(e)
+            };
+        });
 }
 
 /*
@@ -10192,6 +10228,14 @@ function renderSummary(match) {
         if (event.type === 'goal') {
             label.textContent = '⚽ ' + (event.player || 'Gol') +
                 (event.detail === 'p' ? ' (P)' : event.detail === 'kk' ? ' (KK)' : '');
+            /* VAR ile iptal: üstü çizili, yanında "VAR iptal" */
+            if (event.cancelled) {
+                label.classList.add('goal-cancelled');
+                const tag = document.createElement('em');
+                tag.className = 'var-tag';
+                tag.textContent = 'VAR iptal';
+                label.appendChild(tag);
+            }
         } else if (event.type === 'sub') {
             label.classList.add('event-sub');
             [[SUB_IN_ICON, 'span', event.player], [SUB_OUT_ICON, 'small', event.out]].forEach(([icon, tag, name]) => {
