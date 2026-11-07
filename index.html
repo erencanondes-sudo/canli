@@ -743,12 +743,25 @@ button {
     overflow: hidden;
 }
 
+/*
+ * Lig başlığı: bizim lacivert, sağa doğru hafif açılır; sağ üstte küçük parlama,
+ * ondan sola inen ince ışık çizgisi ve üstünde sönükleşen ışık noktaları; üst kenarda ince açık çizgi.
+ */
 .league-head {
     display: flex;
     align-items: center;
     gap: .5em;
     padding: .6em .9em;
-    background: #1d2340;
+    background:
+        radial-gradient(circle at 81% 20%, rgba(255, 255, 255, .9) 0 .1em, rgba(150, 210, 255, .5) .28em, transparent 1.2em),
+        radial-gradient(circle at 76% 42%, rgba(200, 230, 255, .6) 0 .1em, transparent .22em),
+        radial-gradient(circle at 71% 56%, rgba(200, 230, 255, .48) 0 .09em, transparent .2em),
+        radial-gradient(circle at 66% 67%, rgba(200, 230, 255, .36) 0 .08em, transparent .18em),
+        radial-gradient(circle at 61% 76%, rgba(200, 230, 255, .26) 0 .07em, transparent .16em),
+        radial-gradient(circle at 56% 83%, rgba(200, 230, 255, .18) 0 .06em, transparent .14em),
+        radial-gradient(ellipse 48% 190% at 91% -75%, transparent 63%, rgba(140, 200, 255, .3) 65%, transparent 68%),
+        linear-gradient(90deg, #1d2340 0%, #1d2340 40%, #283563 100%);
+    box-shadow: inset 0 1px 0 rgba(130, 195, 255, .45);
     font-size: .8125rem;
     font-weight: 800;
     color: white;
