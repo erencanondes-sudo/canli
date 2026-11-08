@@ -5241,8 +5241,9 @@ body.has-layer .ac-kapa svg {
 
 const FIREBASE_SURUM = '12.19.0';
 
-/* R2 dosyaları (gün listesi, Özet): Cloudflare Pages'teki okuyucu (functions/veri) */
-const VERI_ADRES = '/veri/';
+/* R2 dosyaları (gün listesi, Özet): Cloudflare Pages'teki okuyucu (functions/veri).
+   Android uygulamasında (adres https://localhost) sitenin tam adresinden okunur. */
+const VERI_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/veri/' : '/veri/';
 
 /* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
 const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';

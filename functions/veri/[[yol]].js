@@ -2,12 +2,16 @@
  * R2 okuyucusu (Cloudflare Pages Function): /veri/gun/{gün}.json ve /veri/ozet/{gün}.json
  * R2 kovası projeye DEPO adıyla bağlı (Pages → Settings → Bindings). Yapı: sunucu/VERITABANI.md → "R2".
  * Önbellek: bugün, dün ve ilerideki günler tutulmaz (her açılışta en son hali); daha eski günler 1 saat (değişmezler).
- * Bilgisayardan dosya olarak açılan yönetim sayfası (adresi "null") da okuyabilir; başka siteler tarayıcıda okuyamaz.
+ * Bilgisayardan dosya olarak açılan yönetim sayfası (adresi "null") ve Android uygulaması (https://localhost) da okuyabilir;
+ * başka siteler tarayıcıda okuyamaz.
  */
 
-const IZIN = { 'Access-Control-Allow-Origin': 'null' };
+const IZINLI = ['null', 'https://localhost'];
 
-export async function onRequestGet({ params, env }) {
+export async function onRequestGet({ request, params, env }) {
+
+    const kaynak = request.headers.get('Origin');
+    const IZIN = { 'Access-Control-Allow-Origin': IZINLI.includes(kaynak) ? kaynak : 'null', Vary: 'Origin' };
 
     const yol = (params.yol || []).join('/');
     const eslesme = /^(gun|ozet)\/(\d{4}-\d{2}-\d{2})\.json$/.exec(yol);
