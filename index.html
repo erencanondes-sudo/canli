@@ -7553,7 +7553,7 @@ function renderLive() {
             dataError ? 'Bağlantı kurulamadı. İnternetini kontrol edip sayfayı yenile.' :
             waiting ? 'Maçlar yükleniyor…' :
             searching ? '"' + searchInput.value.trim() + '" için maç bulunamadı.' :
-            liveOnly ? 'Şu an oynanan maç yok.' : 'Bu gün maç yok.';
+            liveOnly ? 'Şu an oynanan maç yok.' : selectedDay === TODAY ? 'Bugün maç yok.' : 'Bu tarihte maç yok.';
         if (waiting && !dataError)
             empty.prepend(loadDot());
         box.appendChild(empty);
