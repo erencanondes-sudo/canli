@@ -10,6 +10,23 @@ module.exports = {
 
     /* Ligler (sitedeki sırayla aynı) */
     LIGLER: [
+        /* Millî maçlar */
+        { no: 10, ad: 'Hazırlık Maçları' },
+        { no: 1, ad: 'Dünya Kupası' },
+        { no: 4, ad: 'Avrupa Şampiyonası' },
+        { no: 5, ad: 'Uluslar Ligi' },
+        { no: 32, ad: 'DK Elemeleri - Avrupa' },
+        { no: 960, ad: 'Avrupa Şampiyonası Elemeleri' },
+        { no: 6, ad: 'Afrika Uluslar Kupası' },
+        { no: 7, ad: 'Asya Kupası' },
+        { no: 9, ad: 'Copa América' },
+        { no: 22, ad: 'Gold Cup' },
+        { no: 29, ad: 'DK Elemeleri - Afrika' },
+        { no: 30, ad: 'DK Elemeleri - Asya' },
+        { no: 31, ad: 'DK Elemeleri - CONCACAF' },
+        { no: 33, ad: 'DK Elemeleri - Okyanusya' },
+        { no: 34, ad: 'DK Elemeleri - Güney Amerika' },
+        { no: 37, ad: 'DK Elemeleri - Play-off' },
         /* Avrupa kupaları */
         { no: 2, ad: 'Şampiyonlar Ligi' },
         { no: 3, ad: 'Avrupa Ligi' },
@@ -37,6 +54,14 @@ module.exports = {
         { no: 253, ad: 'MLS' },
         { no: 307, ad: 'Saudi Pro League' },
         { no: 305, ad: 'Stars League' },
+        { no: 106, ad: 'Ekstraklasa' },
+        { no: 286, ad: 'Super Liga' },
+        { no: 333, ad: 'Premier League' },
+        { no: 345, ad: 'Czech Liga' },
+        { no: 188, ad: 'A-League' },
+        { no: 332, ad: 'Super Liga' },
+        { no: 169, ad: 'Super League' },
+        { no: 419, ad: 'Premyer Liqa' },
         /* 2. ligler */
         { no: 141, ad: 'Segunda División' },
         { no: 204, ad: '1. Lig' },
