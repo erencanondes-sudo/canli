@@ -2,18 +2,15 @@
  * Veritabanına yazma. Sunucu Google'ın kendi bağlantısıyla yazar (anahtar dosyası yok).
  *   Firestore : oranlar (gzip ile sıkıştırılmış), sistem durumu (bir doküman son yazılandan farklı değilse yazılmaz);
  *               yönetim sayfasının yazdıkları dinlenir (elle, istek, analiz sürümü)
- *   RTDB      : yalnızca mesajlar (mesaj.js)
  */
 
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { getDatabase } = require('firebase-admin/database');
 const zlib = require('zlib');
 const A = require('./ayarlar');
 
-initializeApp({ projectId: A.PROJE, databaseURL: A.RTDB_ADRES });
+initializeApp({ projectId: A.PROJE });
 const db = getFirestore();
-const rtdb = getDatabase();
 
 const sonYazilan = new Map();   /* doküman yolu → son içerik */
 const sonZaman = new Map();     /* doküman yolu → son yazma anı (ms) */
@@ -89,4 +86,4 @@ function koleksiyonDinle(ad, degisti) {
         e => console.error(ad + ' dinlenemedi: ' + e.message));
 }
 
-module.exports = { rtdb, yaz, yazSikistir, oku, unut, sil, belgeDinle, koleksiyonDinle, yazmaSayisi: () => yazmaSayisi };
+module.exports = { yaz, yazSikistir, oku, unut, sil, belgeDinle, koleksiyonDinle, yazmaSayisi: () => yazmaSayisi };

@@ -1,5 +1,5 @@
 {
-  "aciklama": "Mesaj ve rumuz filtresi (site ve sunucu kullanır). kok: bu harflerle başlayan kelime, kelime: tam kelime, baglanti: metnin içinde geçerse, izin: yanlışlıkla yakalanan kelimeler. Harfler küçük; tekrar eden harfler tek sayılır.",
+  "aciklama": "Mesaj ve rumuz filtresi (oda programı kullanır: oda/src/filtre.js). kok: bu harflerle başlayan kelime, kelime: tam kelime, baglanti: metnin içinde geçerse, izin: yanlışlıkla yakalanan kelimeler. Harfler küçük; tekrar eden harfler tek sayılır.",
   "kok": [
     "amcık", "amcik", "amcığ", "amına", "amina", "amını", "amini",
     "orospu", "orosbu", "oruspu", "orspu",

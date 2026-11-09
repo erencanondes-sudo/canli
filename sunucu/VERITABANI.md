@@ -1,10 +1,11 @@
 # Veritabanı
 
-Odalar, bir dosya deposu ve iki veritabanı var:
+Odalar, bir dosya deposu ve veritabanları var:
 
 - **Odalar (Cloudflare Durable Objects, `oda/` klasörü, Worker adı `canli-oda`):** canlı veri. Gün odası (günün listesi, Özet, hızlı kaynak) ve maç odası (maçın içeriği). Telefon odaya açık bir hatla (WebSocket) bağlanır; oda değişenleri kendisi gönderir. Ayrıntı: aşağıda "Odalar".
 - **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json` olarak okur. Okuyucu bugün, dün ve ilerideki günleri ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur.
-- **Realtime Database (RTDB):** yalnızca mesajlar (aşağıda "Mesajlar").
+- **Cloudflare D1 (veritabanı `canli`):** kullanıcı bilgileri (rumuz, engellenenler, sayaç, şikayetler; aşağıda "Mesajlar").
+- **Realtime Database:** artık kullanılmıyor (kuralları her şeyi kapatır).
 - **Firestore:** oranlar, analizler, bildirim kayıtları, sunucu durumu; yönetim sayfasının elle düzeltme kilitleri ve istekleri.
 
 Dokümanları ve odaları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), gün odasındaki hızlı skoru ve uyarıyı (`h`, `u`) hızlı kaynak (başka bir bilgisayardaki skor sunucusu, kendi anahtarıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
@@ -51,7 +52,7 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - Bugün her zaman dinlenir. Dün yalnızca seçiliyken dinlenir (gece yarısını geçen maçlar ve maç sonu düzeltmeleri için).
 - Takım adları telefonda saklanır. Sürüm bugünün gün odasından gelir (`v.takim`); telefondakinden farklıysa R2 `takim.json`'un tamamı bir kez iner. Odaya bağlanılamazsa ve telefonda sözlük yoksa dosya yine iner.
 - Maç açılınca maç odasına bağlanılır, maç kapanınca bırakılır. Odada içerik yoksa R2 `mac/{no}.json` okunur (dosya varsa oda bırakılır).
-- Uygulama arka plana geçince bütün dinlemeler durur, RTDB ve oda bağlantıları kapanır.
+- Uygulama arka plana geçince bütün dinlemeler durur, oda bağlantıları kapanır.
 - Hızlı kaynağın skoru ve uyarısı gün odasından gelir (yalnızca canlı ve kilitli olmayan maçlar).
 - Oranlar menüsü açılınca seçili günün `oran_gun` dokümanı, lig seçilince o ligin `oran_lig` dokümanı bir kez okunur. Maç sayfasında Oranlar sekmesine gelince `oran_mac/{no}` bir kez okunur. Okunan oran dokümanı 1 saatten eskiyse yeniden okunur.
 - Kayıtlı Oranlarım telefonda saklanır (Firestore'a yazılmaz).
@@ -249,29 +250,37 @@ Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda 
 
 ---
 
-## Mesajlar (Realtime Database)
+## Mesajlar (maç odası + D1)
 
-Maç sayfasındaki Yorumlar. Okuma herkese açık, yazmak / oy / şikayet için Google ile giriş ve rumuz gerekir. Sınırları kurallar (`database.rules.json`) denetler; mesajlarla ilgili bütün yazmalar yalnızca Google ile girişte (görünmez giriş yazamaz).
+Maç sayfasındaki Yorumlar. Okuma herkese açık; yazmak, oy ve şikayet için Google ile giriş ve rumuz gerekir. Telefon her yazma isteğiyle Firebase giriş kimliğini (ID token) gönderir; oda / Worker kimliği Google'ın herkese açık anahtarlarıyla doğrular (`oda/src/kimlik.js`, görünmez giriş yazamaz). Bütün sınırları oda denetler.
 
-| Yer | Ne | Kim yazar | Kim okur |
-|---|---|---|---|
-| `mesaj/{maç no}/{mesaj}` | `{ u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), g: gün no, y: yanıtlanan mesaj (Yanıtla ile), b: beğeni, d: beğenmeme }`. Yalnızca `acik`'taki maçlara yazılır; değiştirilemez, yazan silebilir. `b`, `d` sunucu yazar | Kullanıcı (sunucu: b, d, uygunsuzsa siler) | Yorumlar sekmesi: son 10 canlı; "Daha fazla göster" daha eski 10 mesajı bir kez okur (en fazla 100, eldekiler yeniden inmez) |
-| `sayac/{kimlik}` | `{ g: gün no, n: o gün yazılan mesaj }`. Gün no = (zaman + 3 saat) / 1 gün. En fazla 20; mesajla aynı anda 1 artar, silinemez | Kullanıcı | Kullanıcının kendisi |
-| `oy/{maç}/{mesaj}/{kimlik}` | `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi mesajına oy verilemez | Kullanıcı | Kullanıcının kendisi, sunucu (sayım) |
-| `kuyruk/{...}` | `{ m: maç, i: mesaj, u: kimlik }`: yeni mesaj ve oy. Sunucu işleyip siler | Kullanıcı | Sunucu |
-| `mesajlarim/{kimlik}/{maç}/{mesaj}` | Kişinin mesajları (hesap silinince mesajları silmek için) | Kullanıcı (sunucu: uygunsuz mesaj silinince) | Kullanıcının kendisi |
-| `kullanici/{kimlik}` | `{ r: rumuz, k: kuralların kabul zamanı, b: true = yanıt bildirimleri kapalı }` | Kullanıcı | Kullanıcının kendisi |
-| `rumuz/{küçük harfle rumuz}` | Rumuzun sahibi (benzersizlik). 3–15 karakter: harf (Türkçe dahil), rakam, alt çizgi | Kullanıcı | Herkes (alınmış mı) |
-| `rumuz_zaman/{kimlik}` | Son rumuz değişikliği (ms); haftada bir. Hesap silinse de kalır | Kullanıcı | Kullanıcının kendisi |
-| `acik/{maç no}` | Mesaj yazılabilen maçlar: sunucunun gördüğü her maç, silinmez | Sunucu | Yalnızca kurallar |
-| `engel/{kimlik}/{engellenen}` | true. Engellenenin mesajları gizlenir, ondan yanıt bildirimi gelmez. Girişte okunur, telefondaki listeyle birleşir | Kullanıcı | Kullanıcının kendisi, sunucu |
-| `sessiz/{kimlik}/{maç}_{mesaj}` | true: kişinin kendi mesajına gelen yanıtlardan bildirim almaz | Kullanıcı | Kullanıcının kendisi, sunucu |
-| `sikayet/{maç}_{mesaj}/{kimlik}` | Şikayet zamanı (her kişi bir kez) | Kullanıcı | Sen (ileride yönetim sayfası) |
+**Yorumlar maç odasında** (`oda/src/index.js` → MacOdasi; tablolar `yorum`, `oy`):
 
-- Küfür ve bağlantı filtresi: depodaki `kufur.json` (kök, tam kelime, bağlantı, izinli kelimeler). Site yazarken bir kez indirir; sunucu kuyruktaki her mesajı (metin ve rumuz) kontrol eder, uygunsuzsa siler.
-- Yanıt bildirimi: yeni mesajda `@rumuz` (en fazla 2) geçerse sunucu o kişiye bildirim gönderir (bildirim izni vermiş ve zil kaydı olan cihaza; bağlantı `#mac={no}&yorum` Yorumlar'ı açar). Gitmez: kendine, yanıt bildirimlerini kapatana, göndereni engelleyene, yanıtlanan mesajı için bildirimi kapatana, aynı gönderenden 10 dakika içinde ikinci kez. İzin ilk mesajdan sonra bir kez sorulur.
-- Hesap silinince: mesajlar, `mesajlarim`, `kullanici`, `engel`, `sessiz`, rumuz ve giriş kaydı silinir; oylar ve `sayac`, `rumuz_zaman` kalır.
-- Henüz yok: 100'den eski mesajları silme, mesajların saklanma süresi, yönetim sayfasında şikayetler.
+| Ne | Ayrıntı |
+|---|---|
+| Yorum | `{ id, u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), y?: yanıtlanan yorum, b: beğeni, d: beğenmeme }`. Değiştirilemez, yazan silebilir. Yalnızca sunucunun "açık" bildirdiği maçlara yazılır (sunucu gördüğü her maçı bildirir). Şimdilik hiç silinmez; maç kesinleşince yalnızca maç içeriği odadan silinir, yorumlar kalır |
+| Oy | Yorum ve kişi başına `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi yorumuna oy verilemez; sayılar oda tarafından tutulur |
+| Okuma | Maç sayfası açılınca (her maçta) odaya bağlanılır: son 10 yorum gelir. Yorumlar sekmesi açılınca 10 eski yorum daha, "Daha fazla göster" ile her seferinde 20 daha (en fazla 200). Yeni yorum, silinen yorum ve oy sayıları sayfa açıkken anında gelir |
+| Mesajların biçimi | `oda/src/index.js` → MAÇ ODASI açıklaması (`c0`, `c`, `x`, `b`, `r` mesajları; `daha`, `yaz`, `sil`, `oy`, `sikayet` istekleri) |
+
+**Kullanıcı bilgileri D1'de** (Cloudflare D1, veritabanı `canli`; `oda/src/d1.js`), hesap işlemleri `/hesap` adresinden (`oda/src/hesap.js`; site Pages'teki geçitten, `functions/hesap`):
+
+| Tablo | Ne |
+|---|---|
+| `kisi` | `uid, r: rumuz, k: kuralların kabul anı, b: 1 = yanıt bildirimleri kapalı` |
+| `rumuz` | Küçük harfle rumuz → sahibi (benzersizlik). 3–15 karakter: harf (Türkçe dahil), rakam, alt çizgi |
+| `rumuz_zaman` | Son rumuz değişikliği; haftada bir. Hesap silinse de kalır |
+| `sayac` | `g: gün no, n: o gün yazılan yorum`. Gün no = (zaman + 3 saat) / 1 gün. En fazla 20. Hesap silinse de kalır |
+| `engel` | Kişinin engelledikleri. Engellenenin yorumları telefonda gizlenir, ondan yanıt bildirimi gelmez. Girişte okunur, telefondaki listeyle birleşir |
+| `sessiz` | Kişinin, yanıtlarından bildirim almadığı kendi yorumları |
+| `sikayet` | Şikayetler (her kişi bir yorumu bir kez); `mac, mesaj, uid, z`. Şimdilik yalnızca Cloudflare panelinden (D1 → canli → Console) bakılır |
+| `mesajlarim` | Kişinin yorumları (hesap silinince bulmak için) |
+| `bildirim_son` | Son yanıt bildirimi (aynı kişiden aynı kişiye 10 dakikada bir) |
+
+- Küfür ve bağlantı filtresi: depodaki `kufur.json` (kök, tam kelime, bağlantı, izinli kelimeler); oda yorumu ve rumuzu yayınlamadan önce kontrol eder (`oda/src/filtre.js`), uygunsuzsa hiç yazılmaz.
+- Yanıt bildirimi: yeni yorumda `@rumuz` (en fazla 2) geçerse oda bildirim kuyruğu odasına ekler; sunucu kuyruğa bağlıdır (`/oda/bildirim`), o kişinin bildirim izni vermiş ve zil kaydı olan cihazlarına gönderir (bağlantı `#mac={no}&yorum` Yorumlar'ı açar). Gitmez: kendine, yanıt bildirimlerini kapatana, göndereni engelleyene ya da göndericinin engellediğine, yanıtlanan yorumu için bildirimi kapatana, aynı gönderenden 10 dakika içinde ikinci kez. Kuyrukta 10 dakikadan eski iş gönderilmez. İzin ilk mesajdan sonra bir kez sorulur.
+- Hesap silinince: yorumlar, `mesajlarim`, `kisi`, `engel`, `sessiz`, rumuz ve giriş kaydı silinir; oylar, `sayac`, `rumuz_zaman` ve şikayetler kalır.
+- Henüz yok: eski yorumları silme (ör. her maçta son 100), yönetim sayfasında şikayetler.
 
 ---
 

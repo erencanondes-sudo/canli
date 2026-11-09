@@ -2,7 +2,9 @@
  * ODALAR (Cloudflare Durable Objects). Ayrıntı: sunucu/VERITABANI.md → "Odalar".
  *
  *   Gün odası  gun/{gün}  : günün listesi (satırlar), Özet (olaylar), hızlı kaynağın skoru ve uyarısı, sürümler (takım adları, analiz)
- *   Maç odası  mac/{no}   : maçın içeriği (durum, istatistik, kadro, olaylar); maç kesinleşince R2'ye yazılır, oda boşaltılır
+ *   Maç odası  mac/{no}   : maçın içeriği (durum, istatistik, kadro, olaylar; maç kesinleşince R2'ye yazılır ve odadan silinir) ve yorumları
+ *   Bildirim kuyruğu      : yorumlardaki @rumuz yanıt bildirimleri; sunucu bağlanıp alır ve FCM ile gönderir
+ *   Kullanıcı bilgileri D1 veritabanında (d1.js); hesap işlemleri hesap.js
  *
  * Adresler:
  *   GET    /oda/gun/{gün}?k=&s=   telefon bağlanır (WebSocket); site bunu Cloudflare Pages'ten (functions/oda) geçirir
@@ -12,6 +14,8 @@
  *   POST   /hizli/gun/{gün}       hızlı kaynak (bilgisayardaki program) yazar (Authorization: Bearer HIZLI_ANAHTAR; sunucu da ODA_ANAHTAR ile)
  *   DELETE /yaz/gun/{gün}, /yaz/mac/{no}   oda boşaltılır
  *   GET    /bak/gun/{gün}?anahtar=..., /bak/mac/{no}?anahtar=...   odanın şu anki hali (yalnızca sen; tarayıcıda açılır)
+ *   GET    /oda/bildirim?anahtar=...   sunucu bildirim kuyruğuna bağlanır (WebSocket, ODA_ANAHTAR)
+ *   GET, POST /hesap/...   hesap işlemleri (hesap.js; site Cloudflare Pages'ten, functions/hesap, geçirir)
  *
  * Sıra numarası (s): odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı (s) ve odanın
  * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odası son 1000 değişikliği saklar).
@@ -22,9 +26,32 @@
  */
 
 import { DurableObject } from 'cloudflare:workers';
+import { dogrula } from './kimlik.js';
+import { d1, rumuzAnahtari } from './d1.js';
+import { uygunsuz } from './filtre.js';
+import { hesap } from './hesap.js';
 
 const BICIM = { gun: /^\d{4}-\d{2}-\d{2}$/, mac: /^\d{1,10}$/ };
 const GUNLUK_SAKLA = 1000;
+const YORUM_SAYFA = 20;          /* bir istekte en fazla bu kadar eski yorum */
+const YORUM_GUNLUK = 20;         /* kişi başına günde en fazla yorum */
+const BILDIRIM_ESKI = 10 * 60000;   /* bildirim kuyruğunda bu kadar eski iş gönderilmez; aynı kişiden aynı kişiye 10 dakikada bir */
+
+/* Hesap işlemlerine Android uygulamasından (https://localhost) da izin; site aynı adresten gelir */
+const IZINLI_KAYNAK = ['https://localhost'];
+
+function izinEkle(istek, cevap) {
+    const kaynak = istek.headers.get('Origin');
+    if (!IZINLI_KAYNAK.includes(kaynak))
+        return cevap;
+    const yeni = new Response(cevap.body, cevap);
+    yeni.headers.set('Access-Control-Allow-Origin', kaynak);
+    yeni.headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    yeni.headers.set('Access-Control-Allow-Methods', 'GET, POST');
+    yeni.headers.set('Access-Control-Max-Age', '86400');
+    yeni.headers.set('Vary', 'Origin');
+    return yeni;
+}
 
 const bos = (durum = 404) => new Response(null, { status: durum });
 
@@ -38,11 +65,21 @@ export default {
     async fetch(istek, env) {
         const url = new URL(istek.url);
         const [, bolum, tur, ad] = url.pathname.split('/');
+        const macOdasi = no => env.MAC.get(env.MAC.idFromName('eeur/mac/' + no), { locationHint: 'eeur' });
+
+        if (bolum === 'hesap')
+            return izinEkle(istek, istek.method === 'OPTIONS' ? bos(204) : await hesap(istek, env, tur, macOdasi));
+
+        if (bolum === 'oda' && tur === 'bildirim' && istek.headers.get('Upgrade') === 'websocket') {
+            if (!yetkili(istek, url, env.ODA_ANAHTAR))
+                return bos(403);
+            return env.BILDIRIM.get(env.BILDIRIM.idFromName('bildirim'), { locationHint: 'eeur' }).fetch(istek);
+        }
+
         if (!BICIM[tur] || !BICIM[tur].test(ad || ''))
             return bos();
 
-        const alan = tur === 'gun' ? env.GUN : env.MAC;
-        const oda = alan.get(alan.idFromName('eeur/' + tur + '/' + ad), { locationHint: 'eeur' });
+        const oda = tur === 'gun' ? env.GUN.get(env.GUN.idFromName('eeur/gun/' + ad), { locationHint: 'eeur' }) : macOdasi(ad);
 
         if (bolum === 'oda' && istek.method === 'GET') {
             if (istek.headers.get('Upgrade') !== 'websocket')
@@ -138,7 +175,7 @@ class Oda extends DurableObject {
         const [istemci, sunucu] = Object.values(new WebSocketPair());
         this.ctx.acceptWebSocket(sunucu);
         const s = url.searchParams.get('s');
-        this.ac(sunucu, url.searchParams.get('k'), s === null || s === '' ? null : Number(s));
+        this.ac(sunucu, url.searchParams.get('k'), s === null || s === '' ? null : Number(s), url);
         return new Response(null, { status: 101, webSocket: istemci });
     }
 
@@ -150,9 +187,8 @@ class Oda extends DurableObject {
         } catch (e) {}
     }
 
-    /* Oda boşaltılır: bağlı telefonlara haber verilir, depo silinir */
+    /* Oda boşaltılır: bağlı telefonların bağlantısı kapanır, depo silinir */
     async sil() {
-        this.bosaltildi();
         this.ctx.getWebSockets().forEach(ws => {
             try {
                 ws.close(1000, 'bosaltildi');
@@ -161,8 +197,6 @@ class Oda extends DurableObject {
         await this.ctx.storage.deleteAll();
         this.tablolar();
     }
-
-    bosaltildi() {}
 }
 
 /*
@@ -327,16 +361,37 @@ export class GunOdasi extends Oda {
 
 /*
  * MAÇ ODASI
- * bilgi tablosunda: d (maçın içeriği, JSON metni), g (son değişme anı, ms)
+ * bilgi tablosunda: no (maç no), acik (sunucu yazar: bu maça yorum yazılabilir), d (maçın içeriği, JSON metni), g (son değişme anı, ms)
+ * yorum tablosu: id, u (yazanın kimliği), r (rumuz), t (metin), z (zaman, ms), y (yanıtlanan yorum), b, d (beğeni, beğenmeme sayısı)
+ * oy tablosu: id (yorum), u (kimlik), v (1 beğeni, -1 beğenmeme, 0 geri alındı), n (kaç kez değişti, en fazla 2)
+ * Maç kesinleşince (sil) yalnızca içerik silinir; yorumlar kalır. Yorumlar şimdilik hiç silinmez.
  *
  * Telefona giden mesajlar:
  *   { t: "m", k, s, g, d }  içerik (bağlanınca ve her değişince)
  *   { t: "h", k, s }        yeniden bağlanış: telefondaki içerik güncel
  *   { t: "y" }              odada içerik yok (maç kesinleştiyse içerik R2'de: mac/{no}.json)
+ *   { t: "c0", c: [...] }   bağlanınca son 10 yorum (yeniden eskiye)
+ *   { t: "c", c }           yeni yorum;  { t: "x", id } yorum silindi;  { t: "b", id, b, d } oy sayıları
+ *   { t: "r", n, ... }      telefonun isteğine cevap (n: isteğin numarası): { ok: true, ... } ya da { hata: "kod" }
+ * Telefondan gelen istekler (JSON, n: isteğin numarası):
+ *   { a: "daha", once: yorum no, adet }          bu yorumdan eski en fazla 20 yorum (giriş gerekmez)
+ *   { a: "yaz", token, t, y? }  { a: "sil", token, id }  { a: "oy", token, id, v: 1 | -1 }  { a: "sikayet", token, id }
+ *   token: Firebase giriş kimliği (Google ile giriş). Hata kodları: giris, rumuz, kapali, bicim, uygunsuz, gunluk, yok, yetki, kendi, oy_sinir
  */
 export class MacOdasi extends Oda {
 
+    tablolar() {
+        super.tablolar();
+        this.sql.exec('CREATE TABLE IF NOT EXISTS yorum (id INTEGER PRIMARY KEY AUTOINCREMENT, u TEXT NOT NULL, r TEXT NOT NULL, ' +
+            't TEXT NOT NULL, z INTEGER NOT NULL, y INTEGER, b INTEGER NOT NULL DEFAULT 0, d INTEGER NOT NULL DEFAULT 0)');
+        this.sql.exec('CREATE TABLE IF NOT EXISTS oy (id INTEGER NOT NULL, u TEXT NOT NULL, v INTEGER NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (id, u))');
+    }
+
+    /* Sunucu yazar: { d?: içerik, acik?: 1 } */
     yaz(govde) {
+        if (govde.acik && !this.bilgi('acik'))
+            this.bilgiYaz('acik', 1);
+
         const metin = JSON.stringify(govde.d);
         if (!govde.d || this.bilgi('d') === metin)
             return { s: this.sira(), degisen: 0 };
@@ -351,22 +406,175 @@ export class MacOdasi extends Oda {
         return { s, degisen: 1 };
     }
 
-    ac(ws, k, s) {
+    /* Maç kesinleşti: içerik R2'de; odadan yalnızca içerik silinir, bağlı telefonlar R2'den okur */
+    async sil() {
+        this.sql.exec("DELETE FROM bilgi WHERE ad IN ('d', 'g')");
+        this.herkese({ t: 'y' });
+    }
+
+    ac(ws, k, s, url) {
+        if (!this.bilgi('no'))
+            this.bilgiYaz('no', url.pathname.split('/')[3]);
+
         const d = this.bilgi('d');
-        if (!d) {
-            ws.send(JSON.stringify({ t: 'y' }));
-            return;
-        }
         const kimlik = this.kimlik();
         const sira = this.sira();
-        if (k === kimlik && s === sira)
+        if (!d)
+            ws.send(JSON.stringify({ t: 'y' }));
+        else if (k === kimlik && s === sira)
             ws.send(JSON.stringify({ t: 'h', k: kimlik, s: sira }));
         else
             ws.send(JSON.stringify({ t: 'm', k: kimlik, s: sira, g: Number(this.bilgi('g')), d: JSON.parse(d) }));
+
+        ws.send(JSON.stringify({ t: 'c0', c: this.yorumlar(null, 10) }));
     }
 
-    bosaltildi() {
-        this.herkese({ t: 'y' });
+    /* Yorumlar, yeniden eskiye (once verilirse ondan eskiler) */
+    yorumlar(once, adet) {
+        return this.sql.exec('SELECT id, u, r, t, z, y, b, d FROM yorum WHERE id < ? ORDER BY id DESC LIMIT ?', once || Number.MAX_SAFE_INTEGER, adet)
+            .toArray().map(x => {
+                const c = { id: x.id, u: x.u, r: x.r, t: x.t, z: x.z, b: x.b, d: x.d };
+                if (x.y) c.y = x.y;
+                return c;
+            });
+    }
+
+    async webSocketMessage(ws, ham) {
+        let m;
+        try {
+            m = JSON.parse(ham);
+        } catch (e) {
+            return;
+        }
+        const cevap = veri => ws.send(JSON.stringify({ t: 'r', n: m.n, ...veri }));
+        try {
+            if (m.a === 'daha')
+                return cevap({ ok: true, c: this.yorumlar(Number(m.once) || null, Math.min(Math.max(Number(m.adet) || 10, 1), YORUM_SAYFA)) });
+            const kim = await dogrula(m.token, this.env);
+            if (!kim || !kim.google)
+                return cevap({ hata: 'giris' });
+            cevap(await this.islem(kim.uid, m));
+        } catch (e) {
+            cevap({ hata: 'sunucu' });
+        }
+    }
+
+    async islem(uid, m) {
+        const mac = this.bilgi('no');
+        const id = Number(m.id);
+        const yorum = m.a === 'yaz' ? null : this.sql.exec('SELECT u FROM yorum WHERE id = ?', id).toArray()[0];
+        const db = await d1(this.env);
+
+        if (m.a === 'yaz') {
+            const t = String(m.t || '').trim();
+            if (!this.bilgi('acik'))
+                return { hata: 'kapali' };
+            if (!t || t.length > 100)
+                return { hata: 'bicim' };
+            if (uygunsuz(t))
+                return { hata: 'uygunsuz' };
+            const kisi = await db.prepare('SELECT r FROM kisi WHERE uid = ?').bind(uid).first();
+            if (!kisi || !kisi.r)
+                return { hata: 'rumuz' };
+
+            /* Gün no: Türkiye saatine göre (zaman + 3 saat) / 1 gün */
+            const gun = Math.floor((Date.now() + 3 * 3600000) / 86400000);
+            const sayac = await db.prepare('SELECT g, n FROM sayac WHERE uid = ?').bind(uid).first();
+            const n = sayac && sayac.g === gun ? sayac.n + 1 : 1;
+            if (n > YORUM_GUNLUK)
+                return { hata: 'gunluk' };
+
+            const y = Number.isInteger(m.y) && this.sql.exec('SELECT 1 FROM yorum WHERE id = ?', m.y).toArray().length ? m.y : null;
+            const yeni = { u: uid, r: kisi.r, t, z: Date.now() };
+            yeni.id = this.sql.exec('INSERT INTO yorum (u, r, t, z, y) VALUES (?, ?, ?, ?, ?) RETURNING id', uid, kisi.r, t, yeni.z, y).one().id;
+            if (y)
+                yeni.y = y;
+            yeni.b = 0;
+            yeni.d = 0;
+            await db.batch([
+                db.prepare('INSERT OR REPLACE INTO sayac (uid, g, n) VALUES (?, ?, ?)').bind(uid, gun, n),
+                db.prepare('INSERT OR IGNORE INTO mesajlarim (uid, mac, mesaj) VALUES (?, ?, ?)').bind(uid, mac, String(yeni.id))
+            ]);
+            this.herkese({ t: 'c', c: yeni });
+            this.ctx.waitUntil(this.yanitBildir(yeni, mac, db).catch(() => {}));
+            return { ok: true, id: yeni.id };
+        }
+
+        if (!yorum)
+            return m.a === 'sil' ? { ok: true } : { hata: 'yok' };
+
+        if (m.a === 'sil') {
+            if (yorum.u !== uid)
+                return { hata: 'yetki' };
+            await this.yorumSil([id], uid);
+            return { ok: true };
+        }
+
+        if (m.a === 'oy') {
+            const v = m.v === 1 ? 1 : m.v === -1 ? -1 : null;
+            if (!v)
+                return { hata: 'bicim' };
+            if (yorum.u === uid)
+                return { hata: 'kendi' };
+            const once = this.sql.exec('SELECT v, n FROM oy WHERE id = ? AND u = ?', id, uid).toArray()[0];
+            const yeni = once && once.v === v ? 0 : v;
+            const n = once ? once.n + 1 : 0;
+            if (n > 2)
+                return { hata: 'oy_sinir' };
+            this.sql.exec('INSERT OR REPLACE INTO oy (id, u, v, n) VALUES (?, ?, ?, ?)', id, uid, yeni, n);
+            const sayi = this.sql.exec('SELECT SUM(v = 1) AS b, SUM(v = -1) AS d FROM oy WHERE id = ?', id).one();
+            this.sql.exec('UPDATE yorum SET b = ?, d = ? WHERE id = ?', sayi.b || 0, sayi.d || 0, id);
+            this.herkese({ t: 'b', id, b: sayi.b || 0, d: sayi.d || 0 });
+            return { ok: true, v: yeni };
+        }
+
+        if (m.a === 'sikayet') {
+            await db.prepare('INSERT OR IGNORE INTO sikayet (mac, mesaj, uid, z) VALUES (?, ?, ?, ?)').bind(mac, String(id), uid, Date.now()).run();
+            return { ok: true };
+        }
+
+        return { hata: 'bicim' };
+    }
+
+    /* Kişinin yorumları silinir (kendi isteğiyle ya da hesabı silinince) */
+    async yorumSil(idler, uid) {
+        const mac = this.bilgi('no');
+        const db = await d1(this.env);
+        for (const id of idler) {
+            if (!this.sql.exec('DELETE FROM yorum WHERE id = ? AND u = ? RETURNING id', id, uid).toArray().length)
+                continue;
+            this.sql.exec('DELETE FROM oy WHERE id = ?', id);
+            await db.prepare('DELETE FROM mesajlarim WHERE uid = ? AND mac = ? AND mesaj = ?').bind(uid, mac, String(id)).run();
+            this.herkese({ t: 'x', id });
+        }
+    }
+
+    /*
+     * Yorumda @rumuz geçiyorsa (en fazla 2) o kişilere yanıt bildirimi (bildirim kuyruğuna). Gitmez: kendine, yanıt bildirimlerini
+     * kapatana, göndereni engelleyene ya da göndericinin engellediğine, yanıtlanan yorumu için bildirimi kapatana,
+     * aynı gönderenden 10 dakika içinde ikinci kez.
+     */
+    async yanitBildir(yorum, mac, db) {
+        const adlar = [...new Set([...yorum.t.matchAll(/@([A-Za-z0-9_çğıöşüÇĞİÖŞÜ]{3,15})/g)].map(x => rumuzAnahtari(x[1])))].slice(0, 2);
+        for (const ad of adlar) {
+            const sahip = await db.prepare('SELECT uid FROM rumuz WHERE ad = ?').bind(ad).first();
+            const kime = sahip && sahip.uid;
+            if (!kime || kime === yorum.u)
+                continue;
+            const cift = yorum.u + '>' + kime;
+            const [son, kisi, engel, sessiz] = await db.batch([
+                db.prepare('SELECT z FROM bildirim_son WHERE cift = ?').bind(cift),
+                db.prepare('SELECT b FROM kisi WHERE uid = ?').bind(kime),
+                db.prepare('SELECT 1 FROM engel WHERE (uid = ? AND kim = ?) OR (uid = ? AND kim = ?)').bind(kime, yorum.u, yorum.u, kime),
+                db.prepare('SELECT 1 FROM sessiz WHERE uid = ? AND mac = ? AND mesaj = ?').bind(kime, mac, String(yorum.y || ''))
+            ]);
+            if ((son.results[0] && Date.now() - son.results[0].z < BILDIRIM_ESKI) || (kisi.results[0] && kisi.results[0].b === 1) ||
+                engel.results.length || sessiz.results.length)
+                continue;
+            await this.env.BILDIRIM.get(this.env.BILDIRIM.idFromName('bildirim'), { locationHint: 'eeur' })
+                .ekle({ kisi: kime, baslik: yorum.r + ' sana yazdı', metin: yorum.t, link: '#mac=' + mac + '&yorum' });
+            await db.prepare('INSERT OR REPLACE INTO bildirim_son (cift, z) VALUES (?, ?)').bind(cift, Date.now()).run();
+        }
     }
 
     async bak() {
@@ -376,8 +584,44 @@ export class MacOdasi extends Oda {
             kimlik: this.bilgi('k'),
             sira: this.sira(),
             bagli_telefon: this.ctx.getWebSockets().length,
+            yorum_acik: !!this.bilgi('acik'),
+            yorum_sayisi: this.sql.exec('SELECT COUNT(*) AS n FROM yorum').one().n,
             guncellendi: this.bilgi('g') ? new Date(Number(this.bilgi('g'))).toISOString() : null,
-            icerik: d ? JSON.parse(d) : null
+            icerik: d ? JSON.parse(d) : null,
+            son_yorumlar: this.yorumlar(null, 20)
         };
+    }
+}
+
+/*
+ * BİLDİRİM KUYRUĞU (tek oda): maç odaları yanıt bildirimlerini ekler, sunucu bağlıysa hemen gönderilir.
+ * Sunucu bağlanınca son 10 dakikanın bekleyen işleri gelir; sunucu işi alınca { ack: no } gönderir, iş silinir.
+ * Sunucuya giden: { t: "i", id, kisi, baslik, metin, link }
+ */
+export class BildirimOdasi extends Oda {
+
+    tablolar() {
+        super.tablolar();
+        this.sql.exec('CREATE TABLE IF NOT EXISTS kuyruk (id INTEGER PRIMARY KEY AUTOINCREMENT, v TEXT NOT NULL, z INTEGER NOT NULL)');
+    }
+
+    ekle(is) {
+        const z = Date.now();
+        this.sql.exec('DELETE FROM kuyruk WHERE z < ?', z - BILDIRIM_ESKI);
+        const id = this.sql.exec('INSERT INTO kuyruk (v, z) VALUES (?, ?) RETURNING id', JSON.stringify(is), z).one().id;
+        this.herkese({ t: 'i', id, ...is });
+    }
+
+    ac(ws) {
+        this.sql.exec('SELECT id, v FROM kuyruk WHERE z >= ? ORDER BY id', Date.now() - BILDIRIM_ESKI).toArray()
+            .forEach(x => ws.send(JSON.stringify({ t: 'i', id: x.id, ...JSON.parse(x.v) })));
+    }
+
+    webSocketMessage(ws, ham) {
+        try {
+            const m = JSON.parse(ham);
+            if (Number.isInteger(m.ack))
+                this.sql.exec('DELETE FROM kuyruk WHERE id <= ?', m.ack);
+        } catch (e) {}
     }
 }

@@ -11,6 +11,9 @@
  * hizliSil(gün, nolar): maçların hızlı skorunu ve uyarısını gün odasından siler (hızlı kaynağın yazdığı h, u).
  * dinle(gün, mesajGeldi): gün odasına telefon gibi bağlanır (hızlı kaynağı öğrenmek için). Her bağlanışta oda her şeyi
  *   baştan gönderir ("l"), sonra değişiklikler ("d"). Kopunca 5 sn sonra yeniden bağlanır. Kapatma fonksiyonu döner.
+ * acik(no): maç odasına "bu maça yorum yazılabilir" bilgisi (bir kez).
+ * bildirimDinle(gonder): bildirim kuyruğu odasına bağlanır; gelen her yanıt bildirimi için gonder({ kisi, baslik, metin, link }),
+ *   sonra alındığı odaya bildirilir (kuyruktan silinir). Kopunca 5 sn sonra yeniden bağlanır.
  */
 
 const { ODA_ADRES, ODA_ANAHTAR } = process.env;
@@ -38,7 +41,9 @@ async function istek(yol, yontem, govde) {
 function yaz(yol, alanlar) {
     const once = son.get(yol) || {};
     const b = bekleyen.get(yol);
-    const yeni = b && b !== SIL ? b : {};
+    /* Boşaltma bekliyorsa önce o yapılır; bu yazma bir sonraki turda yeniden gelir */
+    if (b === SIL) return;
+    const yeni = b || {};
     let var_ = false;
 
     for (const [alan, deger] of Object.entries(alanlar)) {
@@ -90,19 +95,20 @@ async function hizliSil(gunAdi, nolar) {
     }
 }
 
-function dinle(gunAdi, mesajGeldi) {
+/* Odaya WebSocket ile bağlanır; mesajGeldi(mesaj, ws) */
+function dinle(gunAdi, mesajGeldi, yol = '/oda/gun/' + gunAdi) {
     let ws = null;
     let kapali = false;
     let bekleme = null;
 
     const baglan = () => {
         if (!ODA_ADRES) return;
-        ws = new WebSocket(ODA_ADRES.replace(/\/$/, '').replace(/^http/, 'ws') + '/oda/gun/' + gunAdi);
+        ws = new WebSocket(ODA_ADRES.replace(/\/$/, '').replace(/^http/, 'ws') + yol);
         ws.onmessage = olay => {
             try {
-                mesajGeldi(JSON.parse(olay.data));
+                mesajGeldi(JSON.parse(olay.data), ws);
             } catch (e) {
-                console.error('Gün odası mesajı işlenemedi (' + gunAdi + '): ' + e.message);
+                console.error('Oda mesajı işlenemedi (' + yol + '): ' + e.message);
             }
         };
         ws.onclose = () => {
@@ -119,8 +125,17 @@ function dinle(gunAdi, mesajGeldi) {
     };
 }
 
+function bildirimDinle(gonder) {
+    return dinle(null, (is, ws) => {
+        if (is.t !== 'i') return;
+        gonder(is);
+        ws.send(JSON.stringify({ ack: is.id }));
+    }, '/oda/bildirim?anahtar=' + encodeURIComponent(ODA_ANAHTAR || ''));
+}
+
 const gun = (gunAdi, alanlar) => yaz('gun/' + gunAdi, alanlar);
 const mac = (no, icerik) => yaz('mac/' + no, { d: icerik });
+const acik = no => yaz('mac/' + no, { acik: 1 });
 
 function sil(yol) {
     bekleyen.set(yol, SIL);
@@ -134,4 +149,4 @@ function unut(gecerli) {
         if (!gecerli(yol)) son.delete(yol);
 }
 
-module.exports = { gun, mac, sil, unut, hizliSil, dinle, sonHata: () => sonHata };
+module.exports = { gun, mac, acik, sil, unut, hizliSil, dinle, bildirimDinle, sonHata: () => sonHata };

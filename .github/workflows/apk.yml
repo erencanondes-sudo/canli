@@ -24,7 +24,7 @@ jobs:
       - name: Site dosyaları uygulamaya
         run: |
           mkdir -p uygulama/www
-          cp index.html kufur.json canli-skor.webmanifest firebase-messaging-sw.js cs-*.png uygulama/www/
+          cp index.html canli-skor.webmanifest firebase-messaging-sw.js cs-*.png uygulama/www/
 
       - name: Android projesi
         working-directory: uygulama

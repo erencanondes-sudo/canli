@@ -5151,7 +5151,7 @@ body.has-layer .ac-kapa svg {
                     </div>
                     <div id="cmList"></div>
                     <button id="cmMore" type="button" hidden>Daha fazla göster</button>
-                    <p id="cmLimit" hidden>En fazla son 100 mesaj gösterilir.</p>
+                    <p id="cmLimit" hidden>En fazla son 200 mesaj gösterilir.</p>
                 </div>
                 <div class="an-pane"></div>
             </div>
@@ -5236,6 +5236,7 @@ body.has-layer .ac-kapa svg {
      Maç odası mac/{no}   : istatistik, kadro, olaylar (maç açılınca); kesinleşmiş maç R2 mac/{no}
      R2 takim             : takım adları (telefonda saklanır; sürüm gün odasından)
      R2 lig               : liglerin kadro / istatistik verip vermediği
+     Maç odası (yorumlar) : maç sayfasında yorumlar; hesap işlemleri (rumuz, engel...) HESAP_ADRES
 ================================================= */
 
 const FIREBASE_SURUM = '12.19.0';
@@ -5244,8 +5245,9 @@ const FIREBASE_SURUM = '12.19.0';
    Android uygulamasında (adres https://localhost) sitenin tam adresinden okunur. */
 const VERI_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/veri/' : '/veri/';
 
-/* Odalar (WebSocket): Cloudflare Pages'teki geçit (functions/oda) canli-oda Worker'ına iletir */
+/* Odalar (WebSocket) ve hesap işlemleri: Cloudflare Pages'teki geçitler (functions/oda, functions/hesap) canli-oda Worker'ına iletir */
 const ODA_ADRES = location.hostname === 'localhost' ? 'wss://canli-ejw.pages.dev/oda/' : 'wss://' + location.host + '/oda/';
+const HESAP_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/hesap' : '/hesap';
 
 /* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
 const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';
@@ -5253,7 +5255,6 @@ const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAt
 const FIREBASE_AYAR = {
     apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',
     authDomain: 'canli-b4406.firebaseapp.com',
-    databaseURL: 'https://canli-b4406-default-rtdb.firebaseio.com',
     projectId: 'canli-b4406',
     storageBucket: 'canli-b4406.firebasestorage.app',
     messagingSenderId: '940094284577',
@@ -5756,8 +5757,6 @@ function leagueHasDetail(id) {
 
 let fs = null;       /* Firestore kütüphanesi */
 let db = null;       /* Firestore */
-let rt = null;       /* Realtime Database kütüphanesi */
-let rd = null;       /* Realtime Database */
 let dataError = false;
 
 let watchedDay = null;   /* seçili gün */
@@ -5773,9 +5772,7 @@ async function startData() {
     try {
         const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
         const app = await import(base + 'firebase-app.js');
-        rt = await import(base + 'firebase-database.js');
         fbApp = app.initializeApp(FIREBASE_AYAR);
-        rd = rt.getDatabase(fbApp);
     } catch (error) {
         dataError = true;
         refreshViews();
@@ -6395,7 +6392,8 @@ function checkDay() {
  * ODA BAĞLANTISI (WebSocket). Kopunca 1, 2, 4… en fazla 30 sn sonra yeniden bağlanır; bağlanırken son alınan
  * sıra numarasını (s) ve odanın kimliğini (k) gönderir, oda yalnızca kaçırılanları yollar.
  * 45 sn'de bir "p" yoklaması (oda uyandırılmadan "o" cevabı gelir): mobil ağlar boştaki bağlantıyı kesmesin.
- * failed: ilk bağlantı hiçbir mesaj gelmeden koparsa bir kez çağrılır. Kapatma fonksiyonu döner.
+ * failed: ilk bağlantı hiçbir mesaj gelmeden koparsa bir kez çağrılır. Kapatma fonksiyonu döner;
+ * fonksiyonun send(nesne) özelliği odaya mesaj gönderir (bağlı değilse false).
  */
 function openRoom(path, position, onMessage, failed) {
     let ws = null;
@@ -6449,13 +6447,20 @@ function openRoom(path, position, onMessage, failed) {
     };
 
     connect();
-    return () => {
+    const close = () => {
         closed = true;
         clearTimeout(retry);
         clearInterval(ping);
         if (ws)
             ws.close();
     };
+    close.send = message => {
+        if (!ws || ws.readyState !== 1)
+            return false;
+        ws.send(JSON.stringify(message));
+        return true;
+    };
+    return close;
 }
 
 /* Gün odasından gelen değişiklik: { r?, o?, h?, u? }, her biri { maç no: değer }, null = silindi */
@@ -6606,21 +6611,19 @@ function dayLoading() {
 }
 
 /*
- * Maç sayfası açıkken istatistik, kadro ve (maç bitince) olaylar: maç odası (mac/{no}).
- * Odada içerik yoksa ("y") maç kesinleşmiş olabilir: R2 mac/{no}.json okunur; dosya varsa oda bırakılır,
- * yoksa oda açık kalır (içerik gelince gösterilir). Maç sayfası kapanınca bağlantı kapanır.
+ * Maç sayfası açıkken maç odası (mac/{no}): istatistik, kadro, (maç bitince) olaylar ve yorumlar (her maçta).
+ * Odada içerik yoksa ("y") maç kesinleşmiş olabilir: R2 mac/{no}.json okunur (istatistik vermeyen ligde başlamamış
+ * maçta okunmaz). Yorumlar için oda açık kalır. Maç sayfası kapanınca bağlantı kapanır.
  */
 const detailPos = new Map();   /* maç no → { k, s } (yalnızca açık olan maç için tutulur) */
+let detailRoom = null;          /* açık maç odası (kapatma fonksiyonu; send ile istek gönderilir) */
 
 function watchDetail(match) {
 
     unwatchDetail();
 
-    /* Biten maçın içeriğinde olaylar da var (istatistik vermeyen liglerde de) */
-    if (!(leagueHasDetail(match.league.id) || match.status === 'done'))
-        return;
-
     const id = match.id;
+    resetComments(id);
     const position = detailPos.get(id) || { k: null, s: 0 };
     detailPos.clear();
     detailPos.set(id, position);
@@ -6648,20 +6651,24 @@ function watchDetail(match) {
         if (message.t === 'm') {
             show(message.d || {}, message.g);
         } else if (message.t === 'y') {
-            readFile('mac/' + id).then(doc => {
-                if (!doc || detailUnsub !== unsub)
-                    return;
-                show(doc, doc.g);
-                close();
-            }, () => {});
+            if (leagueHasDetail(match.league.id) || match.status !== 'upcoming')
+                readFile('mac/' + id).then(doc => {
+                    if (doc && detailUnsub === unsub)
+                        show(doc, doc.g);
+                }, () => {});
+        } else {
+            commentMessage(id, message);
         }
     });
+    detailRoom = close;
 }
 
 function unwatchDetail() {
     if (detailUnsub)
         detailUnsub();
     detailUnsub = null;
+    detailRoom = null;
+    resetComments(null);
 }
 
 /* Uygulama arka plana geçince bağlantılar kapanır, öne gelince yeniden açılır */
@@ -6671,15 +6678,10 @@ document.addEventListener('visibilitychange', () => {
         lastScores.clear();
         Array.from(days.keys()).forEach(day => closeDay(day));
         unwatchDetail();
-        /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
-        if (rd)
-            rt.goOffline(rd);
         return;
     }
 
     resetScoreTimes();
-    if (rd)
-        rt.goOnline(rd);
     openDay(TODAY);
     openDay(watchedDay);
     checkDay();
@@ -10150,17 +10152,14 @@ startData();
 /* =================================================
    MESAJLAR (maç sayfası, Yorumlar): sunucu/VERITABANI.md → "Mesajlar"
    -------------------------------------------------
-   Okuma herkese açık: Yorumlar sekmesi açılınca maçın son 10 mesajı canlı dinlenir.
-   "Daha fazla göster" yalnızca daha eski 10 mesajı bir kez okur (en fazla 100); eldekiler yeniden inmez.
-   Eski mesajlar canlı değildir (beğeni sayısı ve başkasının sildiği mesaj, Yorumlar yeniden açılınca güncellenir). Yazmak, oy vermek ve şikayet için
-   Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir).
-   Sınırlar (Realtime Database kuralları da denetler): mesaj 100 karakter, günde 20 mesaj,
-   bir mesajda oy en fazla 2 kez değiştirilir, rumuz haftada bir değişir.
-   Beğeni sayıları ve küfür kontrolü sunucuda (kuyruk).
+   Yorumlar maç odasında (maç sayfası açıkken bağlı olunan oda, watchDetail). Oda bağlanınca son 10 yorumu gönderir;
+   Yorumlar sekmesi açılınca 10 eski yorum daha, "Daha fazla göster" ile her seferinde 20 daha istenir (en fazla 200).
+   Yeni yorum, silinen yorum ve oy sayıları maç sayfası açık olduğu sürece anında gelir.
+   Yazmak, oy vermek ve şikayet için Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir); istekle birlikte
+   Firebase giriş kimliği gönderilir, oda doğrular. Küfür / bağlantı kontrolü, günde 20 mesaj, 100 karakter, oy en fazla
+   2 kez değişir: hepsini oda denetler. Rumuz, yanıt bildirimi ayarı, engellenenler: hesap işlemleri (HESAP_ADRES, D1).
 ================================================= */
-const CM_PAGE = 10;
-const CM_MAX = 100;
-const CM_DAILY = 20;
+const CM_MAX = 200;
 const ACCOUNT_KEY = 'canliSkorHesap';   /* giriş yapıldı mı (menü ve hesabın arka planda yüklenmesi için) */
 const BLOCK_KEY = 'canliSkorEngel';     /* engellenen kişiler (yalnızca bu telefonda) */
 const VOTE_KEY = 'canliSkorOy';         /* verilen oylar ("maç/mesaj" → 1, -1, 0) */
@@ -10175,51 +10174,157 @@ const CM_ICONS = {
     flag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>'
 };
 
-/* live: canlı dinlenen son 10 (yeniden eskiye), older: sonradan okunan eskiler, list: ikisi birlikte */
-const cm = { match: null, off: null, live: null, older: [], noMore: false, loadingMore: false, list: null, open: null, replyTo: null };
+/*
+ * room: odasına bağlı olunan maç (yorumlar bu maçın), list: yorumlar (yeniden eskiye), match: Yorumlar sekmesi açık olan maç,
+ * extended: sekme açılınca istenen 10 ek yorum istendi mi
+ */
+const cm = { room: null, list: null, noMore: false, loadingMore: false, extended: false, match: null, open: null, replyTo: null };
 let blocked = new Set(readJSON(BLOCK_KEY, []));
 let myVotes = readJSON(VOTE_KEY, {});
 let myReports = new Set(readJSON(REPORT_KEY, []));
 let mySilenced = new Set();     /* bildirimi kapatılan kendi mesajları ("maç_mesaj"), girişte okunur */
-let me = null;                    /* { uid, r: rumuz (yoksa null), k } Google ile giriş yapmış kullanıcı */
+let me = null;                    /* { uid, r: rumuz (yoksa null), k, b } Google ile giriş yapmış kullanıcı */
 let meReady = Promise.resolve();
 
 const cmInput = document.getElementById('cmInput');
 const cmNote = text => { document.getElementById('cmNote').textContent = text || ''; };
 
-/* ---------- Küfür ve bağlantı filtresi (kufur.json, yazarken bir kez iner; sunucu da aynısını kullanır) ---------- */
-let filterReady = null;
-let FILTER = null;
-const FILTER_DIGITS = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's' };
+const CM_ERRORS = {
+    giris: 'Giriş yapmalısın.',
+    kapali: 'Bu maça mesaj yazılamıyor.',
+    bicim: 'Mesaj 1–100 karakter olmalı.',
+    uygunsuz: 'Mesajın uygunsuz bir ifade ya da bağlantı içeriyor.',
+    gunluk: 'Bugün en fazla 20 mesaj yazabilirsin.',
+    oy_sinir: 'Bir mesajdaki oyunu en fazla 2 kez değiştirebilirsin.',
+    yok: 'Bu mesaj silinmiş.'
+};
 
-function plainText(text) {
-    return String(text || '').toLocaleLowerCase('tr')
-        .replace(/[0134578@$]/g, ch => FILTER_DIGITS[ch])
-        .replace(/[^a-zçğıöşü\s]/g, '')
-        .replace(/(.)\1+/g, '$1');
+/* ---------- Hesap işlemleri (HESAP_ADRES; giriş kimliğiyle) ---------- */
+async function idToken(user) {
+    if (!user) {
+        const { auth } = await authLoad();
+        user = auth.currentUser;
+    }
+    return user ? user.getIdToken() : null;
 }
 
-function loadFilter() {
-    if (!filterReady)
-        filterReady = fetch('kufur.json').then(r => r.json()).then(list => {
-            FILTER = {
-                roots: list.kok.map(plainText),
-                words: new Set(list.kelime.map(plainText)),
-                allow: new Set(list.izin.map(plainText)),
-                links: list.baglanti
-            };
-        }).catch(() => { filterReady = null; });
-    return filterReady;
+/* Cevap { ok: true, ... } ya da { hata }; bağlantı yoksa null */
+async function accountRequest(action, body, user) {
+    try {
+        const response = await fetch(HESAP_ADRES + (action ? '/' + action : ''), {
+            method: body ? 'POST' : 'GET',
+            headers: { Authorization: 'Bearer ' + await idToken(user), 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined
+        });
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
 }
 
-function unfit(text) {
-    if (!FILTER)
-        return false;
-    const raw = String(text || '').toLocaleLowerCase('tr');
-    if (FILTER.links.some(link => raw.includes(link)))
-        return true;
-    return plainText(text).split(/\s+/).some(word =>
-        word && !FILTER.allow.has(word) && (FILTER.words.has(word) || FILTER.roots.some(root => word.startsWith(root))));
+/* Başarılıysa true */
+async function accountCall(action, body) {
+    const answer = await accountRequest(action, body);
+    return !!answer && !!answer.ok;
+}
+
+/* ---------- Maç odasına istek (cevabı beklenir; 15 sn'de gelmezse { hata: "baglanti" }) ---------- */
+let roomAsk = 0;
+const roomWaiting = new Map();   /* istek no → cevabı bekleyen */
+
+function roomCall(request) {
+    return new Promise(resolve => {
+        if (!detailRoom || !detailRoom.send) {
+            resolve({ hata: 'baglanti' });
+            return;
+        }
+        request.n = ++roomAsk;
+        const timer = setTimeout(() => {
+            roomWaiting.delete(request.n);
+            resolve({ hata: 'baglanti' });
+        }, 15000);
+        roomWaiting.set(request.n, answer => {
+            clearTimeout(timer);
+            resolve(answer);
+        });
+        if (!detailRoom.send(request)) {
+            clearTimeout(timer);
+            roomWaiting.delete(request.n);
+            resolve({ hata: 'baglanti' });
+        }
+    });
+}
+
+/* Giriş gerektiren istek: kimlik eklenir */
+async function roomWrite(request) {
+    request.token = await idToken();
+    return roomCall(request);
+}
+
+/* Maç odasından gelen yorum mesajları (watchDetail iletir) */
+function commentMessage(id, message) {
+    if (message.t === 'r') {
+        const waiting = roomWaiting.get(message.n);
+        roomWaiting.delete(message.n);
+        if (waiting)
+            waiting(message);
+        return;
+    }
+    if (cm.room !== id)
+        return;
+    if (message.t === 'c0') {
+        /* Bağlanınca (yeniden bağlanınca da) son 10 yorum; sekme açıksa 10 tane daha */
+        cm.list = message.c || [];
+        cm.noMore = cm.list.length < 10;
+        cm.extended = false;
+        if (cm.match === id)
+            extendComments();
+    } else if (message.t === 'c' && cm.list) {
+        if (!cm.list.some(c => c.id === message.c.id))
+            cm.list.unshift(message.c);
+    } else if (message.t === 'x' && cm.list) {
+        cm.list = cm.list.filter(c => c.id !== message.id);
+    } else if (message.t === 'b' && cm.list) {
+        const c = cm.list.find(c => c.id === message.id);
+        if (c) {
+            c.b = message.b;
+            c.d = message.d;
+        }
+    }
+    renderComments();
+}
+
+/* Eldekilerden eski yorumlar (adet kadar) */
+async function olderComments(count) {
+    if (cm.loadingMore || !cm.list || cm.noMore || cm.list.length >= CM_MAX)
+        return;
+    const room = cm.room;
+    cm.loadingMore = true;
+    const answer = await roomCall({ a: 'daha', once: cm.list.length ? cm.list[cm.list.length - 1].id : 0, adet: count });
+    cm.loadingMore = false;
+    if (cm.room !== room)
+        return;
+    if (!answer.ok) {
+        cmNote('Mesajlar yüklenemedi.');
+        return;
+    }
+    const seen = new Set(cm.list.map(c => c.id));
+    cm.list = cm.list.concat(answer.c.filter(c => !seen.has(c.id)));
+    if (answer.c.length < count)
+        cm.noMore = true;
+    renderComments();
+}
+
+function extendComments() {
+    if (cm.extended || !cm.list)
+        return;
+    cm.extended = true;
+    if (!cm.noMore)
+        olderComments(10);
+}
+
+function moreComments() {
+    olderComments(20);
 }
 
 /* ---------- Giriş (Google) ---------- */
@@ -10238,7 +10343,7 @@ function authLoad() {
     return authReady;
 }
 
-/* Hesap değişince (giriş, çıkış) rumuz okunur, menü ve mesajlar yenilenir */
+/* Hesap değişince (giriş, çıkış) hesap bilgisi okunur, menü ve mesajlar yenilenir */
 let accountUid = undefined;
 
 function accountChanged(user) {
@@ -10251,22 +10356,20 @@ function accountChanged(user) {
             me = null;
             try { localStorage.removeItem(ACCOUNT_KEY); } catch (error) {}
         } else {
-            const [profile, blocks, silenced] = await Promise.all(['kullanici/', 'engel/', 'sessiz/'].map(path =>
-                rt.get(rt.ref(rd, path + uid)).then(snap => snap.val(), () => null)));
-            const value = profile || {};
+            const value = (await accountRequest('', null, user)) || {};
             me = { uid: uid, r: value.r || null, k: value.k || null, b: value.b === true };
             writeJSON(ACCOUNT_KEY, { r: me.r });
             document.getElementById('cmLogin').hidden = true;
 
-            /* Engelleme listesi: veritabanındakiler ve bu telefondakiler birleşir */
-            const saved = Object.keys(blocks || {});
+            /* Engelleme listesi: kayıtlı olanlar ve bu telefondakiler birleşir */
+            const saved = value.engel || [];
             const local = Array.from(blocked).filter(id => !saved.includes(id));
             saved.forEach(id => blocked.add(id));
             writeJSON(BLOCK_KEY, Array.from(blocked));
-            if (local.length)
-                rt.update(rt.ref(rd, 'engel/' + uid), Object.fromEntries(local.map(id => [id, true]))).catch(() => {});
+            if (local.length && value.ok)
+                accountRequest('engel', { ekle: local }, user);
 
-            mySilenced = new Set(Object.keys(silenced || {}));
+            mySilenced = new Set(value.sessiz || []);
         }
 
         /* Bildirim kaydı yeni kişiyle yazılsın (izin verilmişse; çıkışta kişi bilgisi kalkar) */
@@ -10311,7 +10414,7 @@ async function googleLogin() {
 let loginNext = null;
 
 async function requireWriter(action, direct) {
-    if (!fbApp || !rd)
+    if (!fbApp)
         return;
     const { auth } = await authLoad();
     if (!auth.currentUser || auth.currentUser.isAnonymous) {
@@ -10358,7 +10461,6 @@ function openProfile(next) {
     document.getElementById('profileError').textContent = '';
     profileBox.classList.add('open');
     layerOpened('profile');
-    loadFilter();
 }
 
 function hideProfile() {
@@ -10383,9 +10485,6 @@ document.getElementById('profileYes').addEventListener('click', async () => {
         return error('Rumuz 3–15 karakter olmalı: harf, rakam ve alt çizgi.');
     if (first && !document.getElementById('profileCheck').checked)
         return error('Devam etmek için kuralları kabul etmelisin.');
-    await loadFilter();
-    if (unfit(name))
-        return error('Bu rumuz kullanılamaz.');
 
     const next = profileNext;
     if (name === me.r) {
@@ -10393,41 +10492,23 @@ document.getElementById('profileYes').addEventListener('click', async () => {
         return;
     }
 
-    try {
-        const key = name.toLowerCase();
-        const oldKey = me.r ? me.r.toLowerCase() : null;
-        const owner = (await rt.get(rt.ref(rd, 'rumuz/' + key))).val();
-        if (owner && owner !== me.uid)
-            return error('Bu rumuz alınmış.');
-
-        if (me.r) {
-            const last = (await rt.get(rt.ref(rd, 'rumuz_zaman/' + me.uid))).val();
-            if (last && serverNow() - last < 7 * 86400000)
-                return error('Rumuz haftada bir değiştirilebilir. Sonraki değişiklik: ' +
-                    formatDate(new Date(last + 7 * 86400000)) + '.');
-        }
-
-        const update = {
-            ['kullanici/' + me.uid]: { r: name, k: me.k || rt.serverTimestamp() },
-            ['rumuz_zaman/' + me.uid]: rt.serverTimestamp()
-        };
-        if (key !== oldKey) {
-            update['rumuz/' + key] = me.uid;
-            if (oldKey)
-                update['rumuz/' + oldKey] = null;
-        }
-        await rt.update(rt.ref(rd), update);
-
-        me.r = name;
-        me.k = me.k || serverNow();
-        writeJSON(ACCOUNT_KEY, { r: name });
-        renderAccountMenu();
-        closeProfile();
-        if (next)
-            next();
-    } catch (e) {
-        error('Kaydedilemedi. Rumuz alınmış ya da değiştirme süren dolmamış olabilir.');
+    const answer = await accountRequest('rumuz', { r: name, kabul: first });
+    if (!answer || !answer.ok) {
+        const reason = answer && answer.hata;
+        return error(reason === 'alinmis' ? 'Bu rumuz alınmış.' :
+            reason === 'uygunsuz' ? 'Bu rumuz kullanılamaz.' :
+            reason === 'hafta' ? 'Rumuz haftada bir değiştirilebilir. Sonraki değişiklik: ' + formatDate(new Date(answer.sonraki)) + '.' :
+            reason === 'kabul' ? 'Devam etmek için kuralları kabul etmelisin.' :
+            'Kaydedilemedi. Lütfen yeniden dene.');
     }
+
+    me.r = answer.r;
+    me.k = answer.k;
+    writeJSON(ACCOUNT_KEY, { r: me.r });
+    renderAccountMenu();
+    closeProfile();
+    if (next)
+        next();
 });
 
 /* ---------- Menü: giriş, rumuz, çıkış, hesabı silme ---------- */
@@ -10439,17 +10520,16 @@ function renderAccountMenu() {
     document.getElementById('menuNotify').textContent = 'Yanıt bildirimleri: ' + (me && me.b ? 'Kapalı' : 'Açık');
 }
 
-/* Yanıt bildirimleri (kullanici/{kimlik}/b: true = kapalı) */
+/* Yanıt bildirimleri */
 document.getElementById('menuNotify').addEventListener('click', () => {
     closeHomeMenu();
     requireWriter(async () => {
         const off = !me.b;
-        try {
-            await rt.set(rt.ref(rd, 'kullanici/' + me.uid + '/b'), off ? true : null);
-            me.b = off;
-            renderAccountMenu();
-            askConfirm('Yanıt bildirimleri ' + (off ? 'kapatıldı.' : 'açıldı.'), 'Tamam', () => {});
-        } catch (error) {}
+        if (!(await accountCall('bildirim', { kapali: off })))
+            return;
+        me.b = off;
+        renderAccountMenu();
+        askConfirm('Yanıt bildirimleri ' + (off ? 'kapatıldı.' : 'açıldı.'), 'Tamam', () => {});
     }, true);
 });
 
@@ -10477,26 +10557,15 @@ document.getElementById('menuDelete').addEventListener('click', () => {
     askConfirm('Hesabın, rumuzun ve bütün mesajların silinsin mi? Bu geri alınamaz.', 'Hesabımı sil', deleteAccount);
 });
 
-/* Önce mesajlar, rumuz ve hesap bilgisi silinir, sonra Google hesabıyla bağlantı (giriş kaydı) */
+/* Önce mesajlar, rumuz ve hesap bilgisi silinir (hesap işlemi), sonra Google hesabıyla bağlantı (giriş kaydı) */
 async function deleteAccount() {
     try {
         const { lib, auth } = await authLoad();
         await meReady;
         if (!me || !auth.currentUser)
             return;
-        const uid = me.uid;
-
-        const mine = (await rt.get(rt.ref(rd, 'mesajlarim/' + uid))).val() || {};
-        const removals = [];
-        Object.entries(mine).forEach(([match, ids]) => Object.keys(ids).forEach(id => {
-            removals.push(rt.remove(rt.ref(rd, 'mesaj/' + match + '/' + id)));
-        }));
-        await Promise.allSettled(removals);
-
-        const update = { ['mesajlarim/' + uid]: null, ['kullanici/' + uid]: null, ['engel/' + uid]: null, ['sessiz/' + uid]: null };
-        if (me.r)
-            update['rumuz/' + me.r.toLowerCase()] = null;
-        await rt.update(rt.ref(rd), update);
+        if (!(await accountCall('sil', {})))
+            throw new Error('silinemedi');
 
         try {
             await lib.deleteUser(auth.currentUser);
@@ -10516,83 +10585,30 @@ async function deleteAccount() {
     }
 }
 
-/* ---------- Mesajları dinleme ---------- */
+/* ---------- Yorumlar sekmesi ---------- */
 function startComments(id) {
-    if (cm.match === id && cm.off)
+    if (cm.match === id)
         return;
-    stopComments();
     cm.match = id;
     cmNote('');
     loginNext = null;
     document.getElementById('cmLogin').hidden = true;
-    listenComments();
+    if (cm.room === id)
+        extendComments();
     renderComments();
-}
-
-function listenComments() {
-    if (cm.off)
-        cm.off();
-    cm.off = null;
-    if (!rd || !cm.match)
-        return;
-    const query = rt.query(rt.ref(rd, 'mesaj/' + cm.match), rt.limitToLast(CM_PAGE));
-    cm.off = rt.onValue(query, snap => {
-        const list = [];
-        snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
-        list.reverse();
-        /* Yeni mesaj gelince son 10'dan taşan mesaj (en eskiden de eski) eskilere geçer; silinen geçmez */
-        const oldest = list.length ? list[list.length - 1].id : '';
-        if (cm.live && list.length >= CM_PAGE)
-            cm.older = cm.live.filter(m => m.id < oldest && !list.some(n => n.id === m.id)).concat(cm.older);
-        if (!cm.live && list.length < CM_PAGE)
-            cm.noMore = true;
-        cm.live = list;
-        mergeComments();
-    }, () => {
-        cm.live = [];
-        mergeComments();
-    });
-}
-
-function mergeComments() {
-    cm.list = cm.live ? cm.live.concat(cm.older) : null;
-    renderComments();
-}
-
-/* Daha eski 10 mesaj bir kez okunur */
-async function moreComments() {
-    if (cm.loadingMore || !cm.list || !cm.list.length)
-        return;
-    const match = cm.match;
-    cm.loadingMore = true;
-    try {
-        const query = rt.query(rt.ref(rd, 'mesaj/' + match), rt.orderByKey(),
-            rt.endBefore(cm.list[cm.list.length - 1].id), rt.limitToLast(CM_PAGE));
-        const snap = await rt.get(query);
-        if (cm.match !== match)
-            return;
-        const list = [];
-        snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
-        cm.older = cm.older.concat(list.reverse());
-        if (list.length < CM_PAGE)
-            cm.noMore = true;
-        mergeComments();
-    } catch (error) {
-        cmNote('Mesajlar yüklenemedi.');
-    } finally {
-        cm.loadingMore = false;
-    }
 }
 
 function stopComments() {
-    if (cm.off)
-        cm.off();
-    cm.off = null;
     cm.match = null;
-    cm.live = null;
-    cm.older = [];
-    cm.noMore = false;
+    cm.open = null;
+}
+
+/* Maç odası bırakılınca yorumlar da bırakılır */
+function resetComments(id) {
+    cm.room = id;
     cm.list = null;
+    cm.noMore = false;
+    cm.extended = false;
     cm.open = null;
 }
 
@@ -10612,23 +10628,26 @@ function renderComments() {
     if (!cm.match)
         return;
 
-    if (!cm.list) {
+    if (!cm.list || cm.room !== cm.match) {
         const p = document.createElement('p');
         p.className = 'tab-empty';
         p.textContent = 'Yükleniyor…';
         box.appendChild(p);
-    } else {
-        const list = cm.list.filter(m => !blocked.has(m.u));
-        if (!list.length) {
-            const p = document.createElement('p');
-            p.className = 'tab-empty';
-            p.textContent = 'Henüz mesaj yok. İlk mesajı sen yaz.';
-            box.appendChild(p);
-        }
-        list.forEach(m => box.appendChild(commentItem(m)));
+        document.getElementById('cmMore').hidden = true;
+        document.getElementById('cmLimit').hidden = true;
+        return;
     }
 
-    const more = !!cm.list && !cm.noMore && cm.list.length >= CM_PAGE;
+    const list = cm.list.filter(m => !blocked.has(m.u));
+    if (!list.length) {
+        const p = document.createElement('p');
+        p.className = 'tab-empty';
+        p.textContent = 'Henüz mesaj yok. İlk mesajı sen yaz.';
+        box.appendChild(p);
+    }
+    list.forEach(m => box.appendChild(commentItem(m)));
+
+    const more = !cm.noMore && cm.list.length > 0;
     document.getElementById('cmMore').hidden = !more || cm.list.length >= CM_MAX;
     document.getElementById('cmLimit').hidden = !(more && cm.list.length >= CM_MAX);
 }
@@ -10666,7 +10685,7 @@ function commentItem(m) {
         }
     });
 
-    const key = cm.match + '/' + m.id;
+    const key = cm.room + '/' + m.id;
     const own = !!me && m.u === me.uid;
     const myVote = myVotes[key] || 0;
 
@@ -10725,16 +10744,14 @@ function commentItem(m) {
             menu.appendChild(button);
         };
         if (own) {
-            const silentKey = cm.match + '_' + m.id;
+            const silentKey = cm.room + '_' + m.id;
             const silent = mySilenced.has(silentKey);
             add(silent ? 'Bu mesaj için bildirimleri aç' : 'Bu mesaj için bildirim alma', async () => {
-                try {
-                    await rt.set(rt.ref(rd, 'sessiz/' + me.uid + '/' + silentKey), silent ? null : true);
-                    if (silent)
-                        mySilenced.delete(silentKey);
-                    else
-                        mySilenced.add(silentKey);
-                } catch (error) {}
+                const done = await accountCall('sessiz', { mac: String(cm.room), mesaj: String(m.id), sessiz: !silent });
+                if (done && silent)
+                    mySilenced.delete(silentKey);
+                else if (done)
+                    mySilenced.add(silentKey);
                 cm.open = null;
                 renderComments();
             });
@@ -10744,7 +10761,7 @@ function commentItem(m) {
                 blocked.add(m.u);
                 writeJSON(BLOCK_KEY, Array.from(blocked));
                 if (me)
-                    rt.set(rt.ref(rd, 'engel/' + me.uid + '/' + m.u), true).catch(() => {});
+                    accountCall('engel', { ekle: [m.u] });
                 cm.open = null;
                 renderComments();
             }));
@@ -10761,40 +10778,23 @@ async function sendComment() {
     if (!text)
         return;
     requireWriter(async () => {
-        try {
-            await loadFilter();
-            if (unfit(text))
-                return cmNote('Mesajın uygunsuz bir ifade ya da bağlantı içeriyor.');
-
-            const uid = me.uid;
-            const match = String(cm.match);
-            const day = Math.floor((serverNow() + 3 * 3600000) / 86400000);
-            const count = (await rt.get(rt.ref(rd, 'sayac/' + uid))).val() || {};
-            const n = count.g === day ? (count.n || 0) + 1 : 1;
-            if (n > CM_DAILY)
-                return cmNote('Bugün en fazla ' + CM_DAILY + ' mesaj yazabilirsin.');
-
-            const id = rt.push(rt.ref(rd, 'mesaj/' + match)).key;
-            const queue = rt.push(rt.ref(rd, 'kuyruk')).key;
-            const message = { u: uid, r: me.r, t: text, z: rt.serverTimestamp(), g: day };
-            /* Yanıtla ile başladıysa yanıtlanan mesaj (o mesaj için bildirimi kapatan etiketlense de bildirim almaz) */
-            if (cm.replyTo && text.startsWith(cm.replyTo.tag.trim()))
-                message.y = cm.replyTo.id;
-            await rt.update(rt.ref(rd), {
-                ['mesaj/' + match + '/' + id]: message,
-                ['sayac/' + uid]: { g: day, n: n },
-                ['mesajlarim/' + uid + '/' + match + '/' + id]: true,
-                ['kuyruk/' + queue]: { m: match, i: id, u: uid }
-            });
-
-            cmInput.value = '';
-            cm.replyTo = null;
-            updateCount();
-            cmNote('');
-            askReplyNotifications();
-        } catch (error) {
-            cmNote('Mesaj gönderilemedi.');
+        const request = { a: 'yaz', t: text };
+        /* Yanıtla ile başladıysa yanıtlanan mesaj (o mesaj için bildirimi kapatan etiketlense de bildirim almaz) */
+        if (cm.replyTo && text.startsWith(cm.replyTo.tag.trim()))
+            request.y = cm.replyTo.id;
+        const answer = await roomWrite(request);
+        if (answer.hata === 'rumuz') {
+            openProfile(sendComment);
+            return;
         }
+        if (!answer.ok)
+            return cmNote(CM_ERRORS[answer.hata] || 'Mesaj gönderilemedi.');
+
+        cmInput.value = '';
+        cm.replyTo = null;
+        updateCount();
+        cmNote('');
+        askReplyNotifications();
     });
 }
 
@@ -10811,56 +10811,35 @@ function askReplyNotifications() {
     });
 }
 
-/* Aynı oya tekrar basınca geri alınır. Bir mesajda oy en fazla 2 kez değiştirilir */
+/* Aynı oya tekrar basınca geri alınır. Bir mesajda oy en fazla 2 kez değiştirilir (oda denetler) */
 function voteComment(m, value) {
     requireWriter(async () => {
         if (m.u === me.uid)
             return;
-        try {
-            const match = String(cm.match);
-            const path = 'oy/' + match + '/' + m.id + '/' + me.uid;
-            const current = (await rt.get(rt.ref(rd, path))).val();
-            const v = current && current.v === value ? 0 : value;
-            const n = current ? current.n + 1 : 0;
-            if (n > 2)
-                return cmNote('Bir mesajdaki oyunu en fazla 2 kez değiştirebilirsin.');
-
-            const queue = rt.push(rt.ref(rd, 'kuyruk')).key;
-            await rt.update(rt.ref(rd), {
-                [path]: { v: v, n: n },
-                ['kuyruk/' + queue]: { m: match, i: m.id, u: me.uid }
-            });
-            myVotes[match + '/' + m.id] = v;
-            writeJSON(VOTE_KEY, myVotes);
-            cmNote('');
-            renderComments();
-        } catch (error) {
-            cmNote('Oy verilemedi.');
-        }
+        const room = cm.room;
+        const answer = await roomWrite({ a: 'oy', id: m.id, v: value });
+        if (!answer.ok)
+            return cmNote(CM_ERRORS[answer.hata] || 'Oy verilemedi.');
+        myVotes[room + '/' + m.id] = answer.v;
+        writeJSON(VOTE_KEY, myVotes);
+        cmNote('');
+        renderComments();
     });
 }
 
 async function deleteComment(m) {
-    try {
-        const match = String(cm.match);
-        await rt.update(rt.ref(rd), {
-            ['mesaj/' + match + '/' + m.id]: null,
-            ['mesajlarim/' + me.uid + '/' + match + '/' + m.id]: null
-        });
-        cm.older = cm.older.filter(o => o.id !== m.id);
-        cm.open = null;
-        mergeComments();
-    } catch (error) {
-        cmNote('Mesaj silinemedi.');
-    }
+    const answer = await roomWrite({ a: 'sil', id: m.id });
+    if (!answer.ok)
+        return cmNote('Mesaj silinemedi.');
+    cm.open = null;
+    renderComments();
 }
 
 function reportComment(m) {
     requireWriter(async () => {
-        try {
-            await rt.set(rt.ref(rd, 'sikayet/' + cm.match + '_' + m.id + '/' + me.uid), rt.serverTimestamp());
-        } catch (error) {}
-        myReports.add(cm.match + '/' + m.id);
+        const room = cm.room;
+        await roomWrite({ a: 'sikayet', id: m.id });
+        myReports.add(room + '/' + m.id);
         writeJSON(REPORT_KEY, Array.from(myReports));
         cm.open = null;
         cmNote('');
@@ -10875,7 +10854,6 @@ function updateCount() {
 
 /* Giriş yapmamış ya da rumuzu olmayan kullanıcı yazma alanına dokununca girişe yönlendirilir */
 cmInput.addEventListener('focus', () => {
-    loadFilter();
     if (me && me.r)
         return;
     cmInput.blur();

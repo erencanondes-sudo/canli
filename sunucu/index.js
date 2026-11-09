@@ -6,7 +6,8 @@
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
  *   4. Değişenleri yaz: takım adları ve lig bilgisi (R2); gün listesi ve Özet (gün odası + R2, değişince; hızlı kaynağın golünde de);
  *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
- *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
+ *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
+ *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
  * Yönetim sayfasından (Firestore): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; istek/{...} maçı yeniden çektirir
  *   ya da hızlı kaydı sildirir; analiz_dizin/futbol'daki surum gün odasına aktarılır.
  * Hızlı kaynak (bilgisayardaki program) gün odasına kendisi yazar; sunucu dün ve bugünün odasını dinleyerek öğrenir.
@@ -20,7 +21,6 @@ const depo = require('./depo');
 const oda = require('./oda');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
-const mesaj = require('./mesaj');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -305,13 +305,12 @@ async function detayCek(nolar) {
 /*
  * R2 takim.json: { s: sürüm (zaman, saniye), t: { takım no: ad } }, bütün takımlar (silinmez). Yeni ya da değişen ad
  * görülünce sürüm değişir; sürüm gün odasından (v.takim) telefona gider, telefon dosyayı yalnızca sürüm değişince indirir.
- * Dosya yoksa ilk seferde eski adlar RTDB'deki takim dalından alınır (geçiş; adım 3'te bu satır kalkar).
  */
 let takimHali = null;
 
 async function takimYaz() {
     if (!takimHali) {
-        const eski = await depo.oku('takim.json') || { s: 0, t: (await db.rtdb.ref('takim').get()).val() || {} };
+        const eski = await depo.oku('takim.json') || {};
         takimHali = { s: eski.s || 0, t: eski.t || {} };
     }
     let degisti = !takimHali.s;
@@ -555,8 +554,8 @@ async function tur() {
         const hazir = tumu.filter(gun => zaman.fikstur[gun] && zaman.fikstur[sonrakiGun(gun)]);
         hazirGunler = hazir;
         await takimYaz();
-        /* Mesaj yazılabilen maçlar (yeni görülenler) */
-        await mesaj.acikYaz(maclar.keys());
+        /* Yorum yazılabilen maçlar: maç odasına bir kez bildirilir */
+        for (const no of maclar.keys()) oda.acik(no);
         for (const gun of hazir) gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
 
@@ -587,7 +586,7 @@ async function tur() {
 if (require.main === module) {
     console.log('Sunucu başladı: ' + A.LIGLER.map(l => l.ad).join(', '));
     bildirim.zilDinle();
-    mesaj.dinle();
+    oda.bildirimDinle(is => bildirim.kisiyeGonder(is.kisi, is.baslik, is.metin, A.SITE_ADRES + is.link));
     yonetimDinle();
     tur();
 }
