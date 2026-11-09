@@ -5234,7 +5234,8 @@ body.has-layer .ac-kapa svg {
      Gün odası gun/{gün}  : bugün ve dün: liste, ardından Özet, sonra değişiklikler; hızlı kaynağın skoru ve uyarısı (ODA_ADRES)
      R2 gun/{gün}         : diğer günlerin listesi, okuyucudan (VERI_ADRES)
      Maç odası mac/{no}   : istatistik, kadro, olaylar (maç açılınca); kesinleşmiş maç R2 mac/{no}
-     RTDB takim           : takım adları (telefonda saklanır)
+     R2 takim             : takım adları (telefonda saklanır; sürüm gün odasından)
+     R2 lig               : liglerin kadro / istatistik verip vermediği
 ================================================= */
 
 const FIREBASE_SURUM = '12.19.0';
@@ -5455,7 +5456,7 @@ function leagueInfo(id) {
 
 /*
  * Takım rozetleri: tanınan takımlar kendi renkleriyle,
- * diğerleri adından üretilen renkle. Ad, takım sözlüğünden (RTDB takim).
+ * diğerleri adından üretilen renkle. Ad, takım sözlüğünden (R2 takim).
  */
 const TEAM_STYLES = [
     ['galatasaray', 'GS', '#a90432', '#fdb912'],
@@ -5760,11 +5761,12 @@ let rd = null;       /* Realtime Database */
 let dataError = false;
 
 let watchedDay = null;   /* seçili gün */
-let namesUnsub = null;
 let detailUnsub = null;
 
 async function startData() {
-    /* Gün odaları Firebase kütüphanesini beklemez */
+    /* Gün odaları ve R2 dosyaları Firebase kütüphanesini beklemez */
+    setTimeout(setNamesReady, 3000);
+    readLeagues();
     openDay(TODAY);
     watchDay(selectedDay);
 
@@ -5780,15 +5782,9 @@ async function startData() {
         return;
     }
 
-    readLeagues();
     /* Daha önce Google ile giriş yapıldıysa hesap bilgisi arka planda yüklenir */
     if (readJSON(ACCOUNT_KEY, null))
         authLoad();
-    if (anShown) {
-        readAnVersion();
-        anRedraw();
-    }
-    watchNames();
     checkDay();
     setInterval(checkDay, 60000);
 
@@ -5984,13 +5980,12 @@ function refreshViews() {
 }
 
 /*
- * TAKIM ADLARI: sözlük telefonda saklanır. Yalnızca sürüm numarası (takim_surum) dinlenir.
- * Sürüm değişince yalnızca son bakılandan sonra eklenenler (takim_ek) indirilir;
- * sözlük telefonda yoksa ya da 25 günden eskiyse tamamı (takim) indirilir.
+ * TAKIM ADLARI: sözlük telefonda saklanır. Sürüm numarası bugünün gün odasından gelir (v.takim);
+ * telefondakinden farklıysa R2 takim.json ({ s: sürüm, t: { takım no: ad } }) bir kez indirilir.
  */
 const NAMES_KEY = 'canliSkorTakim2';
-const NAMES_FULL_AGE = 25 * 86400;
 let namesVersion = null;
+let namesLoading = false;
 let namesSaved = {};
 
 /* Liste, takım adları hazır olmadan çizilmez (bağlantı sorununda en fazla 3 sn beklenir) */
@@ -6023,41 +6018,27 @@ function takeNames(names, version) {
     refreshViews();
 }
 
-function watchNames() {
-
-    if (namesUnsub || !rd)
+/* Gün odasından gelen sürüm telefondakinden farklıysa sözlüğün tamamı indirilir */
+function checkNames(version) {
+    if (!version || version === namesVersion) {
+        setNamesReady();
         return;
-
-    setTimeout(setNamesReady, 3000);
-
-    namesUnsub = rt.onValue(rt.ref(rd, 'takim_surum'), snap => {
-        const version = snap.val();
-        if (version === null || version === namesVersion) {
+    }
+    if (namesLoading)
+        return;
+    namesLoading = true;
+    readFile('takim').then(data => {
+        namesLoading = false;
+        if (!data || !data.t) {
             setNamesReady();
             return;
         }
-
-        if (namesVersion && version - namesVersion < NAMES_FULL_AGE) {
-            const added = rt.query(rt.ref(rd, 'takim_ek'), rt.orderByKey(), rt.startAfter(String(namesVersion)));
-            rt.get(added).then(list => {
-                const names = {};
-                list.forEach(part => { Object.assign(names, part.val()); });
-                takeNames(names, version);
-            }, setNamesReady);
-            return;
-        }
-
-        rt.get(rt.ref(rd, 'takim')).then(list => {
-            namesSaved = {};
-            takeNames(list.val() || {}, version);
-        }, setNamesReady);
-    }, setNamesReady);
-}
-
-function unwatchNames() {
-    if (namesUnsub)
-        namesUnsub();
-    namesUnsub = null;
+        namesSaved = {};
+        takeNames(data.t, data.s);
+    }, () => {
+        namesLoading = false;
+        setNamesReady();
+    });
 }
 
 /*
@@ -6158,10 +6139,10 @@ function resetScoreTimes() {
     });
 }
 
-/* Liglerin kadro / istatistik verip vermediği (açılışta bir kez) */
+/* Liglerin kadro / istatistik verip vermediği (R2 lig.json, açılışta bir kez) */
 function readLeagues() {
-    rt.get(rt.ref(rd, 'lig')).then(snap => {
-        Object.entries(snap.val() || {}).forEach(([id, detail]) => {
+    readFile('lig').then(data => {
+        Object.entries(data || {}).forEach(([id, detail]) => {
             leagueNames.set(Number(id), { detay: detail === 1 });
         });
         refreshViews();
@@ -6556,13 +6537,14 @@ function openDay(day) {
             });
             takeFast(scores, warns, true);
             takeRows(message.r);
+            if (day === TODAY) {
+                checkNames((message.v || {}).takim);
+                takeAnVersion((message.v || {}).analiz ?? null);
+            }
             ready();
         } else if (message.t === 'o') {
             dayEvents.set(day, message.o || {});
             refreshViews();
-            /* Bugünün listesi ve Özet geldikten sonra analiz sürümüne bakılır */
-            if (day === TODAY)
-                readAnVersion();
         } else if (message.t === 'h') {
             state.loaded = true;
             state.waiting = message.n || 0;
@@ -6570,6 +6552,8 @@ function openDay(day) {
                 ready();
         } else if (message.t === 'd') {
             applyDayChange(day, message);
+            if (day === TODAY && message.v && message.v.takim)
+                checkNames(message.v.takim);
             if (state.waiting && !--state.waiting)
                 ready();
             else
@@ -6578,6 +6562,12 @@ function openDay(day) {
     }, () => {
         if (!state.loaded)
             readFile('gun/' + day).then(takeRows, failed);
+        /* Odaya bağlanılamadı: sürümler bilinmez; sözlük telefonda yoksa indirilir */
+        if (day === TODAY) {
+            if (namesVersion) setNamesReady();
+            else checkNames(-1);
+            takeAnVersion(null);
+        }
     }));
 }
 
@@ -6676,18 +6666,14 @@ document.addEventListener('visibilitychange', () => {
         Array.from(days.keys()).forEach(day => closeDay(day));
         unwatchDetail();
         /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
-        if (rd) {
-            unwatchNames();
+        if (rd)
             rt.goOffline(rd);
-        }
         return;
     }
 
     resetScoreTimes();
-    if (rd) {
+    if (rd)
         rt.goOnline(rd);
-        watchNames();
-    }
     openDay(TODAY);
     openDay(watchedDay);
     checkDay();
@@ -8501,27 +8487,22 @@ karneBox.addEventListener('click', event => {
 });
 
 /*
- * ANALİZ SÜRÜMÜ (RTDB analiz_surum): yönetim sayfası her yüklemede yazar. Sayfa açılınca bugünün
- * listesi ve Özet geldikten sonra (Analiz sekmesi daha önce açılırsa o an) bir kez okunur, dinlenmez.
+ * ANALİZ SÜRÜMÜ: yönetim sayfası her yüklemede Firestore analiz_dizin/futbol'a yazar, sunucu gün odasına aktarır (v.analiz).
+ * Bugünün gün odası bağlanınca bir kez alınır (oda bağlanamazsa yok sayılır), sonraki değişiklikler beklenmez.
  * Okunan analiz dokümanları telefonda sürümüyle saklanır; sürüm aynıysa Firestore'dan okunmaz.
  */
 const AN_STORE_KEY = 'canliSkorAnaliz';
-let anVersion;               /* undefined: okunmadı, null: yok (saklanmaz) */
-let anVersionAsked = false;
+let anVersion;               /* undefined: henüz gelmedi, null: yok (saklanmaz) */
 let anStore = readJSON(AN_STORE_KEY, null) || { v: null, docs: {} };
 
-function readAnVersion() {
-    if (anVersionAsked || !rd)
+function takeAnVersion(version) {
+    if (anVersion !== undefined)
         return;
-    anVersionAsked = true;
-    const done = version => {
-        anVersion = version;
-        if (anShown)
-            anRedraw();
-        if (kpShown)
-            kpRefresh();
-    };
-    rt.get(rt.ref(rd, 'analiz_surum')).then(snap => done(snap.val() ?? null), () => done(null));
+    anVersion = version;
+    if (anShown)
+        anRedraw();
+    if (kpShown)
+        kpRefresh();
 }
 
 /* Telefondaki kopya (sürüm aynıysa) */
@@ -11155,14 +11136,12 @@ function setHomeModeView(mode) {
     /* Analiz verisi sekme ilk açılınca okunur */
     if (mode === 'analysis' && !anShown) {
         anShown = true;
-        readAnVersion();
         anRedraw();
     }
 
     /* AI Kuponu havuzu sekme ilk açılınca okunur */
     if (mode === 'ai' && !kpShown) {
         kpShown = true;
-        readAnVersion();
         kpRefresh();
     }
 

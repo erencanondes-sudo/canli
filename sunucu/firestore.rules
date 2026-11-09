@@ -3,15 +3,27 @@ rules_version = '2';
 /*
  * Firestore kuralları
  * Uygulama yalnızca okur (zil kaydı hariç); yazmayı sunucu yapar (sunucu bu kurallara takılmaz).
- * maclar dokümanlarını yönetici (yonetim.html, elle düzeltme) de güncelleyebilir.
- * Gün listesi ve Özet R2'de (Firestore'da değil).
+ * Yönetici (yonetim.html) analizleri yazar; elle düzeltme kilitlerini ve sunucuya istekleri (istek) yazar, sunucu dinler.
+ * Gün listesi, Özet ve maç içerikleri odalarda ve R2'de (Firestore'da değil).
  */
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /maclar/{mac} {
-      allow read: if true;
-      allow update: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
+    /*
+     * Yönetim sayfası: elle/{maç} kilit { s, d?, o?, t }; istek/{tür}_{maç} { tur, mac?, t } (sunucu işleyip siler).
+     * Yalnızca yönetici okur ve yazar.
+     */
+    match /elle/{mac} {
+      allow read, delete: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2';
+      allow create, update: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'
+        && mac.matches('^[0-9]{1,10}$')
+        && request.resource.data.keys().hasOnly(['s', 'd', 'o', 't'])
+        && request.resource.data.s is string;
+    }
+
+    match /istek/{ad} {
+      allow read, write: if request.auth != null && request.auth.uid == 'Uub6yQU2vnYPa2pOWXxumPjkUMN2'
+        && ad.matches('^(yenile_[0-9]{1,10}|hizli_sil_[0-9]{1,10}|hizli_sil_hepsi)$');
     }
 
     /* Oranlar: maçın bütün oranları, günün ve ligin menü oranları */

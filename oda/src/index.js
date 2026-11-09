@@ -1,7 +1,7 @@
 /*
  * ODALAR (Cloudflare Durable Objects). Ayrıntı: sunucu/VERITABANI.md → "Odalar".
  *
- *   Gün odası  gun/{gün}  : günün listesi (satırlar), Özet (olaylar), hızlı kaynağın skoru ve uyarısı
+ *   Gün odası  gun/{gün}  : günün listesi (satırlar), Özet (olaylar), hızlı kaynağın skoru ve uyarısı, sürümler (takım adları, analiz)
  *   Maç odası  mac/{no}   : maçın içeriği (durum, istatistik, kadro, olaylar); maç kesinleşince R2'ye yazılır, oda boşaltılır
  *
  * Adresler:
@@ -9,6 +9,7 @@
  *   GET    /oda/mac/{no}?k=&s=
  *   POST   /yaz/gun/{gün}         sunucu yazar (Authorization: Bearer ODA_ANAHTAR)
  *   POST   /yaz/mac/{no}
+ *   POST   /hizli/gun/{gün}       hızlı kaynak (bilgisayardaki program) yazar (Authorization: Bearer HIZLI_ANAHTAR; sunucu da ODA_ANAHTAR ile)
  *   DELETE /yaz/gun/{gün}, /yaz/mac/{no}   oda boşaltılır
  *   GET    /bak/gun/{gün}?anahtar=..., /bak/mac/{no}?anahtar=...   odanın şu anki hali (yalnızca sen; tarayıcıda açılır)
  *
@@ -27,10 +28,10 @@ const GUNLUK_SAKLA = 1000;
 
 const bos = (durum = 404) => new Response(null, { status: durum });
 
-/* Sunucunun anahtarı: başlıkta (Bearer) ya da tarayıcıdan bakarken adreste (?anahtar=) */
-function yetkili(istek, env, url) {
+/* Gelen anahtar: başlıkta (Bearer) ya da tarayıcıdan bakarken adreste (?anahtar=); izinli anahtarlardan biri mi */
+function yetkili(istek, url, ...anahtarlar) {
     const gelen = (istek.headers.get('Authorization') || '').replace(/^Bearer /, '') || url.searchParams.get('anahtar') || '';
-    return !!env.ODA_ANAHTAR && gelen === env.ODA_ANAHTAR;
+    return anahtarlar.some(a => !!a && gelen === a);
 }
 
 export default {
@@ -49,7 +50,14 @@ export default {
             return oda.fetch(istek);
         }
 
-        if ((bolum === 'yaz' || bolum === 'bak') && !yetkili(istek, env, url))
+        if (bolum === 'hizli' && tur === 'gun' && istek.method === 'POST') {
+            if (!yetkili(istek, url, env.HIZLI_ANAHTAR, env.ODA_ANAHTAR))
+                return bos(403);
+            const sonuc = await oda.hizli(await istek.json().catch(() => null));
+            return sonuc ? Response.json(sonuc) : bos(400);
+        }
+
+        if ((bolum === 'yaz' || bolum === 'bak') && !yetkili(istek, url, env.ODA_ANAHTAR))
             return bos(403);
 
         if (bolum === 'bak' && istek.method === 'GET')
@@ -159,14 +167,16 @@ class Oda extends DurableObject {
 
 /*
  * GÜN ODASI
- * veri tablosu: tur r (satır metni), o (maçın olayları, JSON metni), h (hızlı skor "2-1"), u (hızlı uyarı "2-2" / "k")
+ * veri tablosu: tur r (satır metni), o (maçın olayları, JSON metni), h (hızlı skor "2-1"), u (hızlı uyarı "2-2" / "k"),
+ *   v (sürümler: takim, analiz; sayı)
  * gunluk tablosu: değişiklikler (sıra → mesaj), son 1000
+ * r, o, v'yi sunucu yazar (yaz: o günün tam hali); h, u'yu hızlı kaynak yazar (hizli: yalnızca değişenler).
  *
  * Telefona giden mesajlar:
- *   { t: "l", k, s, z, r, h, u }  liste (satırlar ve hızlı kaynak), ilk bağlanışta önce bu
+ *   { t: "l", k, s, z, r, h, u, v }  liste (satırlar, hızlı kaynak, sürümler), ilk bağlanışta önce bu
  *   { t: "o", o }                  Özet, listeden hemen sonra
  *   { t: "h", k, s, z, n }         yeniden bağlanış: ardından kaçırılan n değişiklik ("d") gelir (0: telefon güncel)
- *   { t: "d", s, r?, o?, h?, u? }  değişiklik: yalnızca değişen maçlar; null = silindi
+ *   { t: "d", s, r?, o?, h?, u?, v? }  değişiklik: yalnızca değişenler; null = silindi
  * z: sunucu saati (ms), telefon dakikayı doğru hesaplasın diye.
  */
 export class GunOdasi extends Oda {
@@ -177,23 +187,35 @@ export class GunOdasi extends Oda {
         this.sql.exec('CREATE TABLE IF NOT EXISTS gunluk (s INTEGER PRIMARY KEY, v TEXT)');
     }
 
-    /* Odanın tamamı: { r: {no: satır}, o: {no: [olaylar]}, h: {...}, u: {...} } */
+    /* Odanın tamamı: { r: {no: satır}, o: {no: [olaylar]}, h: {...}, u: {...}, v: {takim, analiz} } */
     hal() {
-        const hal = { r: {}, o: {}, h: {}, u: {} };
+        const hal = { r: {}, o: {}, h: {}, u: {}, v: {} };
         for (const { tur, no, v } of this.sql.exec('SELECT tur, no, v FROM veri'))
-            hal[tur][no] = tur === 'o' ? JSON.parse(v) : v;
+            hal[tur][no] = tur === 'o' ? JSON.parse(v) : tur === 'v' ? Number(v) : v;
         return hal;
     }
 
+    /* Değişiklik kaydedilir ve bağlı telefonlara gönderilir */
+    degisiklik(degisen) {
+        this.kimlik();
+        const s = this.sira() + 1;
+        const mesaj = { t: 'd', s, ...degisen };
+        this.bilgiYaz('s', s);
+        this.sql.exec('INSERT INTO gunluk (s, v) VALUES (?, ?)', s, JSON.stringify(mesaj));
+        this.sql.exec('DELETE FROM gunluk WHERE s <= ?', s - GUNLUK_SAKLA);
+        this.herkese(mesaj);
+        return s;
+    }
+
     /*
-     * Sunucu yazar: { r?, o?, h?, u? }, her alan o günün tam hali. Oda kendi haliyle karşılaştırır,
+     * Sunucu yazar: { r?, o?, v? }, her alan o günün tam hali. Oda kendi haliyle karşılaştırır,
      * yalnızca değişenleri saklar ve bağlı telefonlara tek mesajla gönderir.
      */
     yaz(govde) {
         const degisen = {};
         let sayi = 0;
 
-        for (const tur of ['r', 'o', 'h', 'u']) {
+        for (const tur of ['r', 'o', 'v']) {
             const yeni = govde[tur];
             if (!yeni || typeof yeni !== 'object')
                 continue;
@@ -221,15 +243,51 @@ export class GunOdasi extends Oda {
 
         if (!sayi)
             return { s: this.sira(), degisen: 0 };
+        return { s: this.degisiklik(degisen), degisen: sayi };
+    }
 
-        this.kimlik();
-        const s = this.sira() + 1;
-        const mesaj = { t: 'd', s, ...degisen };
-        this.bilgiYaz('s', s);
-        this.sql.exec('INSERT INTO gunluk (s, v) VALUES (?, ?)', s, JSON.stringify(mesaj));
-        this.sql.exec('DELETE FROM gunluk WHERE s <= ?', s - GUNLUK_SAKLA);
-        this.herkese(mesaj);
-        return { s, degisen: sayi };
+    /*
+     * Hızlı kaynak yazar: { h?: { no: "2-1" | null }, u?: { no: "2-2" | "k" | null }, t?: 1 }, yalnızca değişenler (null = sil).
+     * t: programın çalıştığını gösteren işaret (zamanı saklanır, telefonlara gitmez). Biçime uymayan istek hiç yazılmaz (null döner).
+     */
+    hizli(govde) {
+        const BICIMLER = { h: /^\d+-\d+$/, u: /^(k|\d+-\d+)$/ };
+        if (!govde || typeof govde !== 'object')
+            return null;
+        for (const tur of ['h', 'u']) {
+            const alan = govde[tur];
+            if (alan === undefined)
+                continue;
+            if (!alan || typeof alan !== 'object')
+                return null;
+            for (const [no, deger] of Object.entries(alan))
+                if (!BICIM.mac.test(no) || (deger !== null && !BICIMLER[tur].test(String(deger))))
+                    return null;
+        }
+
+        if (govde.t)
+            this.bilgiYaz('hizli_t', Date.now());
+
+        const degisen = {};
+        for (const tur of ['h', 'u']) {
+            const fark = {};
+            for (const [no, deger] of Object.entries(govde[tur] || {})) {
+                const once = this.sql.exec('SELECT v FROM veri WHERE tur = ? AND no = ?', tur, no).toArray()[0];
+                if ((once ? once.v : null) === deger)
+                    continue;
+                if (deger === null)
+                    this.sql.exec('DELETE FROM veri WHERE tur = ? AND no = ?', tur, no);
+                else
+                    this.sql.exec('INSERT OR REPLACE INTO veri (tur, no, v) VALUES (?, ?, ?)', tur, no, deger);
+                fark[no] = deger;
+            }
+            if (Object.keys(fark).length)
+                degisen[tur] = fark;
+        }
+
+        if (!Object.keys(degisen).length)
+            return { s: this.sira(), degisen: 0 };
+        return { s: this.degisiklik(degisen), degisen: Object.values(degisen).reduce((n, x) => n + Object.keys(x).length, 0) };
     }
 
     ac(ws, k, s) {
@@ -248,7 +306,7 @@ export class GunOdasi extends Oda {
         }
 
         const hal = this.hal();
-        ws.send(JSON.stringify({ t: 'l', k: kimlik, s: sira, z, r: hal.r, h: hal.h, u: hal.u }));
+        ws.send(JSON.stringify({ t: 'l', k: kimlik, s: sira, z, r: hal.r, h: hal.h, u: hal.u, v: hal.v }));
         ws.send(JSON.stringify({ t: 'o', o: hal.o }));
     }
 
@@ -260,6 +318,7 @@ export class GunOdasi extends Oda {
             sira: this.sira(),
             bagli_telefon: this.ctx.getWebSockets().length,
             mac_sayisi: Object.keys(hal.r).length,
+            hizli_son_isaret: this.bilgi('hizli_t') ? new Date(Number(this.bilgi('hizli_t'))).toISOString() : null,
             ...hal,
             son_degisiklikler: this.sql.exec('SELECT v FROM gunluk ORDER BY s DESC LIMIT 20').toArray().map(x => JSON.parse(x.v))
         };

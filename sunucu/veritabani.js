@@ -1,8 +1,8 @@
 /*
  * Veritabanına yazma. Sunucu Google'ın kendi bağlantısıyla yazar (anahtar dosyası yok).
- *   Firestore : oranlar (gzip ile sıkıştırılmış), sistem durumu
- *               (bir doküman son yazılandan farklı değilse yazılmaz)
- *   RTDB      : takım adları, lig bilgisi (yalnızca değişen satırlar yazılır)
+ *   Firestore : oranlar (gzip ile sıkıştırılmış), sistem durumu (bir doküman son yazılandan farklı değilse yazılmaz);
+ *               yönetim sayfasının yazdıkları dinlenir (elle, istek, analiz sürümü)
+ *   RTDB      : yalnızca mesajlar (mesaj.js)
  */
 
 const { initializeApp } = require('firebase-admin/app');
@@ -71,60 +71,22 @@ async function oku(yol) {
     return veri;
 }
 
-/* ---------- RTDB ---------- */
-
-const dal = new Map();   /* dal yolu → Map(anahtar → son yazılan değer) */
-
-/* Dalın sunucudaki halini ilk seferde bir kez okur */
-async function dalHali(yol) {
-    if (!dal.has(yol)) {
-        const snap = await rtdb.ref(yol).get();
-        dal.set(yol, new Map(Object.entries(snap.val() || {})));
-    }
-    return dal.get(yol);
+/* Firestore dokümanını siler */
+async function sil(yol) {
+    await db.doc(yol).delete();
 }
 
-/*
- * Dalı verilen içeriğe getirir: yalnızca değişen anahtarlar yazılır.
- * silinsin: true ise içerikte olmayan anahtarlar silinir. Değişenleri { anahtar: değer } döner (yoksa null).
- */
-async function dalYaz(yol, icerik, silinsin = true) {
-    const once = await dalHali(yol);
-    const degisen = {};
-
-    icerik.forEach((deger, anahtar) => {
-        if (once.get(anahtar) !== deger) degisen[anahtar] = deger;
-    });
-    if (silinsin) once.forEach((deger, anahtar) => {
-        if (!icerik.has(anahtar)) degisen[anahtar] = null;
-    });
-
-    if (!Object.keys(degisen).length) return null;
-
-    await rtdb.ref(yol).update(degisen);
-    Object.entries(degisen).forEach(([anahtar, deger]) => {
-        if (deger === null) once.delete(anahtar);
-        else once.set(anahtar, deger);
-    });
-    yazmaSayisi++;
-    return degisen;
+/* Firestore dokümanını dinler: geldi(veri ya da null) */
+function belgeDinle(yol, geldi) {
+    return db.doc(yol).onSnapshot(snap => geldi(snap.exists ? snap.data() : null),
+        e => console.error(yol + ' dinlenemedi: ' + e.message));
 }
 
-/* Birden çok yola tek seferde yazar: { "takim_surum": 5, "takim_ek/5": {...} } */
-async function cokluYaz(veri) {
-    await rtdb.ref().update(veri);
-    yazmaSayisi++;
+/* Firestore koleksiyonunu dinler: degisti(belge adı, veri ya da silindiyse null) */
+function koleksiyonDinle(ad, degisti) {
+    return db.collection(ad).onSnapshot(snap => snap.docChanges().forEach(d =>
+        degisti(d.doc.id, d.type === 'removed' ? null : d.doc.data())),
+        e => console.error(ad + ' dinlenemedi: ' + e.message));
 }
 
-/* Dalda anahtarı sinir'e kadar (dahil) olan kayıtları siler (anahtarlar aynı uzunlukta sayı) */
-async function eskiSil(yol, sinir) {
-    const snap = await rtdb.ref(yol).orderByKey().endAt(String(sinir)).get();
-    const sil = {};
-    snap.forEach(c => { sil[c.key] = null; });
-    if (Object.keys(sil).length) {
-        await rtdb.ref(yol).update(sil);
-        yazmaSayisi++;
-    }
-}
-
-module.exports = { rtdb, yaz, yazSikistir, oku, unut, dalYaz, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };
+module.exports = { rtdb, yaz, yazSikistir, oku, unut, sil, belgeDinle, koleksiyonDinle, yazmaSayisi: () => yazmaSayisi };

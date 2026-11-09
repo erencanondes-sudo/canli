@@ -128,7 +128,6 @@ module.exports = {
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
     ILERI_GUN: 7,                   /* bugünden sonra kaç günün fikstürü çekilir */
     FIKSTUR_ILERI: 6 * 3600000,     /* yarından sonraki günlerin fikstürü: 6 saat */
-    TAKIM_EK_SURE: 30 * 86400,      /* takım ekleri (takim_ek) bu kadar saniye saklanır */
     KAPSAM_ARALIK: 24 * 3600000,    /* liglerin veri kapsamı: günde 1 */
 
     /* ORANLAR (maç öncesi, canlı değil) */

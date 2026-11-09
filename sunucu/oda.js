@@ -2,12 +2,15 @@
  * Odalara yazma (Cloudflare Durable Objects, klasör oda/). Yapı: sunucu/VERITABANI.md → "Odalar".
  * Anahtarlar /etc/canli/anahtar.env içinde: ODA_ADRES (canli-oda Worker'ının adresi), ODA_ANAHTAR (yazma anahtarı).
  *
- * gun(gün, alanlar): gün odasına { r, o, h, u } alanlarından verilenleri (her biri o günün tam hali) gönderir.
+ * gun(gün, alanlar): gün odasına { r, o, v } alanlarından verilenleri (her biri o günün tam hali) gönderir.
  *   Yalnızca son gönderilenden farklı olan alanlar gider; oda da kendi haliyle karşılaştırıp yalnızca değişen maçları telefonlara iletir.
  * mac(no, içerik): maç odasına içeriği gönderir (değiştiyse).
  * sil(yol): odayı boşaltır ("gun/2026-11-09", "mac/123").
  * Aynı oda için istekler sırayla gider; beklerken yenisi gelirse yalnızca en son hali gider.
  * Gönderilemezse o odanın "son gönderilen"i unutulur: bir sonraki yazmada alanların hepsi yeniden gider.
+ * hizliSil(gün, nolar): maçların hızlı skorunu ve uyarısını gün odasından siler (hızlı kaynağın yazdığı h, u).
+ * dinle(gün, mesajGeldi): gün odasına telefon gibi bağlanır (hızlı kaynağı öğrenmek için). Her bağlanışta oda her şeyi
+ *   baştan gönderir ("l"), sonra değişiklikler ("d"). Kopunca 5 sn sonra yeniden bağlanır. Kapatma fonksiyonu döner.
  */
 
 const { ODA_ADRES, ODA_ANAHTAR } = process.env;
@@ -18,10 +21,11 @@ const bekleyen = new Map();  /* oda yolu → { alan: değer } ya da SIL */
 const gidiyor = new Set();
 let sonHata = null;
 
+/* yol: Worker'daki adres ("/yaz/gun/2026-11-09") */
 async function istek(yol, yontem, govde) {
     if (!ODA_ADRES || !ODA_ANAHTAR)
         throw new Error('Oda anahtarları tanımlı değil (/etc/canli/anahtar.env)');
-    const cevap = await fetch(ODA_ADRES.replace(/\/$/, '') + '/yaz/' + yol, {
+    const cevap = await fetch(ODA_ADRES.replace(/\/$/, '') + yol, {
         method: yontem,
         headers: { authorization: 'Bearer ' + ODA_ANAHTAR, 'content-type': 'application/json' },
         body: govde === undefined ? undefined : JSON.stringify(govde),
@@ -57,10 +61,10 @@ async function bosalt(yol) {
         bekleyen.delete(yol);
         try {
             if (is === SIL) {
-                await istek(yol, 'DELETE');
+                await istek('/yaz/' + yol, 'DELETE');
                 son.delete(yol);
             } else {
-                await istek(yol, 'POST', is);
+                await istek('/yaz/' + yol, 'POST', is);
                 const once = son.get(yol) || {};
                 for (const [alan, deger] of Object.entries(is))
                     once[alan] = JSON.stringify(deger);
@@ -74,6 +78,45 @@ async function bosalt(yol) {
         }
     }
     gidiyor.delete(yol);
+}
+
+async function hizliSil(gunAdi, nolar) {
+    const bos = Object.fromEntries(nolar.map(no => [no, null]));
+    try {
+        await istek('/hizli/gun/' + gunAdi, 'POST', { h: bos, u: bos });
+    } catch (e) {
+        sonHata = e.message;
+        console.error(e.message);
+    }
+}
+
+function dinle(gunAdi, mesajGeldi) {
+    let ws = null;
+    let kapali = false;
+    let bekleme = null;
+
+    const baglan = () => {
+        if (!ODA_ADRES) return;
+        ws = new WebSocket(ODA_ADRES.replace(/\/$/, '').replace(/^http/, 'ws') + '/oda/gun/' + gunAdi);
+        ws.onmessage = olay => {
+            try {
+                mesajGeldi(JSON.parse(olay.data));
+            } catch (e) {
+                console.error('Gün odası mesajı işlenemedi (' + gunAdi + '): ' + e.message);
+            }
+        };
+        ws.onclose = () => {
+            if (!kapali) bekleme = setTimeout(baglan, 5000);
+        };
+        ws.onerror = () => {};
+    };
+
+    baglan();
+    return () => {
+        kapali = true;
+        clearTimeout(bekleme);
+        if (ws) ws.close();
+    };
 }
 
 const gun = (gunAdi, alanlar) => yaz('gun/' + gunAdi, alanlar);
@@ -91,4 +134,4 @@ function unut(gecerli) {
         if (!gecerli(yol)) son.delete(yol);
 }
 
-module.exports = { gun, mac, sil, unut, sonHata: () => sonHata };
+module.exports = { gun, mac, sil, unut, hizliSil, dinle, sonHata: () => sonHata };

@@ -2,7 +2,7 @@
  * BİLDİRİMLER (Firebase Cloud Messaging)
  * - zil/{cihaz} dokümanlarını dinler; cihazı kayıtlı maçların konusuna (mac-{no}) abone eder.
  * - Maçta gol, VAR iptali, kırmızı kart, başlama, devre ve maç sonunda konuya tek mesaj gönderir.
- * - Gol ve gol iptali hızlı kaynaktan (RTDB hizli) da gelir: hangi kaynak önce görürse o gönderir,
+ * - Gol ve gol iptali hızlı kaynaktan (gün odasındaki h) da gelir: hangi kaynak önce görürse o gönderir,
  *   diğeri aynı skor için tekrar göndermez (bildirilen skor ortak tutulur).
  * Her olay yalnızca bir kez gönderilir; ilk görülen maç yalnızca not edilir.
  */
@@ -10,7 +10,6 @@
 require('./veritabani');   /* Firebase bağlantısı orada kurulur */
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
-const { getDatabase } = require('firebase-admin/database');
 const A = require('./ayarlar');
 const B = require('./bicim');
 
@@ -97,7 +96,7 @@ function kontrol(f, olaylar, gonder) {
         gonderMesaj(no, 'Maç sonu', sonuc);
 }
 
-/* ---------- Hızlı kaynak (RTDB hizli) ---------- */
+/* ---------- Hızlı kaynak (gün odasından, index.js iletir) ---------- */
 
 /*
  * Hızlı kaynakta skor değişince: API'nin bildirdiğinden ilerideyse gol, gerideyse iptal bildirimi.
@@ -125,51 +124,37 @@ function hizliSkor(no, deger, gonder) {
 }
 
 const hizliKayit = new Map();  /* maç no → hızlı kaynağın skoru "2-1" */
-const hizliUyari = new Map();  /* maç no → hızlı kaynağın uyarısı "2-2" / "k" (gün odasına aktarılır) */
 const hizliFark = new Map();   /* maç no → API skorundan farklı olduğu ilk an (ms) */
 
 /*
- * canliSaatte: bildirim gönderilecek saatlerde miyiz; skorDegisti(maç no): skor ya da uyarı değişince, kayıt silinince
- * (gün listesi ve gün odası yeniden yazılsın diye). İkisini index.js verir. İlk gelen kayıtlar yalnızca not edilir.
+ * Gün odasından gelen hızlı skorlar: { maç no: "2-1" }, null = silindi (uyarılar sunucuyu ilgilendirmez).
+ * gonder: yeni skor bildirim gönderebilir mi (odaya bağlanınca gelen ilk hal göndermez; canlı saatlerde değilse de göndermez).
+ * Değişen maçların numaraları döner.
  */
-function hizliDinle(canliSaatte, skorDegisti) {
-
-    let ilk = true;
-
-    const degisti = snap => {
-        hizliKayit.set(Number(snap.key), snap.val());
-        hizliSkor(Number(snap.key), snap.val(), !ilk && canliSaatte());
-        skorDegisti(Number(snap.key));
-    };
-    const ref = getDatabase().ref('hizli');
-    ref.on('child_added', degisti, e => console.error('hizli dinlenemedi: ' + e.message));
-    ref.on('child_changed', degisti);
-    ref.on('child_removed', snap => {
-        hizliKayit.delete(Number(snap.key));
-        hizliFark.delete(Number(snap.key));
-        skorDegisti(Number(snap.key));
-    });
-    ref.once('value', () => { ilk = false; });
-
-    const uyari = getDatabase().ref('hizli_u');
-    const uyariDegisti = snap => {
-        hizliUyari.set(Number(snap.key), snap.val());
-        skorDegisti(Number(snap.key));
-    };
-    uyari.on('child_added', uyariDegisti, e => console.error('hizli_u dinlenemedi: ' + e.message));
-    uyari.on('child_changed', uyariDegisti);
-    uyari.on('child_removed', snap => {
-        hizliUyari.delete(Number(snap.key));
-        skorDegisti(Number(snap.key));
-    });
+function hizliAl(skorlar, gonder) {
+    const degisen = new Set();
+    for (const [anahtar, deger] of Object.entries(skorlar || {})) {
+        const no = Number(anahtar);
+        if ((hizliKayit.get(no) ?? null) === deger) continue;
+        if (deger === null) {
+            hizliKayit.delete(no);
+            hizliFark.delete(no);
+        } else {
+            hizliKayit.set(no, deger);
+            hizliSkor(no, deger, gonder);
+        }
+        degisen.add(no);
+    }
+    return degisen;
 }
 
 /*
  * Hızlı kaynağın skoru, canlı maçta API'nin skorundan HIZLI_FARK süresince farklı kalırsa
  * (program durmuş, yanlış ya da iptal edilmiş gol) maçın hızlı kaydı ve uyarısı silinir; site API skoruna döner.
  * Yalnızca API'nin canlı skoru yeni çekilmişken çağrılır (index.js), API'ye ulaşılamıyorsa karşılaştırılmaz.
+ * sil(maç no): kaydı gün odasından siler (index.js verir).
  */
-function hizliKontrol() {
+function hizliKontrol(sil) {
     const t = Date.now();
     for (const [no, deger] of hizliKayit) {
         const d = durumlar.get(no);
@@ -181,15 +166,13 @@ function hizliKontrol() {
         else if (t - hizliFark.get(no) >= A.HIZLI_FARK) {
             hizliFark.delete(no);
             console.log('Hızlı kayıt silindi (' + no + '): ' + deger + ', API ' + d.skor.join('-'));
-            getDatabase().ref().update({ ['hizli/' + no]: null, ['hizli_u/' + no]: null })
-                .catch(e => console.error('Hızlı kayıt silinemedi (' + no + '): ' + e.message));
+            sil(no);
         }
     }
 }
 
-/* Hızlı kaynağın maç için son skoru ("2-1") ve uyarısı ("2-2" / "k"), yoksa undefined */
+/* Hızlı kaynağın maç için son skoru ("2-1"), yoksa undefined */
 const hizliSkoru = no => hizliKayit.get(no);
-const hizliUyarisi = no => hizliUyari.get(no);
 
 function gonderMesaj(no, baslik, metin) {
     let mesajci;
@@ -331,4 +314,4 @@ function kisiyeGonder(kisi, baslik, metin, link) {
     return true;
 }
 
-module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, hizliSkoru, hizliUyarisi, kisiyeGonder };
+module.exports = { kontrol, zilDinle, hizliAl, hizliKontrol, hizliSkoru, kisiyeGonder };

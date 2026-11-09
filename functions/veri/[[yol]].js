@@ -1,8 +1,10 @@
 /*
- * R2 okuyucusu (Cloudflare Pages Function): /veri/gun/{gün}.json, /veri/ozet/{gün}.json ve /veri/mac/{maç no}.json
+ * R2 okuyucusu (Cloudflare Pages Function): /veri/gun/{gün}.json, /veri/ozet/{gün}.json, /veri/mac/{maç no}.json,
+ * /veri/takim.json ve /veri/lig.json
  * R2 kovası projeye DEPO adıyla bağlı (Pages → Settings → Bindings). Yapı: sunucu/VERITABANI.md → "R2".
  * Önbellek: bugün, dün ve ilerideki günler tutulmaz (her açılışta en son hali); daha eski günler 1 saat (değişmezler).
  * Maç dosyası maç kesinleşince yazılır: 1 saat (yönetim sayfasından düzeltilirse yeniden yazılır).
+ * Takım adları tutulmaz (telefon yalnızca sürüm değişince ister, en son hali gerekir); lig bilgisi 1 saat.
  * Bilgisayardan dosya olarak açılan yönetim sayfası (adresi "null") ve Android uygulaması (https://localhost) da okuyabilir;
  * başka siteler tarayıcıda okuyamaz.
  */
@@ -16,12 +18,12 @@ export async function onRequestGet({ request, params, env }) {
 
     const yol = (params.yol || []).join('/');
     const gunDosyasi = /^(gun|ozet)\/(\d{4}-\d{2}-\d{2})\.json$/.exec(yol);
-    if (!gunDosyasi && !/^mac\/\d{1,10}\.json$/.test(yol))
+    if (!gunDosyasi && !/^(mac\/\d{1,10}|takim|lig)\.json$/.test(yol))
         return new Response('', { status: 404, headers: IZIN });
 
     /* Dün (Türkiye saati, gün 04:00'te değişir) */
     const dun = new Date(Date.now() + (3 - 4) * 3600000 - 86400000).toISOString().slice(0, 10);
-    const sure = !gunDosyasi || gunDosyasi[2] < dun ? 3600 : 0;
+    const sure = yol === 'takim.json' ? 0 : !gunDosyasi || gunDosyasi[2] < dun ? 3600 : 0;
 
     const nesne = await env.DEPO.get(yol);
     if (!nesne)
