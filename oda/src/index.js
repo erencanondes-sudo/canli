@@ -15,6 +15,9 @@
  * Sıra numarası (s): odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı (s) ve odanın
  * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odası son 1000 değişikliği saklar).
  * Kimlik oda ilk kez oluşunca rastgele verilir; oda boşaltılıp yeniden oluşursa değişir (telefon her şeyi baştan alır).
+ *
+ * Yer: odalar Doğu Avrupa'da kurulur (Türkiye'ye en yakın bölge). Bir oda kurulduğu yerde kalır; adlarının başındaki
+ * "eeur/" bu yüzden: önceki (ipucusuz, Amerika'da kurulmuş) odalardan ayrı, yeni odalar. /bak sayfasında "konum" odanın bulunduğu merkez.
  */
 
 import { DurableObject } from 'cloudflare:workers';
@@ -38,7 +41,7 @@ export default {
             return bos();
 
         const alan = tur === 'gun' ? env.GUN : env.MAC;
-        const oda = alan.get(alan.idFromName(tur + '/' + ad));
+        const oda = alan.get(alan.idFromName('eeur/' + tur + '/' + ad), { locationHint: 'eeur' });
 
         if (bolum === 'oda' && istek.method === 'GET') {
             if (istek.headers.get('Upgrade') !== 'websocket')
@@ -101,6 +104,15 @@ class Oda extends DurableObject {
 
     sira() {
         return Number(this.bilgi('s')) || 0;
+    }
+
+    /* Odanın bulunduğu Cloudflare merkezi (ör. WAW Varşova, OTP Bükreş); yalnızca /bak için */
+    async konum() {
+        try {
+            return (/colo=(\w+)/.exec(await (await fetch('https://cloudflare.com/cdn-cgi/trace')).text()) || [])[1] || null;
+        } catch (e) {
+            return null;
+        }
     }
 
     herkese(mesaj) {
@@ -240,9 +252,10 @@ export class GunOdasi extends Oda {
         ws.send(JSON.stringify({ t: 'o', o: hal.o }));
     }
 
-    bak() {
+    async bak() {
         const hal = this.hal();
         return {
+            konum: await this.konum(),
             kimlik: this.bilgi('k'),
             sira: this.sira(),
             bagli_telefon: this.ctx.getWebSockets().length,
@@ -297,9 +310,10 @@ export class MacOdasi extends Oda {
         this.herkese({ t: 'y' });
     }
 
-    bak() {
+    async bak() {
         const d = this.bilgi('d');
         return {
+            konum: await this.konum(),
             kimlik: this.bilgi('k'),
             sira: this.sira(),
             bagli_telefon: this.ctx.getWebSockets().length,
