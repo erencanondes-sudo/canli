@@ -23,6 +23,9 @@ self.addEventListener('notificationclick', event => {
     }));
 });
 
+importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js');
+
 firebase.initializeApp({
     apiKey: 'AIzaSyC0i1eqUGgQrzh26toayMgdOX9I-jDtL8Q',
     authDomain: 'canli-b4406.firebaseapp.com',
