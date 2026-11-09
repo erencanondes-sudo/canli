@@ -19,7 +19,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez. Gün listesini, Özet'i ve maç içeriğini sunucu kilitten yazar; kilit konunca, değişince ve kalkınca maç API'den yeniden çekilir, konunca maçın hızlı kaydı silinir (yönetim sayfası yalnızca kilidi yazar; dün ve sonrası) | Yönetim sayfası | Sunucu (dinler), yönetim sayfası | Düzeltmede | ~40 bayt |
 | Firestore `istek/{ad}` | Yönetim sayfasının sunucudan istediği iş `{ tur, mac?, t }`: `yenile_{maç}` maçı API'den yeniden çek, `hizli_sil_{maç}` maçın hızlı kaydını sil, `hizli_sil_hepsi` bütün hızlı kayıtları sil. Sunucu işi yapınca siler (yönetim sayfası bunu bekler) | Yönetim sayfası | Sunucu (dinler) | İstendiğinde | ~50 bayt |
 | R2 `gun/{gün}.json` | Günün bütün maçları `{ "maç no": "satır" }`. Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) o. Arşiv, silinmez | Sunucu | Canlı Skor: dünden eski günler, yarın ve sonrası (bir kez); gün odasına bağlanılamazsa bugün ve dün de | Skor ya da durum değişince (hızlı kaynağın golünde de) | 200 maç ~7,7 KB |
-| R2 `ozet/{gün}.json` | Dün ve bugünün oynanan ve biten maçlarının olayları `{ m: { "maç no": [olaylar] } }`. Arşiv, silinmez | Sunucu | Yalnızca yönetim sayfası (site Özet'i gün odasından alır) | Olay olunca | 150 maç ~95 KB |
+| R2 `ozet/{gün}.json` | Dün ve bugünün oynanan ve biten maçlarının olayları `{ m: { "maç no": [olaylar] } }`. Arşiv, silinmez | Sunucu | Site: dünden önceki son 7 gün (bir kez; bugün ve dün gün odasından); yönetim sayfası | Olay olunca | 150 maç ~95 KB |
 | R2 `mac/{maç no}.json` | Kesinleşmiş maçın içeriği `{ durum, istatistik, kadro, olaylar, g: yazma anı (ms) }`. Maç bitince 2 saat sonraki son çekişte yazılır (elle düzeltmede yeniden). Arşiv, silinmez | Sunucu | Maç sayfası (maç odası boşsa, bir kez) | Maç kesinleşince | ~2–4 KB |
 | Firestore `maclar/{maç no}` | Eski maç içerikleri (artık yazılmıyor). Yönetim sayfası düzeltmede hâlâ bakar; doküman yoksa o adımı atlar | — | — | — | — |
 | Firestore `oran_gun/{gün}` | Bugün ve sonraki 7 günün başlamamış maçlarının menü oranları (`z`, gzip: `{ "maç no": "satır" }`) | Sunucu | Oranlar menüsü (seçili gün, bir kez) | Günde 2 kez, değişince | hafta içi ~1,5–2 KB, hafta sonu ~4–5 KB (sıkıştırılmış) |
@@ -43,7 +43,7 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 | Ne | Bugün ve dün | Diğer geçmiş günler | Yarın ve sonrası |
 |---|---|---|---|
 | Liste | Gün odası: bağlanınca hepsi (hızlı kaynakla birlikte), sonra değişenler. Odaya bağlanılamazsa R2 `gun` bir kez | R2 `gun` bir kez | R2 `gun` bir kez |
-| Özet | Gün odası: listeden hemen sonra hepsi, sonra değişenler | Okunmaz (maç açılınca olaylar maç odasından / R2 maç dosyasından) | Okunmaz |
+| Özet | Gün odası: listeden hemen sonra hepsi, sonra değişenler | Son 7 gün: R2 `ozet` bir kez. Daha eskiler okunmaz (maç açılınca olaylar R2 maç dosyasından) | Okunmaz |
 
 - Dün yalnızca seçiliyken ve 04:00–07:00 arası (gece yarısını geçen maçlar) bağlı kalır.
 - Uygulama arka plana geçince oda bağlantıları kapanır; öne gelince yeniden bağlanır ve yalnızca kaçırılan değişiklikler gelir.

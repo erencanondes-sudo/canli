@@ -6335,7 +6335,8 @@ async function readFile(path) {
  * GÜNLER
  * Bugün ve dün: gün odası (gun/{gün}). Bağlanınca önce liste (satırlar ve hızlı kaynak), hemen ardından Özet gelir;
  * sonra yalnızca değişen maçlar. Oda bağlanamazsa liste R2 gun/{gün}.json dosyasından bir kez okunur.
- * Diğer günler: R2 gun/{gün}.json bir kez okunur; Özet okunmaz (maç açılınca olaylar maç odasından / R2 maç dosyasından).
+ * Diğer günler: R2 gun/{gün}.json bir kez okunur. Son 7 günde (dünden önceki) Özet de R2 ozet/{gün}.json'dan bir kez okunur;
+ * daha eski günlerde okunmaz (maç açılınca olaylar R2 maç dosyasından).
  * Uygulama arka plana geçince oda bağlantısı kapanır; öne gelince yeniden bağlanır ve yalnızca kaçırılan değişiklikler gelir
  * (son sıra numarası roomPos'ta). GÜN TANIMI (sunucuda da aynı): maçın günü = başlama − 7 saat; "Bugün" = şu an − 4 saat (04:00'te değişir).
  */
@@ -6509,6 +6510,11 @@ function openDay(day) {
 
     if (!state.live) {
         readFile('gun/' + day).then(takeRows, failed);
+        if (day < TODAY && day >= dayShift(-7))
+            readFile('ozet/' + day).then(data => {
+                dayEvents.set(day, data && data.m || {});
+                refreshViews();
+            }, () => {});
         return;
     }
 
