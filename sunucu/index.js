@@ -4,10 +4,11 @@
  *   1. Gerekirse fikstür (dün, bugün ve 7 gün ileri) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
- *   4. Değişenleri yaz: takım adları ve canlı skor satırları (RTDB), gün listesi (R2, değişince; hızlı kaynağın golünde de),
- *      Özet (RTDB olay günlüğü + R2, değişince)
+ *   4. Değişenleri yaz: takım adları (RTDB); gün listesi ve Özet (gün odası + R2, değişince; hızlı kaynağın golünde de);
+ *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da)
  * Yönetim sayfasından (RTDB): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; yenile/{maç} maçı hemen yeniden çektirir.
+ * Hızlı kaynak (bilgisayardaki program) şimdilik RTDB hizli, hizli_u'ya yazar; sunucu bunları gün odasına aktarır.
  */
 
 const A = require('./ayarlar');
@@ -15,6 +16,7 @@ const api = require('./api');
 const B = require('./bicim');
 const db = require('./veritabani');
 const depo = require('./depo');
+const oda = require('./oda');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
 const mesaj = require('./mesaj');
@@ -27,7 +29,7 @@ const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
 
-/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol, cBitis } */
+/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol } */
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
@@ -38,7 +40,7 @@ let hazirGunler = [];   /* fikstürü bu açılışta çekilmiş, yazılabilen g
 /*
  * ELLE DÜZELTME (yönetim sayfası yazar)
  *   elle/{maç}: { s: "2-1", d?: "FT", o?: "[olaylar]", t } kilit. Kilit durdukça maçın skoru (ve verildiyse durumu, olayları) API'den değil buradan;
- *     kilitli maç için bildirim gönderilmez. Kilit kalkınca maç API'den yeniden çekilir.
+ *     kilitli maç için bildirim gönderilmez. Kilit konunca, değişince ve kalkınca maç API'den yeniden çekilir (maç odası / R2 düzelsin).
  *   yenile/{maç}: maç bir sonraki turda API'den yeniden çekilir, sonra kayıt silinir.
  */
 const elle = new Map();      /* maç no → { s, d } */
@@ -76,8 +78,8 @@ function elleDinle() {
             }
         } else {
             elle.delete(no);
-            yenilenecek.add(no);
         }
+        yenilenecek.add(no);
     };
     const ref = db.rtdb.ref('elle');
     ref.on('child_added', degisti, e => console.error('elle dinlenemedi: ' + e.message));
@@ -142,7 +144,7 @@ function kaydet(f, canliIstek) {
     const no = f.fixture.id;
     let k = maclar.get(no);
     if (!k) {
-        k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false, cBitis: null };
+        k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false };
         maclar.set(no, k);
     }
     if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
@@ -258,12 +260,19 @@ async function detayCek(nolar) {
             if (OYNANMAYACAK.has(d)) k.sonHal = true;
             if (f.lineups && f.lineups.length) k.kadro = true;
 
-            /* Maç bitince doküman olaylarla birlikte tam yazılır (istatistik vermeyen liglerde de).
+            /* Maç içeriği maç odasına; maç bitince olaylarla birlikte tam (istatistik vermeyen liglerde de).
+               Maç kesinleşince (bitişten 2 saat sonraki son çekiş) içerik R2'ye mac/{no}.json yazılır, oda boşaltılır.
                Bir maçın verisindeki sorun turu durdurmaz: o maç atlanır, günlüğe yazılır. */
             const bitti = BITTI.has(d);
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
                 try {
-                    await db.yazSikistir('maclar/' + f.fixture.id, JSON.stringify(B.macDokumani(f, bitti ? (k.olaylar || []) : null)));
+                    const icerik = B.macDokumani(f, bitti ? (k.olaylar || []) : null);
+                    if (bitti && k.duzeltildi) {
+                        await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...icerik, g: Date.now() }));
+                        oda.sil('mac/' + f.fixture.id);
+                    } else {
+                        oda.mac(f.fixture.id, icerik);
+                    }
                 } catch (e) {
                     console.error('Maç ' + f.fixture.id + ' yazılamadı: ' + e.message);
                 }
@@ -298,10 +307,10 @@ async function ligYaz() {
 
 /*
  * Günün canlı skor satırları.
- * RTDB gun/{gün}: her maç ayrı satır, yalnızca değişen yazılır. Canlı maçlar ve bittikten sonra
- * 3 dk (b1) "c" ile başlar; site yalnızca bunları dinler. Sonra "c" kalkar (b2).
- * R2 gun/{gün}.json: aynı satırlar ("c" olmadan) tek dosyada, değişince. Canlı maçta hızlı kaynağın skoru varsa
- * (kilitli değilse) dosyaya o yazılır (site de onu gösterir); maç bitince ya da hızlı kayıt silinince API'ninki.
+ * Gün odası gun/{gün}: r = satırlar (API'nin skoru), h / u = canlı maçların hızlı skoru ve uyarısı (kilitli maçlar hariç).
+ *   Site skoru ikisinden birleştirir. Oda yalnızca değişen maçları telefonlara iletir.
+ * R2 gun/{gün}.json: aynı satırlar tek dosyada, değişince (bugün ve dünden eski günler, yarın ve sonrası buradan okunur).
+ *   Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) dosyaya o yazılır; maç bitince ya da hızlı kayıt silinince API'ninki.
  */
 /*
  * DEVRE BAŞLANGICI: dakika veritabanına yazılmaz; oynanan devrede devre kodu ve devrenin başladığı an
@@ -334,9 +343,10 @@ function devreMetni(k) {
     return kod + (k.devre.bas - basla);
 }
 
-async function gunYaz(gun) {
-    const rtdb = await db.dalHali('gun/' + gun);
-    const icerik = new Map();
+function gunYaz(gun) {
+    const satirlar = {};
+    const hizliSkor = {};
+    const hizliUyari = {};
     const duz = {};
 
     for (const [no, k] of maclar) {
@@ -345,64 +355,47 @@ async function gunYaz(gun) {
         const ertesi = k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun;
         const devre = devreMetni(k);
         const satir = B.satir(k.f, ertesi, devre);
+        satirlar[no] = satir;
 
-        let c = CANLI.has(durumu(k));
-        const hizli = c && !elle.has(no) && /^(\d+)-(\d+)$/.exec(bildirim.hizliSkoru(no) || '');
+        const hizliAcik = CANLI.has(durumu(k)) && !elle.has(no);
+        const skor = hizliAcik && bildirim.hizliSkoru(no);
+        const uyari = hizliAcik && bildirim.hizliUyarisi(no);
+        if (skor) hizliSkor[no] = skor;
+        if (uyari) hizliUyari[no] = uyari;
+
+        const hizli = /^(\d+)-(\d+)$/.exec(skor || '');
         duz[no] = hizli ? B.satir({ ...k.f, goals: { home: Number(hizli[1]), away: Number(hizli[2]) } }, ertesi, devre) : satir;
-
-        if (c) k.cBitis = null;
-        else {
-            /* "c" ile yazılmış maç artık canlı değilse 3 dk sayılır (sunucu yeniden açıldıysa da) */
-            if (!k.cBitis && (rtdb.get(String(no)) || '').startsWith('c')) k.cBitis = simdi();
-            c = !!k.cBitis && simdi() - k.cBitis < A.B1_SURE;
-        }
-        icerik.set(String(no), (c ? 'c' : '') + satir);
     }
 
-    await db.dalYaz('gun/' + gun, icerik);
+    oda.gun(gun, { r: satirlar, h: hizliSkor, u: hizliUyari });
     depo.yaz('gun/' + gun + '.json', JSON.stringify(duz));
 }
 
-/* Hızlı kaynağın skoru değişince (ya da kaydı silinince) maçın günleri hemen yeniden yazılır */
+/* Hızlı kaynağın skoru ya da uyarısı değişince (ya da kaydı silinince) maçın günleri hemen yeniden yazılır */
 function hizliDegisti(no) {
     const k = maclar.get(no);
     if (!k) return;
     for (const gun of [k.gun, k.gun2])
         if (gun && hazirGunler.includes(gun))
-            gunYaz(gun).catch(e => console.error('Gün yazılamadı (' + gun + '): ' + e.message));
+            gunYaz(gun);
 }
 
 /*
  * ÖZET (oynanan ve biten maçların olayları), dün ve bugün için:
- *   RTDB olay/{gün}/{anahtar}: olay günlüğü. Yeni olay bir satır: [maç no, sıra, dakika, uzatma, taraf, tür, ayrıntı, oyuncu, ikinci oyuncu]
- *     (sıra: maçın kaçıncı olayı, 0'dan; aynı satır iki kez gelse de sonuç değişmez).
- *     API eski bir olayı değiştirir ya da silerse maçın tamamı bir satır: [maç no, [olaylar]].
- *     Anahtar zamana göre sıralı ("1793...123-00"). 2 gün sonra silinir.
- *   R2 ozet/{gün}.json: { t: dahil olan son günlük anahtarı, m: bütün olaylar }. Değişince yazılır.
- * Önce RTDB, sonra R2 yazılır: R2 aksarsa eksik kalan günlükten gelir.
+ *   Gün odası gun/{gün}: o = { maç no: [olaylar] }. Oda yalnızca olayları değişen maçları telefonlara iletir.
+ *   R2 ozet/{gün}.json: { m: { maç no: [olaylar] } } (arşiv). Değişince yazılır.
  * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı R2'deki dosyadan korunur.
  */
-const ozetHali = new Map();   /* gün → { m: { maç no: olaylar }, t } (günlüğe son yazılan) */
-let anahtarSon = '';
-
-function yeniAnahtar() {
-    let a = String(Date.now()) + '-00';
-    if (a <= anahtarSon) {
-        const [ms, sira] = anahtarSon.split('-');
-        a = ms + '-' + String(Number(sira) + 1).padStart(2, '0');
-    }
-    return (anahtarSon = a);
-}
+const ozetHali = new Map();   /* gün → { maç no: olaylar } (son yazılan) */
 
 async function ozetYaz(gun) {
     if (!ozetHali.has(gun)) {
         const eski = await depo.oku('ozet/' + gun + '.json');
-        ozetHali.set(gun, { m: eski && eski.m || {}, t: eski && eski.t || '' });
+        ozetHali.set(gun, eski && eski.m || {});
     }
-    const hal = ozetHali.get(gun);
 
     const ozet = {};
-    for (const [no, olay] of Object.entries(hal.m)) {
+    for (const [no, olay] of Object.entries(ozetHali.get(gun))) {
         const k = maclar.get(Number(no));
         if (k && k.gun === gun && k.olaylar === null) ozet[no] = olay;
     }
@@ -411,27 +404,10 @@ async function ozetYaz(gun) {
         const d = durumu(k);
         if (CANLI.has(d) || BITTI.has(d)) ozet[no] = k.olaylar.map(B.kisaOlay);
     }
+    ozetHali.set(gun, ozet);
 
-    /* Günlüğe yazılacaklar: önceki listenin devamıysa yalnızca yeniler, değilse maçın tamamı */
-    const satirlar = {};
-    for (const [no, yeni] of Object.entries(ozet)) {
-        const once = hal.m[no] || [];
-        const metin = olay => JSON.stringify(olay);
-        const devam = yeni.length >= once.length && once.every((o, i) => metin(o) === metin(yeni[i]));
-        if (devam) yeni.slice(once.length).forEach((o, i) => {
-            satirlar['olay/' + gun + '/' + yeniAnahtar()] = JSON.stringify([Number(no), once.length + i, ...o]);
-        });
-        else satirlar['olay/' + gun + '/' + yeniAnahtar()] = JSON.stringify([Number(no), yeni]);
-    }
-
-    /* Günlük yazılınca hal güncellenir (R2 aksarsa günlüğe aynı satırlar tekrar yazılmasın) */
-    const anahtarlar = Object.keys(satirlar);
-    if (anahtarlar.length) {
-        await db.cokluYaz(satirlar);
-        ozetHali.set(gun, { m: ozet, t: anahtarlar[anahtarlar.length - 1].split('/').pop() });
-    }
-
-    depo.yaz('ozet/' + gun + '.json', JSON.stringify({ t: ozetHali.get(gun).t, m: ozet }));
+    oda.gun(gun, { o: ozet });
+    depo.yaz('ozet/' + gun + '.json', JSON.stringify({ m: ozet }));
 }
 
 async function durumYaz() {
@@ -446,7 +422,8 @@ async function durumYaz() {
         acilistan_beri_istek: api.durum.istek,
         acilistan_beri_yazma: db.yazmaSayisi(),
         son_hata: sonHata,
-        r2_son_hata: depo.sonHata()
+        r2_son_hata: depo.sonHata(),
+        oda_son_hata: oda.sonHata()
     });
 }
 
@@ -454,6 +431,11 @@ async function durumYaz() {
 function temizle(dun) {
     for (const [no, k] of maclar) if (k.gun < dun && !(k.gun2 && k.gun2 >= dun)) maclar.delete(no);
     depo.unutEski(dun);
+    for (const gun of ozetHali.keys()) if (gun < dun) ozetHali.delete(gun);
+    oda.unut(yol => {
+        const [tur, ad] = yol.split('/');
+        return tur === 'gun' ? ad >= dun : maclar.has(Number(ad));
+    });
 }
 
 /* ---------- Tur ---------- */
@@ -468,8 +450,11 @@ async function tur() {
             await kapsamCek();
             await ligYaz();
             await db.eskiSil('takim_ek', simdi() - A.TAKIM_EK_SURE);
-            await db.eskiSil('gun', gunAdi(basla - A.RTDB_GUN_SAKLA * 864e5));
-            await db.eskiSil('olay', gunAdi(basla - A.RTDB_GUN_SAKLA * 864e5));
+            /* Geçiş: RTDB'de eskiden yazılan gun ve olay dalları silinir (artık yazılmıyor; adım 2'de bu satırlar kalkar) */
+            await db.eskiSil('gun', gunAdi(basla));
+            await db.eskiSil('olay', gunAdi(basla));
+            /* Dünden eski günlerin odaları boşaltılır (o günler R2'den okunur) */
+            for (let i = 2; i <= A.ODA_GUN_SAKLA; i++) oda.sil('gun/' + gunAdi(basla - A.BUGUN_KAYMA * SAAT_MS - i * 864e5));
             zaman.kapsam = basla;
         }
 
@@ -503,7 +488,7 @@ async function tur() {
         await takimYaz();
         /* Mesaj yazılabilen maçlar (yeni görülenler) */
         await mesaj.acikYaz(maclar.keys());
-        for (const gun of hazir) await gunYaz(gun);
+        for (const gun of hazir) gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
 
         /* Oranlar (günde 2 kez): bugün ve sonraki 7 günün fikstürü hazırsa. Beklenmez, arka planda sürer */

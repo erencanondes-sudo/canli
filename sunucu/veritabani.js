@@ -1,8 +1,8 @@
 /*
  * Veritabanına yazma. Sunucu Google'ın kendi bağlantısıyla yazar (anahtar dosyası yok).
- *   Firestore : oranlar (gzip ile sıkıştırılmış), maç detayı, sistem durumu
+ *   Firestore : oranlar (gzip ile sıkıştırılmış), sistem durumu
  *               (bir doküman son yazılandan farklı değilse yazılmaz)
- *   RTDB      : canlı skor listesi, takım adları (yalnızca değişen satırlar yazılır)
+ *   RTDB      : takım adları, lig bilgisi (yalnızca değişen satırlar yazılır)
  */
 
 const { initializeApp } = require('firebase-admin/app');
@@ -127,4 +127,4 @@ async function eskiSil(yol, sinir) {
     }
 }
 
-module.exports = { rtdb, yaz, yazSikistir, oku, unut, dalYaz, dalHali, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };
+module.exports = { rtdb, yaz, yazSikistir, oku, unut, dalYaz, cokluYaz, eskiSil, yazmaSayisi: () => yazmaSayisi };

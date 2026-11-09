@@ -5227,16 +5227,14 @@ body.has-layer .ac-kapa svg {
 <script>
 
 /* =================================================
-   VERİ (Realtime Database + Firestore)
+   VERİ (odalar + R2 + Realtime Database + Firestore)
    -------------------------------------------------
    Veriyi sunucu API-Football'dan çekip yazar; uygulama
    yalnızca okur. Yapının açıklaması: sunucu/VERITABANI.md
-     R2 gun/{gün}         : günün bütün maçları (canlı skor satırları), okuyucudan (VERI_ADRES)
-     RTDB gun/{gün}       : aynısı; yalnızca canlı ve yeni biten ("c" ile başlayan) satırlar dinlenir
+     Gün odası gun/{gün}  : bugün ve dün: liste, ardından Özet, sonra değişiklikler; hızlı kaynağın skoru ve uyarısı (ODA_ADRES)
+     R2 gun/{gün}         : diğer günlerin listesi, okuyucudan (VERI_ADRES)
+     Maç odası mac/{no}   : istatistik, kadro, olaylar (maç açılınca); kesinleşmiş maç R2 mac/{no}
      RTDB takim           : takım adları (telefonda saklanır)
-     RTDB hizli, hizli_u  : hızlı kaynağın skoru ve uyarısı (canlı maçlar)
-     R2 ozet/{gün}        : günün olayları (Özet sekmesi), okuyucudan
-     Firestore maclar/{no}: istatistik ve kadro (maç açılınca)
 ================================================= */
 
 const FIREBASE_SURUM = '12.19.0';
@@ -5244,6 +5242,9 @@ const FIREBASE_SURUM = '12.19.0';
 /* R2 dosyaları (gün listesi, Özet): Cloudflare Pages'teki okuyucu (functions/veri).
    Android uygulamasında (adres https://localhost) sitenin tam adresinden okunur. */
 const VERI_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/veri/' : '/veri/';
+
+/* Odalar (WebSocket): Cloudflare Pages'teki geçit (functions/oda) canli-oda Worker'ına iletir */
+const ODA_ADRES = location.hostname === 'localhost' ? 'wss://canli-ejw.pages.dev/oda/' : 'wss://' + location.host + '/oda/';
 
 /* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
 const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';
@@ -5568,12 +5569,11 @@ function rowEvents(list) {
 /*
  * Satır biçimi: sunucu/VERITABANI.md → "Canlı skor satırı"
  * "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Saat Türkiye saatidir (UTC+3).
- * Olaylar günün Özet dokümanından gelir.
+ * Olaylar günün Özet'inden gelir.
  */
 function rowToMatch(day, no, text, events) {
 
-    /* RTDB'de canlı ve yeni biten maçların satırı "c" ile başlar */
-    const [league, week, home, away, time, state, hg, ag] = text.replace(/^c/, '').split(',');
+    const [league, week, home, away, time, state, hg, ag] = text.split(',');
 
     /*
      * Durum: boş = başlamadı; "2H3725" = oynanan devre ve devrenin başladığı an (planlanan başlama
@@ -5682,13 +5682,10 @@ function scheduleMinuteTick() {
 const MATCHES = [];
 const MATCH_BY_ID = new Map();
 
-const dayRows = new Map();       /* gün → Map(maç no → satır) (R2 dosyası) */
-const heldRows = new Map();      /* gün → Map(maç no → satır) (RTDB'den gelip "c"si kalkan satırların son hali) */
+const dayRows = new Map();       /* gün → Map(maç no → satır) (gün odası ya da R2 dosyası) */
 let scoresReady = false;         /* bir önceki çizimde canlı veri tazeydi */
 let scoresSettled = false;       /* bu çizimdeki skor değişimleri gerçek değişim sayılır */
-const liveRows = new Map();      /* gün → Map(maç no → satır) (RTDB, canlı ve yeni biten; öncelikli) */
-const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet: R2 + RTDB günlüğü) */
-const eventKeys = new Map();     /* gün → işlenen son günlük anahtarı */
+const dayEvents = new Map();     /* gün → { maç no: olaylar } (Özet, gün odasından) */
 const matchDetails = new Map();  /* maç no → { stats, lineup } */
 
 function rebuildMatches() {
@@ -5704,12 +5701,8 @@ function rebuildMatches() {
     const yesterday = dayShift(-1);
     const morning = inMorning();
 
-    dayRows.forEach((stored, day) => {
+    dayRows.forEach((rows, day) => {
         const events = dayEvents.get(day);
-        const live = liveRows.get(day) || new Map();
-        const rows = new Map(stored);
-        (heldRows.get(day) || new Map()).forEach((text, no) => rows.set(no, text));
-        live.forEach((text, no) => rows.set(no, text));
         rows.forEach((text, no) => {
             const match = rowToMatch(day, no, text, matchEvents(day, no));
             const detail = matchDetails.get(match.id);
@@ -5719,8 +5712,8 @@ function rebuildMatches() {
                 match.events = rowEvents(detail.olaylar);
             if (!match.events && events && match.status !== 'upcoming')
                 match.events = [];
-            /* 04:00–07:00: önceki günün canlı (ve yeni biten) maçları bugünün listesinde de */
-            match.alsoToday = morning && day === yesterday && live.has(no);
+            /* 04:00–07:00: önceki günün canlı maçları bugünün listesinde de */
+            match.alsoToday = morning && day === yesterday && match.status === 'live';
             if (match.status === 'live')
                 applyFast(match);
             MATCHES.push(match);
@@ -5771,6 +5764,10 @@ let namesUnsub = null;
 let detailUnsub = null;
 
 async function startData() {
+    /* Gün odaları Firebase kütüphanesini beklemez */
+    openDay(TODAY);
+    watchDay(selectedDay);
+
     try {
         const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
         const app = await import(base + 'firebase-app.js');
@@ -5792,9 +5789,6 @@ async function startData() {
         anRedraw();
     }
     watchNames();
-    watchFast();
-    openDay(TODAY);
-    watchDay(selectedDay);
     checkDay();
     setInterval(checkDay, 60000);
 
@@ -5815,7 +5809,7 @@ async function startData() {
 let fbApp = null;
 
 /*
- * Firestore kütüphanesi açılışta beklenmez: bugünün listesi (R2) ve canlı satırlar (RTDB) gelince
+ * Firestore kütüphanesi açılışta beklenmez: bugünün listesi (gün odası) gelince
  * arka planda iner (indirmek okuma sayılmaz). Daha önce gerekirse (maç, oran, analiz, zil) o an iner.
  * İnince true, inemezse false döner (yalnızca Firestore'dan gelen bölümler gelmez).
  */
@@ -6067,9 +6061,8 @@ function unwatchNames() {
 }
 
 /*
- * HIZLI KAYNAK (başka bir bilgisayardaki skor sunucusu)
- *   hizli/{no}   : onaylı skor "2-1"
- *   hizli_u/{no} : uyarı ("2-2" gol bekleniyor, "k" genel uyarı)
+ * HIZLI KAYNAK (başka bir bilgisayardaki skor sunucusu), gün odasından:
+ *   h { no: "2-1" } onaylı skor, u { no: "2-2" | "k" } uyarı ("2-2" gol bekleniyor, "k" genel uyarı)
  * İki kaynaktan (API, hızlı) en son değişen skor gösterilir; ilk açılışta farklıysa hızlı.
  * Uyarı geldikten sonra skor değişirse uyarı gizlenir.
  */
@@ -6082,7 +6075,6 @@ const warnScores = new Map();   /* maç no → uyarı geldiğinde gösterilen sk
 const shownScores = new Map();  /* maç no → son gösterilen skor */
 const quietUntil = new Map();   /* maç no → skor değiştikten sonra "k" uyarısının gösterilmeyeceği an (1 dk) */
 const QUIET_TIME = 60000;
-let fastUnsubs = [];
 
 function sourceOf(id) {
     if (!scoreSources.has(id))
@@ -6135,72 +6127,31 @@ function applyFast(match) {
     }
 }
 
-/* Dalın yalnızca değişen kayıtları işlenir. İlk gelen kayıtlar "yeni" sayılmaz (initial: true) */
-function takeFast(target, onChange) {
-    let initial = true;
-    return snap => {
-        const next = snap.val() || {};
-        const changed = id => onChange(id, target.has(id) ? target.get(id) : null, initial);
-        Array.from(target.keys()).forEach(id => {
-            if (!(id in next)) {
-                target.delete(id);
-                changed(id);
-            }
-        });
-        Object.entries(next).forEach(([id, value]) => {
-            if (target.get(id) !== value) {
-                target.set(id, value);
-                changed(id);
-            }
-        });
-        initial = false;
-        refreshViews();
-    };
-}
-
-/* Hızlı kaynağın skorları (hizli) bu bağlantıda en az bir kez geldi mi? Gelmeden gol sayılmaz */
-let fastReady = false;
-
-function watchFast() {
-
-    if (fastUnsubs.length || !rd)
-        return;
-
-    /* İlk gelen skorlar "değişmiş" sayılmaz; sonradan gelenler o an değişmiştir */
-    const takeScores = takeFast(fastScores, (id, value, initial) => {
+/*
+ * Gün odasından gelen hızlı skorlar ve uyarılar: { maç no: değer }, null = silindi.
+ * initial: açılışta / yeniden bağlanınca gelen hal, "değişim" sayılmaz (iki kaynak farklıysa hızlı).
+ */
+function takeFast(scores, warns, initial) {
+    Object.entries(scores || {}).forEach(([id, value]) => {
+        if ((fastScores.get(id) ?? null) === value)
+            return;
+        if (value === null) fastScores.delete(id);
+        else fastScores.set(id, value);
         const source = sourceOf(id);
         source.fastAt = initial ? 0 : Date.now();
         source.fast = value;
     });
-
-    fastUnsubs = [
-        rt.onValue(rt.ref(rd, '.info/serverTimeOffset'), snap => {
-            serverOffset = Number(snap.val()) || 0;
-        }),
-        rt.onValue(rt.ref(rd, 'hizli'), snap => {
-            takeScores(snap);
-            fastReady = true;
-            commitLive();
-        }, () => {
-            fastReady = true;
-            commitLive();
-            refreshViews();
-        }),
-        rt.onValue(rt.ref(rd, 'hizli_u'), takeFast(fastWarns, id => {
-            warnScores.delete(id);
-        }), () => {})
-    ];
+    Object.entries(warns || {}).forEach(([id, value]) => {
+        if ((fastWarns.get(id) ?? null) === value)
+            return;
+        if (value === null) fastWarns.delete(id);
+        else fastWarns.set(id, value);
+        warnScores.delete(id);
+    });
 }
 
-/*
- * Dinleme durur ama son bilinen skorlar ve uyarılar hafızada kalır: uygulama öne
- * gelince yenisi gelene kadar eski (daha geride) skor gösterilmez.
- */
-function unwatchFast() {
-    fastUnsubs.forEach(off => off());
-    fastUnsubs = [];
-    fastReady = false;
-    /* Öne gelince "en son değişen" baştan değerlendirilir: iki kaynak farklıysa hızlı */
+/* Uygulama öne gelince "en son değişen" baştan değerlendirilir: iki kaynak farklıysa hızlı */
+function resetScoreTimes() {
     scoreSources.forEach(source => {
         source.apiAt = 0;
         source.fastAt = 0;
@@ -6220,7 +6171,7 @@ function readLeagues() {
 /*
  * GOL: canlı maçın skoru bir öncekinden büyükse gol olmuştur.
  * İlk açılışta ve uygulama öne geldiğinde skorlar yalnızca not edilir: canlı günlerin
- * RTDB satırları ve hızlı kaynak bu bağlantıda ilk kez gelene kadar, ve geldikleri
+ * odası bu bağlantıda güncel hale gelene kadar (kaçırılan değişiklikler dahil), ve geldiği
  * ilk çizimde de gol sayılmaz (listedeki eski skor ile yenisi arasındaki fark gol değildir).
  */
 const lastScores = new Map();   /* maç no → [ev, dep] */
@@ -6229,7 +6180,7 @@ const goalQueue = [];
 let goalsReady = false;         /* bir önceki çizimde canlı veri tazeydi */
 
 function liveDataReady() {
-    return fastReady && Array.from(days.values()).every(state => !state.live || state.fresh);
+    return Array.from(days.values()).every(state => !state.live || state.fresh);
 }
 
 function findGoals() {
@@ -6401,19 +6352,14 @@ async function readFile(path) {
 
 /*
  * GÜNLER
- * Liste R2 gun/{gün}.json dosyasından bir kez okunur ve gelince gösterilir (sunucu skor ya da durum değişince yazar).
- * Bugün ve dün: ayrıca RTDB gun/{gün}'den yalnızca "c" ile başlayan satırlar (canlı ve 3 dk içinde
- * biten maçlar) dinlenir; bunlar dosyadakinden önceliklidir. "c"si kalkan satırın son hali heldRows'ta kalır.
- *
- * ÖZET (olaylar), summaryMode'a göre:
- *   'live': R2 ozet/{gün}.json bir kez okunur, sonra RTDB olay/{gün} günlüğünden yalnızca
- *           dosyaya girmemiş (t'den sonraki) satırlar canlı dinlenir. Bugün; 04:00–07:00 dün de.
- *   'once': R2 ozet/{gün}.json bir kez okunur (dün, 07:00'den sonra).
- *   null  : okunmaz; maç açılınca olaylar maç dokümanından gelir (eski günler, yarın).
- * GÜN TANIMI (sunucuda da aynı): maçın günü = başlama − 7 saat; "Bugün" = şu an − 4 saat (04:00'te değişir).
- * Uygulama öne gelince Özet yeniden okunmaz; günlük kalınan yerden sürer.
+ * Bugün ve dün: gün odası (gun/{gün}). Bağlanınca önce liste (satırlar ve hızlı kaynak), hemen ardından Özet gelir;
+ * sonra yalnızca değişen maçlar. Oda bağlanamazsa liste R2 gun/{gün}.json dosyasından bir kez okunur.
+ * Diğer günler: R2 gun/{gün}.json bir kez okunur; Özet okunmaz (maç açılınca olaylar maç odasından / R2 maç dosyasından).
+ * Uygulama arka plana geçince oda bağlantısı kapanır; öne gelince yeniden bağlanır ve yalnızca kaçırılan değişiklikler gelir
+ * (son sıra numarası roomPos'ta). GÜN TANIMI (sunucuda da aynı): maçın günü = başlama − 7 saat; "Bugün" = şu an − 4 saat (04:00'te değişir).
  */
-const days = new Map();   /* gün → { live, loaded, off: [kapatma fonksiyonları] } */
+const days = new Map();      /* gün → { live, loaded, fresh, waiting, off: [kapatma fonksiyonları] } */
+const roomPos = new Map();   /* gün → { k: oda kimliği, s: son sıra numarası } */
 
 /* Bugünden n gün önce / sonra (gün tanımına göre) */
 function dayShift(n) {
@@ -6426,16 +6372,10 @@ function isLiveDay(day) {
     return day === TODAY || day === dayShift(-1);
 }
 
-/* 04:00–07:00: önceki günün canlı satırları ve olay günlüğü de dinlenir */
+/* 04:00–07:00: önceki günün odası da açık kalır */
 function inMorning() {
     const hour = new Date().getHours();
     return hour >= 4 && hour < 7;
-}
-
-function summaryMode(day) {
-    if (day === TODAY) return 'live';
-    if (day === dayShift(-1)) return inMorning() ? 'live' : 'once';
-    return null;
 }
 
 /*
@@ -6469,48 +6409,111 @@ function checkDay() {
     refreshViews();
 }
 
-/* Günlük satırı: [maç no, sıra, olay...] yeni olay; [maç no, [olaylar]] maçın tamamı */
-function applyEventLine(day, key, text) {
-    try {
-        const line = JSON.parse(text);
-        const no = String(line[0]);
-        const events = dayEvents.get(day) || {};
-        if (Array.isArray(line[1])) {
-            events[no] = line[1];
-        } else {
-            const list = events[no] || [];
-            list[line[1]] = line.slice(2);
-            events[no] = list;
+/*
+ * ODA BAĞLANTISI (WebSocket). Kopunca 1, 2, 4… en fazla 30 sn sonra yeniden bağlanır; bağlanırken son alınan
+ * sıra numarasını (s) ve odanın kimliğini (k) gönderir, oda yalnızca kaçırılanları yollar.
+ * 45 sn'de bir "p" yoklaması (oda uyandırılmadan "o" cevabı gelir): mobil ağlar boştaki bağlantıyı kesmesin.
+ * failed: ilk bağlantı hiçbir mesaj gelmeden koparsa bir kez çağrılır. Kapatma fonksiyonu döner.
+ */
+function openRoom(path, position, onMessage, failed) {
+    let ws = null;
+    let closed = false;
+    let heard = false;
+    let wait = 1000;
+    let ping = null;
+    let retry = null;
+
+    const connect = () => {
+        try {
+            ws = new WebSocket(ODA_ADRES + path + (position.k ? '?k=' + position.k + '&s=' + position.s : ''));
+        } catch (error) {
+            if (failed) failed();
+            return;
         }
+        ws.onopen = () => {
+            wait = 1000;
+            ping = setInterval(() => {
+                if (ws.readyState === 1)
+                    ws.send('p');
+            }, 45000);
+        };
+        ws.onmessage = event => {
+            if (event.data === 'o')
+                return;
+            let message;
+            try {
+                message = JSON.parse(event.data);
+            } catch (error) {
+                return;
+            }
+            heard = true;
+            if (message.k)
+                position.k = message.k;
+            if (typeof message.s === 'number')
+                position.s = message.s;
+            onMessage(message);
+        };
+        ws.onclose = event => {
+            clearInterval(ping);
+            if (!heard && failed) {
+                failed();
+                failed = null;
+            }
+            if (closed || event.reason === 'bosaltildi')
+                return;
+            retry = setTimeout(connect, wait);
+            wait = Math.min(wait * 2, 30000);
+        };
+    };
+
+    connect();
+    return () => {
+        closed = true;
+        clearTimeout(retry);
+        clearInterval(ping);
+        if (ws)
+            ws.close();
+    };
+}
+
+/* Gün odasından gelen değişiklik: { r?, o?, h?, u? }, her biri { maç no: değer }, null = silindi */
+function applyDayChange(day, message) {
+    if (message.r) {
+        const rows = dayRows.get(day) || new Map();
+        Object.entries(message.r).forEach(([no, text]) => {
+            if (text === null) rows.delete(no);
+            else rows.set(no, text);
+        });
+        dayRows.set(day, rows);
+    }
+    if (message.o) {
+        const events = dayEvents.get(day) || {};
+        Object.entries(message.o).forEach(([no, list]) => {
+            if (list === null) delete events[no];
+            else events[no] = list;
+        });
         dayEvents.set(day, events);
-    } catch (error) {}
-    eventKeys.set(day, key);
-    refreshViews();
+    }
+    takeFast(message.h, message.u, false);
 }
 
 function openDay(day) {
 
-    if (!rd || days.has(day))
+    /* Bir kez okunmuş gün sonradan canlı gün olduysa (gün değişimi) odaya bağlanılır */
+    const before = days.get(day);
+    if (before && (before.live || !isLiveDay(day)))
         return;
 
     /*
-     * fresh: canlı satırlar (RTDB) bu bağlantıda en az bir kez işlendi.
-     * pendingLive: gelen canlı satırlar; hızlı kaynak da gelince birlikte işlenir (commitLive).
+     * fresh: oda bu bağlantıda güncel hale geldi (liste ya da kaçırılan değişikliklerin hepsi işlendi).
+     * waiting: yeniden bağlanınca gelecek kaçırılmış değişiklik sayısı.
      */
-    const state = { live: isLiveDay(day), loaded: false, fresh: false, pendingLive: null, off: [] };
+    const state = { live: isLiveDay(day), loaded: false, fresh: false, waiting: 0, off: [] };
     days.set(day, state);
 
-    const liveQuery = rt.query(rt.ref(rd, 'gun/' + day), rt.orderByValue(), rt.startAt('c'), rt.endAt('c\uf8ff'));
-    const mode = summaryMode(day);
-
-    /* Yeni dosya, arka plana geçmeden önceki canlı satırlardan yenidir: onlar bırakılır */
     const takeRows = rows => {
         if (days.get(day) !== state)
             return;
-        if (!state.fresh) {
-            liveRows.delete(day);
-            heldRows.delete(day);
-        }
         dayRows.set(day, new Map(Object.entries(rows || {})));
         state.loaded = true;
         refreshViews();
@@ -6523,103 +6526,75 @@ function openDay(day) {
         preloadFs();
     };
 
-    const takeLive = snap => {
-        state.pendingLive = new Map(Object.entries(snap.val() || {}));
-        commitLive();
-    };
+    if (!state.live) {
+        readFile('gun/' + day).then(takeRows, failed);
+        return;
+    }
 
-    const liveFailed = () => {
+    if (!roomPos.has(day))
+        roomPos.set(day, { k: null, s: 0 });
+
+    const ready = () => {
         state.fresh = true;
         refreshViews();
+        preloadFs();
     };
 
-    const listenLog = () => {
+    state.off.push(openRoom('gun/' + day, roomPos.get(day), message => {
         if (days.get(day) !== state)
             return;
-        const log = rt.query(rt.ref(rd, 'olay/' + day), rt.orderByKey(), rt.startAfter(eventKeys.get(day) || ''));
-        state.off.push(rt.onChildAdded(log, snap => applyEventLine(day, snap.key, snap.val()), () => {}));
-    };
+        if (message.z)
+            serverOffset = message.z - Date.now();
 
-    const takeEvents = data => {
-        dayEvents.set(day, data && data.m || {});
-        eventKeys.set(day, data && data.t || '');
-        refreshViews();
-    };
-
-    readFile('gun/' + day).then(takeRows, failed);
-    if (state.live)
-        state.off.push(rt.onValue(liveQuery, takeLive, liveFailed));
-
-    if (mode && dayEvents.has(day)) {
-        if (mode === 'live')
-            listenLog();
-    } else if (mode) {
-        readFile('ozet/' + day).then(takeEvents).then(() => {
-            if (mode === 'live')
-                listenLog();
-        }, () => {
-            if (mode !== 'live')
-                return;
-            dayEvents.set(day, {});
-            listenLog();
-        }).finally(() => {
+        if (message.t === 'l') {
+            /* Liste: hızlı kaynağın bu günün maçlarındaki değerleri de baştan */
+            const scores = {};
+            const warns = {};
+            Object.keys(message.r || {}).forEach(no => {
+                scores[no] = (message.h || {})[no] ?? null;
+                warns[no] = (message.u || {})[no] ?? null;
+            });
+            takeFast(scores, warns, true);
+            takeRows(message.r);
+            ready();
+        } else if (message.t === 'o') {
+            dayEvents.set(day, message.o || {});
+            refreshViews();
             /* Bugünün listesi ve Özet geldikten sonra analiz sürümüne bakılır */
             if (day === TODAY)
                 readAnVersion();
-        });
-    }
+        } else if (message.t === 'h') {
+            state.loaded = true;
+            state.waiting = message.n || 0;
+            if (!state.waiting)
+                ready();
+        } else if (message.t === 'd') {
+            applyDayChange(day, message);
+            if (state.waiting && !--state.waiting)
+                ready();
+            else
+                refreshViews();
+        }
+    }, () => {
+        if (!state.loaded)
+            readFile('gun/' + day).then(takeRows, failed);
+    }));
 }
 
 /*
- * Gelen canlı satırlar (RTDB) hızlı kaynak da gelmişse işlenir: ikisi tek çizimde yansır
- * (biri önce gelirse skor gidip gelmesin). "c"si kalkan (listeden çıkan) satırın son hali
- * heldRows'ta saklanır: dosya açılıştaki haliyle kalmıştır. İlk işlemede saklanmaz.
+ * Dinlenen günü bırakır (gelen liste ve Özet hafızada kalır; odaya yeniden bağlanınca kalınan yerden sürer).
+ * Bir kez okunan günler (R2) bırakılmaz.
  */
-function commitLive() {
-    if (!fastReady)
-        return;
-    let changed = false;
-    days.forEach((state, day) => {
-        const rows = state.pendingLive;
-        if (!rows)
-            return;
-        const held = heldRows.get(day) || new Map();
-        if (state.fresh)
-            (liveRows.get(day) || new Map()).forEach((text, no) => {
-                if (!rows.has(no))
-                    held.set(no, text.replace(/^c/, ''));
-            });
-        heldRows.set(day, held);
-        liveRows.set(day, rows);
-        state.pendingLive = null;
-        state.fresh = true;
-        changed = true;
-    });
-    if (changed)
-        refreshViews();
-    preloadFs();
-}
-
-/*
- * Dinlenen günü bırakır (bir kez okunan günler ve Özet hafızada kalır).
- * keepLive: son canlı satırlar (RTDB) da kalır; uygulama arka plana geçerken kullanılır:
- * öne gelince ekran, yeni dosya gelene kadar ayrılırken gördüğü gibi kalır (eski dosyaya dönmez).
- */
-function closeDay(day, keepLive) {
+function closeDay(day) {
     const state = days.get(day);
-    if (!state || !(state.live || state.off.length))
+    if (!state || !state.live)
         return;
     state.off.forEach(off => off());
     days.delete(day);
-    if (!keepLive)
-        liveRows.delete(day);
 }
 
 /* Seçili gün değişince: önceki seçili gün bugün değilse bırakılır */
 function watchDay(day) {
-
-    if (!rd)
-        return;
 
     if (watchedDay && watchedDay !== day && watchedDay !== TODAY)
         closeDay(watchedDay);
@@ -6634,49 +6609,57 @@ function dayLoading() {
     return !dataError && (!state || !state.loaded || !namesReady);
 }
 
-/* Maç sayfası açıkken istatistik ve kadro */
+/*
+ * Maç sayfası açıkken istatistik, kadro ve (maç bitince) olaylar: maç odası (mac/{no}).
+ * Odada içerik yoksa ("y") maç kesinleşmiş olabilir: R2 mac/{no}.json okunur; dosya varsa oda bırakılır,
+ * yoksa oda açık kalır (içerik gelince gösterilir). Maç sayfası kapanınca bağlantı kapanır.
+ */
+const detailPos = new Map();   /* maç no → { k, s } (yalnızca açık olan maç için tutulur) */
+
 function watchDetail(match) {
 
     unwatchDetail();
 
-    /* Biten maçın dokümanında olaylar da var (istatistik vermeyen liglerde de) */
-    if (!fbApp || !(leagueHasDetail(match.league.id) || match.status === 'done'))
+    /* Biten maçın içeriğinde olaylar da var (istatistik vermeyen liglerde de) */
+    if (!(leagueHasDetail(match.league.id) || match.status === 'done'))
         return;
-
-    /* Firestore kütüphanesi henüz inmediyse inince başlanır (bu arada maç kapanırsa başlanmaz) */
-    if (!db) {
-        let cancelled = false;
-        detailUnsub = () => { cancelled = true; };
-        loadFs().then(ok => {
-            if (ok && !cancelled)
-                watchDetail(match);
-        });
-        return;
-    }
 
     const id = match.id;
+    const position = detailPos.get(id) || { k: null, s: 0 };
+    detailPos.clear();
+    detailPos.set(id, position);
 
-    detailUnsub = fs.onSnapshot(fs.doc(db, 'maclar', id), snap => {
-        const data = snap.exists() ? snap.data() : {};
-        /* Yeni dokümanlar gzip ile sıkıştırılmış (z); eskilerde alanlar ayrı ayrı metin */
-        const content = data.z ? docJSON(data) : Promise.resolve({
-            istatistik: data.istatistik ? JSON.parse(data.istatistik) : null,
-            kadro: data.kadro ? JSON.parse(data.kadro) : null,
-            olaylar: data.olaylar ? JSON.parse(data.olaylar) : null
+    const show = (doc, time) => {
+        matchDetails.set(id, {
+            stats: doc.istatistik || null,
+            lineup: doc.kadro || null,
+            olaylar: doc.olaylar || null,
+            updated: time ? new Date(time) : null
         });
-        content.then(doc => {
-            if (detailUnsub !== unsub)
-                return;
-            matchDetails.set(id, {
-                stats: doc.istatistik || null,
-                lineup: doc.kadro || null,
-                olaylar: doc.olaylar || null,
-                updated: data.guncellendi ? data.guncellendi.toDate() : null
-            });
-            refreshViews();
-        }, () => {});
-    }, () => {});
-    const unsub = detailUnsub;
+        refreshViews();
+    };
+
+    let close = null;
+    const unsub = () => {
+        if (close)
+            close();
+    };
+    detailUnsub = unsub;
+
+    close = openRoom('mac/' + id, position, message => {
+        if (detailUnsub !== unsub)
+            return;
+        if (message.t === 'm') {
+            show(message.d || {}, message.g);
+        } else if (message.t === 'y') {
+            readFile('mac/' + id).then(doc => {
+                if (!doc || detailUnsub !== unsub)
+                    return;
+                show(doc, doc.g);
+                close();
+            }, () => {});
+        }
+    });
 }
 
 function unwatchDetail() {
@@ -6685,26 +6668,26 @@ function unwatchDetail() {
     detailUnsub = null;
 }
 
-/* Uygulama arka plana geçince dinleme durur, öne gelince sürer */
+/* Uygulama arka plana geçince bağlantılar kapanır, öne gelince yeniden açılır */
 document.addEventListener('visibilitychange', () => {
 
-    if (!rd)
-        return;
-
-    /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
     if (document.hidden) {
         lastScores.clear();
-        Array.from(days.keys()).forEach(day => closeDay(day, true));
-        unwatchNames();
-        unwatchFast();
+        Array.from(days.keys()).forEach(day => closeDay(day));
         unwatchDetail();
-        rt.goOffline(rd);
+        /* RTDB bağlantısı da kapanır (aynı anda bağlı kişi sınırı) */
+        if (rd) {
+            unwatchNames();
+            rt.goOffline(rd);
+        }
         return;
     }
 
-    rt.goOnline(rd);
-    watchNames();
-    watchFast();
+    resetScoreTimes();
+    if (rd) {
+        rt.goOnline(rd);
+        watchNames();
+    }
     openDay(TODAY);
     openDay(watchedDay);
     checkDay();

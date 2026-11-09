@@ -121,8 +121,7 @@ module.exports = {
     BUGUN_KAYMA: 4,                 /* "bugün" = şu an − 4 saat (gün 04:00'te değişir, sitede de aynı) */
     SABAH: [4, 7],                  /* 04:00–06:59 başlayan maç kendi takvim gününün listesine de yazılır */
     TUR_ARALIK: 20000,              /* canlı saatlerde: canlı skor ve yazma 20 sn */
-    B1_SURE: 3 * 60,                /* biten maç RTDB'de bu kadar saniye daha "c" ile (dinlenir) kalır */
-    RTDB_GUN_SAKLA: 2,              /* RTDB'deki günler bu kadar gün sonra silinir (Firestore'da kalır) */
+    ODA_GUN_SAKLA: 4,               /* gün odaları dünden eskiyse boşaltılır; geriye bu kadar güne bakılır (R2'de kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 2 * 60000,        /* canlı maç detayı: 2 dk */
     FIKSTUR_BUGUN: 30 * 60000,      /* bugünün ve yarının fikstürü: 30 dk */

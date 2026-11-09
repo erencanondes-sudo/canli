@@ -125,11 +125,12 @@ function hizliSkor(no, deger, gonder) {
 }
 
 const hizliKayit = new Map();  /* maç no → hızlı kaynağın skoru "2-1" */
+const hizliUyari = new Map();  /* maç no → hızlı kaynağın uyarısı "2-2" / "k" (gün odasına aktarılır) */
 const hizliFark = new Map();   /* maç no → API skorundan farklı olduğu ilk an (ms) */
 
 /*
- * canliSaatte: bildirim gönderilecek saatlerde miyiz; skorDegisti(maç no): skor değişince ya da kayıt silinince
- * (gün listesi yeniden yazılsın diye). İkisini index.js verir. İlk gelen kayıtlar yalnızca not edilir.
+ * canliSaatte: bildirim gönderilecek saatlerde miyiz; skorDegisti(maç no): skor ya da uyarı değişince, kayıt silinince
+ * (gün listesi ve gün odası yeniden yazılsın diye). İkisini index.js verir. İlk gelen kayıtlar yalnızca not edilir.
  */
 function hizliDinle(canliSaatte, skorDegisti) {
 
@@ -149,6 +150,18 @@ function hizliDinle(canliSaatte, skorDegisti) {
         skorDegisti(Number(snap.key));
     });
     ref.once('value', () => { ilk = false; });
+
+    const uyari = getDatabase().ref('hizli_u');
+    const uyariDegisti = snap => {
+        hizliUyari.set(Number(snap.key), snap.val());
+        skorDegisti(Number(snap.key));
+    };
+    uyari.on('child_added', uyariDegisti, e => console.error('hizli_u dinlenemedi: ' + e.message));
+    uyari.on('child_changed', uyariDegisti);
+    uyari.on('child_removed', snap => {
+        hizliUyari.delete(Number(snap.key));
+        skorDegisti(Number(snap.key));
+    });
 }
 
 /*
@@ -174,8 +187,9 @@ function hizliKontrol() {
     }
 }
 
-/* Hızlı kaynağın maç için son değeri ("2-1"; uyarıda "k"), yoksa undefined */
+/* Hızlı kaynağın maç için son skoru ("2-1") ve uyarısı ("2-2" / "k"), yoksa undefined */
 const hizliSkoru = no => hizliKayit.get(no);
+const hizliUyarisi = no => hizliUyari.get(no);
 
 function gonderMesaj(no, baslik, metin) {
     let mesajci;
@@ -317,4 +331,4 @@ function kisiyeGonder(kisi, baslik, metin, link) {
     return true;
 }
 
-module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, hizliSkoru, kisiyeGonder };
+module.exports = { kontrol, zilDinle, hizliDinle, hizliKontrol, hizliSkoru, hizliUyarisi, kisiyeGonder };

@@ -1,0 +1,19 @@
+# Odalar (Cloudflare Worker + Durable Objects). Yapı: sunucu/VERITABANI.md → "Odalar".
+# Cloudflare bu klasörü GitHub'dan kendisi yükler (Workers & Pages → canli-oda → Settings → Build).
+# Gizli anahtar ODA_ANAHTAR Cloudflare panelinde: canli-oda → Settings → Variables and Secrets.
+
+name = "canli-oda"
+main = "src/index.js"
+compatibility_date = "2026-01-15"
+
+[[durable_objects.bindings]]
+name = "GUN"
+class_name = "GunOdasi"
+
+[[durable_objects.bindings]]
+name = "MAC"
+class_name = "MacOdasi"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GunOdasi", "MacOdasi"]
