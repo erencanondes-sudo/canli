@@ -2509,8 +2509,16 @@ body.has-layer .ac-kapa svg {
 }
 
 .pitch-team div {
+    display: flex;
+    align-items: baseline;
+    gap: .4em;
     min-width: 0;
     line-height: 1.2;
+}
+
+/* Diziliş takım adının yanında: ev sahibinde sağında, deplasmanda solunda */
+.pitch-team.away div {
+    flex-direction: row-reverse;
 }
 
 .pitch-team b {
@@ -2524,7 +2532,7 @@ body.has-layer .ac-kapa svg {
 }
 
 .pitch-team small {
-    display: block;
+    flex: none;
     font-size: .875rem;
     font-weight: 700;
     color: #98a4b8;
@@ -2533,13 +2541,13 @@ body.has-layer .ac-kapa svg {
 /* Saha yatay: ev sahibi sol yarıda, deplasman sağ yarıda */
 .pitch {
     position: relative;
-    aspect-ratio: 105 / 100;
+    aspect-ratio: 105 / 80;
     border: .125rem solid rgba(255, 255, 255, .6);
     border-radius: .6em;
     overflow: hidden;
     background:
         radial-gradient(ellipse 90% 70% at 50% 50%, rgba(255, 255, 255, .05), transparent 75%),
-        repeating-linear-gradient(90deg, #2e9139 0 5%, #28832f 5% 10%);
+        repeating-linear-gradient(90deg, #3aab36 0 5%, #2f9a2c 5% 10%);
     box-shadow: 0 .15rem .6rem rgba(0, 0, 0, .35);
 }
 
@@ -2569,12 +2577,12 @@ body.has-layer .ac-kapa svg {
 .pp-shirt {
     position: relative;
     /* Dar ekranda saha küçüldükçe biraz küçülür */
-    width: min(1.9rem, 8vw);
-    height: min(1.7rem, 7.2vw);
+    width: min(1.6rem, 6.8vw);
+    height: min(1.45rem, 6.1vw);
     display: grid;
     place-items: center;
     padding-top: .15em;
-    font-size: min(.75rem, 3.3vw);
+    font-size: min(.65rem, 2.8vw);
     font-weight: 800;
     /* İnce çerçeve (koyu formada beyaz, açık formada siyah) ve gölge */
     --edge: #fff;
@@ -2616,7 +2624,7 @@ body.has-layer .ac-kapa svg {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: min(.62rem, 2.8vw);
+    font-size: min(.495rem, 2.175vw);
     font-weight: 600;
     color: #fff;
 }
@@ -2660,8 +2668,15 @@ body.has-layer .ac-kapa svg {
     transform: none;
 }
 
+.bench .pp-shirt {
+    width: min(1.9rem, 8vw);
+    height: min(1.7rem, 7.2vw);
+    font-size: min(.75rem, 3.3vw);
+}
+
 .bench .pp-name {
     background: #1d2340;
+    font-size: min(.62rem, 2.8vw);
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
