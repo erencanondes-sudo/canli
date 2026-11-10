@@ -2931,9 +2931,9 @@ body.has-layer .ac-kapa svg {
 }
 
 /*
- * Özet: sekmelerin altında ekranın sonuna kadar uzanan beyaz panel.
+ * Özet: sekmelerin altında ekranın sonuna kadar uzanan panel (ana sayfa zemini).
  * Ortada ince zaman çizgisi; yarı başlıkları çizginin üstünde lacivert hap,
- * dakika lacivert kutucuk, olaylar kendi takımının tarafında açık gri kartta.
+ * dakika lacivert kutucuk, olaylar kendi takımının tarafında beyaz kartta.
  */
 #detailSheet:not(.an-mode) .tab-page[data-page="summary"]:has(.sum-panel) {
     padding-bottom: 0;
@@ -2945,7 +2945,8 @@ body.has-layer .ac-kapa svg {
     margin-top: .6rem;
     padding: .75rem .5rem calc(6rem + env(safe-area-inset-bottom, 0px));
     border-radius: .75rem .75rem 0 0;
-    background: white;
+    /* Ana sayfanın zemini */
+    background: #f4f5f7;
 }
 
 .timeline {
@@ -3002,7 +3003,8 @@ body.has-layer .ac-kapa svg {
     padding: .45em .65em;
     border: 1px solid #e3e7ee;
     border-radius: .6rem;
-    background: #f2f4f8;
+    /* Ana sayfadaki maç satırı gibi beyaz */
+    background: white;
     line-height: 1.25;
     font-weight: 600;
     color: #1d2340;
@@ -3081,10 +3083,10 @@ body.has-layer .ac-kapa svg {
     color: white;
 }
 
-/* Maç başladı, henüz olay yok: İLK YARI'nın altında açık gri hap (ilk olay gelince kalkar) */
+/* Maç / ikinci yarı başladı, henüz olay yok: yarı başlığının altında beyaz hap (olay gelince kalkar) */
 .half-line.kickoff {
     border: 1px solid #e3e7ee;
-    background: #f2f4f8;
+    background: white;
     font-size: .75rem;
     font-weight: 700;
     letter-spacing: 0;
@@ -11772,6 +11774,18 @@ function renderSummary(match) {
         row.appendChild(away);
         list.appendChild(row);
     });
+
+    /* İkinci yarı başladı ama ikinci yarıda henüz olay yok */
+    if (match.status === 'live' && match.code === '2H' && !halfShown) {
+        const line = document.createElement('div');
+        line.className = 'half-line';
+        line.textContent = 'İKİNCİ YARI';
+        list.appendChild(line);
+        const kick = document.createElement('div');
+        kick.className = 'half-line kickoff';
+        kick.textContent = 'İkinci yarı başladı';
+        list.appendChild(kick);
+    }
 
     if (events.length && match.status === 'live') {
         const note = document.createElement('p');
