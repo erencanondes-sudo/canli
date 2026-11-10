@@ -4726,8 +4726,8 @@ body.has-layer .ac-kapa svg {
 
 /* =====================================================
    REKLAM (üst resmin üzerinde, tam genişlik, 100px boy)
-   İki reklam, video gibi sahne sahne oynar; her biri 15 saniye.
-   Hepsi 30 saniyelik tek döngü: ilk yarı 1. reklam, ikinci yarı 2. reklam.
+   Dört reklam, video gibi sahne sahne oynar; her biri 15 saniye.
+   Hepsi 60 saniyelik tek döngü; reklam kutusu (320×100) şeridin ortasında.
 ===================================================== */
 .ad-strip {
     position: absolute;
@@ -4737,11 +4737,6 @@ body.has-layer .ac-kapa svg {
     justify-content: center;
     overflow: hidden;
     background: black;
-}
-
-/* ŞİMDİLİK GİZLİ: reklamlar görünmez, siyah şerit kalır. Açmak için bu kuralı sil. */
-.ad-strip .ad-box {
-    display: none;
 }
 
 .ad-box {
@@ -4758,11 +4753,13 @@ body.has-layer .ac-kapa svg {
     --off: 0s;
     position: absolute;
     inset: 0;
-    animation: adShow 30s linear var(--off) infinite both;
+    animation: adShow 60s linear var(--off) infinite both;
 }
 
 .ad-1 { background: linear-gradient(120deg, #172554, #1a73e8); }
-.ad-2 { --off: -15s; background: linear-gradient(120deg, #1c1917, #b45309); }
+.ad-2 { --off: -45s; }
+.ad-3 { --off: -30s; }
+.ad-4 { --off: -15s; }
 
 .ad-scene {
     position: absolute;
@@ -4774,9 +4771,9 @@ body.has-layer .ac-kapa svg {
     opacity: 0;
 }
 
-.ad-s1 { animation: adS1 30s ease var(--off) infinite both; }
-.ad-s2 { animation: adS2 30s ease var(--off) infinite both; }
-.ad-s3 { animation: adS3 30s ease var(--off) infinite both; }
+.ad-s1 { animation: adS1 60s ease var(--off) infinite both; }
+.ad-s2 { animation: adS2 60s ease var(--off) infinite both; }
+.ad-s3 { animation: adS3 60s ease var(--off) infinite both; }
 
 .ad-row {
     display: flex;
@@ -4821,7 +4818,7 @@ body.has-layer .ac-kapa svg {
 .ad-pop {
     --d: 0s;
     display: inline-block;
-    animation: adPop 30s ease calc(var(--off) + var(--d)) infinite both;
+    animation: adPop 60s ease calc(var(--off) + var(--d)) infinite both;
 }
 
 .ad-chip {
@@ -4847,71 +4844,158 @@ body.has-layer .ac-kapa svg {
     animation: adPulse 1s ease-in-out infinite;
 }
 
-.ad-2 .ad-btn { color: #b45309; }
-
-.ad-stars {
-    margin-top: .15em;
-    font-size: 1.1em;
-    letter-spacing: .1em;
-    color: #facc15;
+/* Köşedeki küçük "Reklam" işareti (2., 3. ve 4. reklamda) */
+.ad-mark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    padding: .1em .45em;
+    border-radius: 0 0 0 .4em;
+    background: rgba(0, 0, 0, .45);
+    font: 600 .5em/1.5 Arial, sans-serif;
+    color: white;
 }
 
-.ad-stars .off { color: rgba(255,255,255,.3); }
-
-.ad-bars {
+/* 2. reklam: alışveriş uygulaması (beyaz zemin, kırmızı-sarı, yanıp sönen indirim) */
+.ad-2 {
+    background: repeating-linear-gradient(-45deg, #fff 0 14px, #fff4d6 14px 28px);
+    font-family: 'Arial Black', Impact, Arial, sans-serif;
+    color: #e3000f;
+}
+.ad-2 .ad-scene { align-items: center; text-align: center; }
+.shop-big { font-size: 1.7em; line-height: 1; letter-spacing: -.02em; }
+.shop-sub { margin-top: .3em; font: 700 .7em Arial, sans-serif; color: #222; }
+.shop-badge {
+    position: absolute;
+    right: .5em;
+    top: 1.1em;
     display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: .2em .5em;
+    place-items: center;
+    width: 3.1em;
+    height: 3.1em;
+    border-radius: 50%;
+    background: #ffd400;
+    font-size: 1.05em;
+    color: #e3000f;
+    transform: rotate(12deg);
+    animation: adBlink .7s steps(1) infinite;
+}
+.shop-items { display: flex; gap: .4em; }
+.shop-items span {
+    padding: .3em .45em;
+    border: 2px solid #e3000f;
+    border-radius: .4em;
+    background: white;
+    font: 800 .68em Arial, sans-serif;
+    color: #222;
+}
+.shop-items s { color: #888; font-weight: 400; }
+.shop-items b { display: block; color: #e3000f; font-size: 1.25em; }
+.shop-last { font-size: 1.35em; animation: adBlink .7s steps(1) infinite; }
+.shop-btn {
     margin-top: .3em;
-    font-size: .68em;
-    font-weight: 700;
+    padding: .35em .9em;
+    border-radius: .3em;
+    background: #e3000f;
+    font-size: .8em;
+    color: white;
+    animation: adShake .5s linear infinite;
 }
 
-.ad-bar {
-    height: .5em;
+/* 3. reklam: mobil oyun (mor, neon, zıplayan düğme) */
+.ad-3 {
+    background: radial-gradient(circle at 80% 20%, #7b2ff7, #1a0533 70%);
+    font-family: Impact, 'Arial Black', sans-serif;
+    letter-spacing: .03em;
+}
+.ad-3 .ad-scene { align-items: center; text-align: center; }
+.game-big { font-size: 1.75em; line-height: 1.05; color: #ffe94a; text-shadow: 0 .08em 0 #b3001b, 0 0 .5em #ff4fd8; }
+.game-sub { margin-top: .25em; font: 700 .72em Arial, sans-serif; letter-spacing: 0; color: #e9d5ff; }
+.game-dare { font-size: 1.1em; line-height: 1.15; color: white; text-shadow: 0 .08em 0 #000; }
+.game-dare b { color: #ffe94a; font-size: 1.3em; }
+.game-btn {
+    padding: .25em 1em;
+    border: 3px solid #0b5e16;
+    border-radius: .5em;
+    background: linear-gradient(180deg, #7dff5a, #18b62c);
+    font-size: 1.25em;
+    color: white;
+    text-shadow: 0 .08em 0 #0b5e16;
+    animation: adBounce .6s ease-in-out infinite;
+}
+
+/* 4. reklam: yemek siparişi (turuncu, sade) */
+.ad-4 {
+    background: linear-gradient(100deg, #ff6a00, #ffb100);
+    font-family: Georgia, 'Times New Roman', serif;
+}
+.food-row { display: flex; align-items: center; gap: .6em; }
+.food-emoji { font-size: 2.6em; line-height: 1; }
+.food-big { font-size: 1.45em; font-weight: 700; line-height: 1.05; }
+.food-sub { margin-top: .2em; font: 600 .72em Arial, sans-serif; }
+.food-deal { font: 900 2em/1 Arial, sans-serif; color: #5a1e00; }
+.food-code {
+    display: inline-block;
+    margin-top: .3em;
+    padding: .15em .6em;
+    border: 2px dashed white;
     border-radius: .3em;
-    background: #facc15;
-    transform-origin: left;
-    animation: adBar 30s ease var(--off) infinite both;
+    font: 800 .75em 'Courier New', monospace;
+}
+.food-btn {
+    margin-left: auto;
+    padding: .45em .8em;
+    border-radius: 2em;
+    background: #5a1e00;
+    font: 700 .75em Arial, sans-serif;
+    white-space: nowrap;
 }
 
 @keyframes adShow {
     0%      { opacity: 0; visibility: visible; }
-    1%      { opacity: 1; }
-    49%     { opacity: 1; visibility: visible; }
-    50%, 100% { opacity: 0; visibility: hidden; }
+    .5%     { opacity: 1; }
+    24.5%   { opacity: 1; visibility: visible; }
+    25%, 100% { opacity: 0; visibility: hidden; }
 }
 
 @keyframes adS1 {
     0%      { opacity: 0; transform: translateX(-1.5em); }
-    2.5%    { opacity: 1; transform: none; }
-    15.5%   { opacity: 1; transform: none; }
-    16.67%, 100% { opacity: 0; transform: translateX(1.5em); }
+    1.25%   { opacity: 1; transform: none; }
+    7.75%   { opacity: 1; transform: none; }
+    8.33%, 100% { opacity: 0; transform: translateX(1.5em); }
 }
 
 @keyframes adS2 {
-    0%, 16.67% { opacity: 0; transform: translateY(.8em); }
-    18.5%   { opacity: 1; transform: none; }
-    32%     { opacity: 1; transform: none; }
-    33.33%, 100% { opacity: 0; transform: translateX(1.5em); }
+    0%, 8.33% { opacity: 0; transform: translateY(.8em); }
+    9.25%   { opacity: 1; transform: none; }
+    16%     { opacity: 1; transform: none; }
+    16.67%, 100% { opacity: 0; transform: translateX(1.5em); }
 }
 
 @keyframes adS3 {
-    0%, 33.33% { opacity: 0; transform: scale(.92); }
-    35%     { opacity: 1; transform: none; }
-    50%, 100% { opacity: 1; transform: none; }
+    0%, 16.67% { opacity: 0; transform: scale(.92); }
+    17.5%   { opacity: 1; transform: none; }
+    25%, 100% { opacity: 1; transform: none; }
 }
 
 @keyframes adPop {
     0%      { opacity: 0; transform: scale(.4); }
-    1.5%    { opacity: 1; transform: scale(1.12); }
-    2.5%, 100% { opacity: 1; transform: scale(1); }
+    .75%    { opacity: 1; transform: scale(1.12); }
+    1.25%, 100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes adBar {
-    0%, 17.5% { transform: scaleX(0); }
-    23%, 100% { transform: scaleX(1); }
+@keyframes adBlink {
+    50% { opacity: .15; }
+}
+
+@keyframes adShake {
+    25% { transform: translateX(-.15em) rotate(-2deg); }
+    75% { transform: translateX(.15em) rotate(2deg); }
+}
+
+@keyframes adBounce {
+    50% { transform: translateY(-.25em) scale(1.08); }
 }
 
 @keyframes adSpin {
@@ -5403,30 +5487,54 @@ body.has-layer .ac-kapa svg {
                 </div>
             </div>
 
-            <!-- 2. reklam: Maç Analizi -->
+            <!-- 2. reklam: Sepetçi (uydurma alışveriş uygulaması) -->
             <div class="ad ad-2">
+                <span class="ad-mark">Reklam</span>
                 <div class="ad-scene ad-s1">
-                    <div class="ad-big">Maç Analizi</div>
-                    <div class="ad-stars">
-                        <span class="ad-pop" style="--d:.6s">★</span><span class="ad-pop" style="--d:.9s">★</span><span class="ad-pop" style="--d:1.2s">★</span><span class="ad-pop" style="--d:1.5s">★</span><span class="ad-pop off" style="--d:1.8s">★</span>
-                    </div>
-                    <div class="ad-small">Günün en güvenli maçları</div>
+                    <div class="shop-big">SÜPER CUMA</div>
+                    <div class="shop-sub">Sepetçi'de dev indirim başladı!</div>
+                    <span class="shop-badge">%70</span>
                 </div>
                 <div class="ad-scene ad-s2">
-                    <div class="ad-mid">Kazanma ihtimali</div>
-                    <div class="ad-bars">
-                        <span>Ev</span><span class="ad-bar" style="width:57%"></span><span>%57</span>
-                        <span>Ber.</span><span class="ad-bar" style="width:22%"></span><span>%22</span>
-                        <span>Dep</span><span class="ad-bar" style="width:21%"></span><span>%21</span>
+                    <div class="shop-items">
+                        <span>🎧 Kulaklık <s>1.299</s><b>399 TL</b></span>
+                        <span>👟 Ayakkabı <s>2.450</s><b>899 TL</b></span>
+                        <span>⌚ Saat <s>3.100</s><b>999 TL</b></span>
                     </div>
                 </div>
                 <div class="ad-scene ad-s3">
-                    <div class="ad-row">
-                        <span class="ad-pop ad-chip" style="--d:10.3s">Korner</span>
-                        <span class="ad-pop ad-chip" style="--d:10.6s">Kart</span>
-                        <span class="ad-pop ad-chip" style="--d:10.9s">Ofsayt</span>
-                    </div>
-                    <div class="ad-btn">Analize git ›</div>
+                    <div class="shop-last">SON 3 SAAT!</div>
+                    <div class="shop-btn">ALIŞVERİŞE BAŞLA ›</div>
+                </div>
+            </div>
+
+            <!-- 3. reklam: Kale Savaşları (uydurma mobil oyun) -->
+            <div class="ad ad-3">
+                <span class="ad-mark">Reklam</span>
+                <div class="ad-scene ad-s1">
+                    <div class="game-big">⚔️ KALE SAVAŞLARI</div>
+                    <div class="game-sub">Ücretsiz strateji oyunu · ★ 4,8</div>
+                </div>
+                <div class="ad-scene ad-s2">
+                    <div class="game-dare">🏰 Oyuncuların sadece <b>%1</b>'i<br>5. bölümü geçebiliyor!</div>
+                </div>
+                <div class="ad-scene ad-s3">
+                    <div class="game-btn">HEMEN OYNA</div>
+                    <div class="game-sub">10 milyon+ indirme</div>
+                </div>
+            </div>
+
+            <!-- 4. reklam: DürümHane (uydurma yemek siparişi) -->
+            <div class="ad ad-4">
+                <span class="ad-mark">Reklam</span>
+                <div class="ad-scene ad-s1">
+                    <div class="food-row"><span class="food-emoji">🌯</span><div><div class="food-big">DürümHane</div><div class="food-sub">Sıcacık, 30 dakikada kapında</div></div></div>
+                </div>
+                <div class="ad-scene ad-s2">
+                    <div class="food-row"><span class="food-emoji">🌯🌯</span><div><div class="food-deal">2 AL 1 ÖDE</div><div class="food-sub">Her çarşamba, tüm dürümlerde</div></div></div>
+                </div>
+                <div class="ad-scene ad-s3">
+                    <div class="food-row"><div><div class="food-big">İlk siparişe 100 TL</div><span class="food-code">KOD: MERHABA</span></div><span class="food-btn">Sipariş ver ›</span></div>
                 </div>
             </div>
 
@@ -12828,9 +12936,15 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-/* Reklamı ana sayfanın üst resminin üzerine koy */
+/*
+ * Reklamı ana sayfanın üst resminin üzerine koy.
+ * Gerçek reklam gibi: site açılınca şerit siyahtır, reklam sayfa yüklendikten 1,5–3 saniye sonra gelir.
+ */
 document.getElementById('homeBanner').appendChild(
     document.getElementById('adTemplate').content.cloneNode(true));
+const adBox = document.querySelector('#homeBanner .ad-box');
+adBox.hidden = true;
+window.addEventListener('load', () => setTimeout(() => { adBox.hidden = false; }, 1500 + Math.random() * 1500));
 
 </script>
 </body>
