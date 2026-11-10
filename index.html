@@ -2507,7 +2507,7 @@ body.has-layer .ac-kapa svg {
     text-align: right;
 }
 
-/* Diziliş takım adının sağında */
+/* Diziliş takım adının yanında: ev sahibinde sağında, deplasmanda solunda */
 .pitch-team div {
     display: flex;
     align-items: baseline;
@@ -2515,6 +2515,10 @@ body.has-layer .ac-kapa svg {
     min-width: 0;
     max-width: 100%;
     line-height: 1.2;
+}
+
+.pitch-team.away div {
+    flex-direction: row-reverse;
 }
 
 /* Alt satırda teknik direktör */
@@ -2584,8 +2588,8 @@ body.has-layer .ac-kapa svg {
 .pp-shirt {
     position: relative;
     /* Dar ekranda saha küçüldükçe biraz küçülür */
-    width: min(1.6rem, 6.8vw);
-    height: min(1.45rem, 6.1vw);
+    width: min(1.5375rem, 6.5vw);
+    height: min(1.3875rem, 5.8vw);
     display: grid;
     place-items: center;
     padding-top: .15em;
@@ -2636,7 +2640,7 @@ body.has-layer .ac-kapa svg {
     color: #fff;
 }
 
-/* Yedekler: her takım ayrı kutu, kendi yarısının altında; başlık takım renginde, içinde forma ve ad */
+/* Yedekler: her takım ayrı kutu, kendi yarısının altında; başlık lacivert, içinde liste */
 .benches {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2664,6 +2668,7 @@ body.has-layer .ac-kapa svg {
     font-size: .8125rem;
     font-weight: 700;
     color: #fff;
+    background: #1d2340;
 }
 
 .bench-head span {
@@ -2692,9 +2697,13 @@ body.has-layer .ac-kapa svg {
     color: #1d2340;
 }
 
-#detailSheet .tab-page[data-page="lineup"] .bench .lineup-instead,
 #detailSheet .tab-page[data-page="lineup"] .bench .lineup-player small {
     color: #6b7280;
+}
+
+/* Yedeklerde "X yerine" satırı yok */
+.bench .lineup-instead {
+    display: none;
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
@@ -2702,7 +2711,7 @@ body.has-layer .ac-kapa svg {
     position: absolute;
     display: flex;
     align-items: center;
-    font-size: .3125rem;
+    font-size: .46875rem;
     line-height: 1;
 }
 
@@ -11761,7 +11770,9 @@ function playerEvents(match) {
 /* Kısa ad: "A. Antunes" → "Antunes" */
 function pitchName(name) {
     const m = /^\S{1,3}\.\s+(.+)$/.exec(name || '');
-    return m ? m[1] : name || '';
+    const short = Array.from(m ? m[1] : name || '');
+    /* En fazla 8 harf; uzunsa ilk 7 harf ve nokta */
+    return short.length > 8 ? short.slice(0, 7).join('') + '.' : short.join('');
 }
 
 /* Olay işaretleri (liste için tek satır) */
@@ -11909,13 +11920,10 @@ function renderPitch(match, box, events) {
     [match.home, match.away].forEach((team, side) => {
         const subs = (match.lineup[side] || [])[3] || [];
         if (!subs.length) return;
-        const color = colors[side].field;
         const bench = document.createElement('div');
         bench.className = 'bench' + (side ? ' away' : '');
         const head = document.createElement('div');
         head.className = 'bench-head';
-        /* Başlık takım renginde; açık renkli takımda lacivert */
-        head.style.background = isDark(color.bg) ? color.bg : '#1d2340';
         const code = document.createElement('span');
         code.textContent = team.short;
         head.appendChild(code);
