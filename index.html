@@ -4749,6 +4749,25 @@ body.has-layer .ac-kapa svg {
     color: white;
 }
 
+/* Reklam gelene kadar: boş reklam yeri (açık gri kutu, ortasında "Reklam") */
+.ad-box.ad-wait {
+    display: grid;
+    place-items: center;
+    background: #eceef1;
+    box-shadow: inset 0 0 0 1px #d3d7de;
+}
+
+.ad-box.ad-wait::before {
+    content: 'Reklam';
+    font: 600 .7em Arial, sans-serif;
+    letter-spacing: .08em;
+    color: #9aa0ab;
+}
+
+.ad-box.ad-wait .ad {
+    display: none;
+}
+
 .ad {
     --off: 0s;
     position: absolute;
@@ -12938,17 +12957,17 @@ if ('serviceWorker' in navigator) {
 
 /*
  * Reklamı ana sayfanın üst resminin üzerine koy.
- * Gerçek reklam gibi: site açılınca şerit siyahtır, reklam sayfa yüklendikten 0,5–2,5 saniye sonra gelir.
+ * Gerçek reklam gibi: site açılınca reklamın yeri boş gri kutudur, reklam sayfa yüklendikten 0,5–2,5 saniye sonra gelir.
  * Reklamların sırası her açılışta rastgeledir.
  */
 document.getElementById('homeBanner').appendChild(
     document.getElementById('adTemplate').content.cloneNode(true));
 const adBox = document.querySelector('#homeBanner .ad-box');
-adBox.hidden = true;
+adBox.classList.add('ad-wait');
 const adSlots = ['0s', '-45s', '-30s', '-15s'];
 adBox.querySelectorAll('.ad').forEach(ad =>
     ad.style.setProperty('--off', adSlots.splice(Math.floor(Math.random() * adSlots.length), 1)[0]));
-window.addEventListener('load', () => setTimeout(() => { adBox.hidden = false; }, 500 + Math.random() * 2000));
+window.addEventListener('load', () => setTimeout(() => adBox.classList.remove('ad-wait'), 500 + Math.random() * 2000));
 
 </script>
 </body>
