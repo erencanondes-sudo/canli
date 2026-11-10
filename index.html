@@ -12938,13 +12938,17 @@ if ('serviceWorker' in navigator) {
 
 /*
  * Reklamı ana sayfanın üst resminin üzerine koy.
- * Gerçek reklam gibi: site açılınca şerit siyahtır, reklam sayfa yüklendikten 1,5–3 saniye sonra gelir.
+ * Gerçek reklam gibi: site açılınca şerit siyahtır, reklam sayfa yüklendikten 0,5–2,5 saniye sonra gelir.
+ * Reklamların sırası her açılışta rastgeledir.
  */
 document.getElementById('homeBanner').appendChild(
     document.getElementById('adTemplate').content.cloneNode(true));
 const adBox = document.querySelector('#homeBanner .ad-box');
 adBox.hidden = true;
-window.addEventListener('load', () => setTimeout(() => { adBox.hidden = false; }, 1500 + Math.random() * 1500));
+const adSlots = ['0s', '-45s', '-30s', '-15s'];
+adBox.querySelectorAll('.ad').forEach(ad =>
+    ad.style.setProperty('--off', adSlots.splice(Math.floor(Math.random() * adSlots.length), 1)[0]));
+window.addEventListener('load', () => setTimeout(() => { adBox.hidden = false; }, 500 + Math.random() * 2000));
 
 </script>
 </body>
