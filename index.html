@@ -2498,27 +2498,34 @@ body.has-layer .ac-kapa svg {
 
 .pitch-team {
     display: flex;
-    align-items: center;
-    gap: .5em;
+    flex-direction: column;
     min-width: 0;
 }
 
 .pitch-team.away {
-    flex-direction: row-reverse;
+    align-items: flex-end;
     text-align: right;
 }
 
+/* Diziliş takım adının sağında */
 .pitch-team div {
     display: flex;
     align-items: baseline;
     gap: .4em;
     min-width: 0;
+    max-width: 100%;
     line-height: 1.2;
 }
 
-/* Diziliş takım adının yanında: ev sahibinde sağında, deplasmanda solunda */
-.pitch-team.away div {
-    flex-direction: row-reverse;
+/* Alt satırda teknik direktör */
+.pitch-team > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #98a4b8;
 }
 
 .pitch-team b {
@@ -2646,7 +2653,7 @@ body.has-layer .ac-kapa svg {
     min-width: 0;
     border-radius: .6em;
     overflow: hidden;
-    background: #fff;
+    background: #e9ecf1;
 }
 
 .bench-head {
@@ -2666,22 +2673,28 @@ body.has-layer .ac-kapa svg {
     font-weight: 800;
 }
 
-.bench-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(2.8rem, 1fr));
-    gap: .25em .1em;
-    padding: .4em .2em;
+.bench-list {
+    padding: 0 .5em;
+    font-size: .8125rem;
 }
 
-.bench .pp {
-    position: static;
-    width: auto;
-    min-width: 0;
-    transform: none;
+/* Yedek listesi açık kutuda: koyu yazı */
+#detailSheet .tab-page[data-page="lineup"] .bench .lineup-player {
+    border-bottom-color: #d8dce4;
+    color: #333;
 }
 
-.bench .pp-name {
-    background: #1d2340;
+#detailSheet .tab-page[data-page="lineup"] .bench .lineup-player:last-child {
+    border-bottom: 0;
+}
+
+#detailSheet .tab-page[data-page="lineup"] .bench .lineup-player b {
+    color: #1d2340;
+}
+
+#detailSheet .tab-page[data-page="lineup"] .bench .lineup-instead,
+#detailSheet .tab-page[data-page="lineup"] .bench .lineup-player small {
+    color: #6b7280;
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
@@ -2689,13 +2702,13 @@ body.has-layer .ac-kapa svg {
     position: absolute;
     display: flex;
     align-items: center;
-    font-size: .625rem;
+    font-size: .3125rem;
     line-height: 1;
 }
 
 .pp-goal { left: -.55em; top: -.45em; }
 .pp-card { right: -.35em; top: -.4em; }
-.pp-sub { right: -.45em; bottom: -.35em; padding: .12em; border-radius: 50%; background: #fff; font-size: .75rem; }
+.pp-sub { right: -.45em; bottom: -.35em; padding: .12em; border-radius: 50%; background: #fff; font-size: .375rem; }
 
 .sub-icon {
     width: 1em;
@@ -11836,6 +11849,12 @@ function pitchTeams(match) {
         text.appendChild(name);
         text.appendChild(form);
         head.appendChild(text);
+        const coach = (match.lineup[side] || [])[1];
+        if (coach) {
+            const c = document.createElement('span');
+            c.textContent = coach;
+            head.appendChild(c);
+        }
         row.appendChild(head);
     });
     return row;
@@ -11902,10 +11921,10 @@ function renderPitch(match, box, events) {
         head.appendChild(code);
         head.appendChild(document.createTextNode('Yedekler'));
         bench.appendChild(head);
-        const grid = document.createElement('div');
-        grid.className = 'bench-grid';
-        subs.forEach(([number, name]) => grid.appendChild(playerShirt(number, name, color, events[side].get(name), blackEdge[side])));
-        bench.appendChild(grid);
+        const list = document.createElement('div');
+        list.className = 'bench-list';
+        subs.forEach(p => list.appendChild(playerRow(p, events[side])));
+        bench.appendChild(list);
         benches.appendChild(bench);
     });
     if (benches.children.length) box.appendChild(benches);
