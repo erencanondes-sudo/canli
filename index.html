@@ -2930,46 +2930,80 @@ body.has-layer .ac-kapa svg {
     color: #9fb0cc;
 }
 
-#summaryBox:has(.event, .half-line) {
-    overflow: hidden;
-    border: 1px solid #1f3c6e;
-    background: #fafafb;
+/*
+ * Özet: sekmelerin altında ekranın sonuna kadar uzanan beyaz panel.
+ * Ortada ince zaman çizgisi; yarı başlıkları çizginin üstünde lacivert hap,
+ * dakika lacivert kutucuk, olaylar kendi takımının tarafında açık gri kartta.
+ */
+#detailSheet:not(.an-mode) .tab-page[data-page="summary"]:has(.sum-panel) {
+    padding-bottom: 0;
+}
+
+.sum-panel {
+    position: relative;
+    min-height: calc(100% - .6rem);
+    margin-top: .6rem;
+    padding: .75rem .5rem calc(6rem + env(safe-area-inset-bottom, 0px));
+    border-radius: .75rem .75rem 0 0;
+    background: white;
+}
+
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    background: #d5dbe6;
 }
 
 .event {
+    position: relative;
     display: grid;
-    grid-template-columns: 1fr 3.2em 1fr;
+    grid-template-columns: 1fr 2.6em 1fr;
     align-items: center;
-    column-gap: .6em;
-    padding: .5em .75em;
-    border-bottom: 1px solid #dde5f0;
-    font-size: .875rem;
+    column-gap: .3em;
+    margin-bottom: .5em;
+    font-size: .75rem;
 }
 
-/* Son satırın ve yarı şeridinin hemen üstündeki satırın alt çizgisi yok */
-.event:last-child,
-.event:has(+ .half-line) {
-    border-bottom: 0;
-}
-
-/* Ev sahibi tarafı ortadaki dakikaya yaslı */
+/* Ev sahibi kartı ortadaki dakikaya yaslı */
 .event .home {
+    display: flex;
+    justify-content: flex-end;
     text-align: right;
 }
 
+.event > div:last-child {
+    display: flex;
+}
+
 .event .minute {
-    padding: .15em 0;
-    border-radius: 999px;
-    background: #d6e2f3;
+    position: relative;
+    padding: .3em 0;
+    border-radius: .45em;
+    background: #1d2340;
     text-align: center;
+    font-size: .6875rem;
     font-weight: 800;
-    color: #1d2340;
+    color: white;
 }
 
 .event-label {
     display: inline-flex;
     align-items: center;
     gap: .4em;
+    padding: .45em .65em;
+    border: 1px solid #e3e7ee;
+    border-radius: .6rem;
+    background: #f2f4f8;
+    line-height: 1.25;
     font-weight: 600;
     color: #1d2340;
 }
@@ -3001,13 +3035,13 @@ body.has-layer .ac-kapa svg {
 }
 
 .event-out {
-    color: #9aa0ab;
+    color: #8a93a6;
 }
 
 /*
  * Oyuncu değişikliği: üstte giren oyuncu (yeşil ok), altında çıkan oyuncu (kırmızı ok).
  * İki ok alt alta aynı hizada, adlar oklara yaslı; blok uzun ada göre genişler.
- * Ev sahibinde ok adın solunda (blok dakikaya yaslı), deplasmanda sağında.
+ * Oklar ortadaki çizgiye bakar: ev sahibinde adın sağında, deplasmanda solunda.
  */
 .event-label.event-sub {
     flex-direction: column;
@@ -3021,7 +3055,7 @@ body.has-layer .ac-kapa svg {
     gap: .35em;
 }
 
-.event > div:last-child .sub-line {
+.event .home .sub-line {
     flex-direction: row-reverse;
 }
 
@@ -3033,19 +3067,133 @@ body.has-layer .ac-kapa svg {
     background: #d93025;
 }
 
-/* İLK YARI / İKİNCİ YARI / MAÇ SONU: lacivert şerit */
+/* İLK YARI / İKİNCİ YARI / MAÇ SONU: çizginin üstünde lacivert hap */
 .half-line {
-    padding: .45em;
-    background: linear-gradient(180deg, #24447a, #1a3462);
-    text-align: center;
-    font-size: .875rem;
+    position: relative;
+    display: table;
+    margin: .2em auto .7em;
+    padding: .3em .9em;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #26305a, #1d2340);
+    font-size: .6875rem;
     font-weight: 800;
-    letter-spacing: .02em;
+    letter-spacing: .03em;
     color: white;
 }
 
-.event + .half-line {
-    margin-top: .35em;
+/* Maç başladı, henüz olay yok: İLK YARI'nın altında açık gri hap (ilk olay gelince kalkar) */
+.half-line.kickoff {
+    border: 1px solid #e3e7ee;
+    background: #f2f4f8;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #1d2340;
+}
+
+/* Canlı maçta olayların altında */
+.sum-note {
+    margin: .9em 0 0;
+    text-align: center;
+    font-size: .75rem;
+    color: #9aa1b0;
+}
+
+/* Maç başlamadı: panelin ortasında geri sayım, başlık, açıklama, haber ver düğmesi */
+.sum-panel.sum-wait {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding-top: 1.5rem;
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+    color: #1d2340;
+}
+
+.cd-label {
+    font-size: .6875rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #6b7386;
+}
+
+.cd {
+    display: flex;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+
+.cd div {
+    width: 4.1rem;
+    padding: .55rem 0;
+    border-radius: .75rem;
+    background: linear-gradient(180deg, #26305a, #1d2340);
+    box-shadow: 0 .25rem .75rem rgba(29, 35, 64, .25);
+    color: white;
+}
+
+.cd b {
+    display: block;
+    font-size: 1.5625rem;
+    font-weight: 850;
+}
+
+.cd small {
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    color: #aab4d6;
+}
+
+.sum-wait h3 {
+    margin: 1.4rem 0 0;
+    font-size: 1.1875rem;
+    font-weight: 800;
+}
+
+.sum-wait hr {
+    width: 60%;
+    height: 2px;
+    margin: .5rem auto .75rem;
+    border: 0;
+    background: linear-gradient(90deg, transparent, #2f6cf0, transparent);
+}
+
+.sum-wait p {
+    max-width: 20em;
+    margin: 0;
+    font-size: .8125rem;
+    line-height: 1.5;
+    color: #6b7386;
+}
+
+.wait-bell {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: 1.1rem;
+    padding: .65rem 1.1rem;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #2f6cf0, #1a49b8);
+    box-shadow: 0 .25rem .9rem rgba(47, 108, 240, .35);
+    font: inherit;
+    font-size: .84375rem;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+}
+
+.wait-bell svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Kayıtlıyken (zil açık) yeşil */
+.wait-bell.on {
+    background: linear-gradient(180deg, #2fb45a, #1f8a43);
+    box-shadow: 0 .25rem .9rem rgba(47, 180, 90, .35);
 }
 
 /*
@@ -11453,7 +11601,6 @@ function sbTeam(el, team) {
 const HERO_ICONS = {
     list: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/>' +
         '<path d="M11 10h5M11 14h5M11 18h5"/><circle cx="8.3" cy="10" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="14" r=".5" fill="#e8f1ff"/><circle cx="8.3" cy="18" r=".5" fill="#e8f1ff"/>',
-    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
     stats: '<path d="M4 20h16"/><rect x="5.5" y="12" width="3" height="8" rx=".5"/><rect x="10.5" y="7" width="3" height="13" rx=".5"/><rect x="15.5" y="10" width="3" height="10" rx=".5"/>',
     lineup: '<path d="M9 3.5 4 6l-1.5 4.5 3 1V20.5h13V11.5l3-1L20 6l-5-2.5a3 3 0 0 1-6 0z"/>'
 };
@@ -11467,15 +11614,54 @@ function emptyHero(icon, title, text) {
     return el;
 }
 
+/* Maç başlamadı ekranındaki geri sayım (her yeniden çizimde eskisi durur) */
+let countdownTimer = null;
+
+function renderWait(box, match) {
+
+    box.className = 'sum-panel sum-wait';
+    box.innerHTML = '<div class="cd-label">MAÇIN BAŞLAMASINA</div>' +
+        '<div class="cd"><div><b></b><small>GÜN</small></div><div><b></b><small>SAAT</small></div><div><b></b><small>DAKİKA</small></div></div>' +
+        '<h3>Maç henüz başlamadı.</h3><hr><p></p>';
+    box.querySelector('p').textContent =
+        'Başlama saati ' + formatDate(match.date) + ' ' + formatTime(match.date) + '. Gol, kart ve değişiklikler maç başlayınca burada görünecek.';
+
+    const digits = box.querySelectorAll('.cd b');
+    const tick = () => {
+        const left = Math.max(0, Math.floor((match.date - Date.now()) / 60000));
+        [Math.floor(left / 1440), Math.floor(left / 60) % 24, left % 60]
+            .forEach((value, i) => digits[i].textContent = String(value).padStart(2, '0'));
+    };
+    tick();
+    countdownTimer = setInterval(() => box.contains(digits[0]) ? tick() : clearInterval(countdownTimer), 30000);
+
+    /* Maçın zili: kaydeder / kayıttan çıkarır */
+    const bell = document.createElement('button');
+    bell.className = 'wait-bell';
+    const paint = () => {
+        const on = isSaved(match.id);
+        bell.classList.toggle('on', on);
+        bell.innerHTML = ICONS.bell + '<span></span>';
+        bell.querySelector('span').textContent = on ? 'Maç başlayınca haber verilecek' : 'Maç başlayınca haber ver';
+    };
+    paint();
+    bell.addEventListener('click', () => {
+        toggleSaved(match.id);
+        paint();
+    });
+    box.appendChild(bell);
+}
+
 function renderSummary(match) {
 
     const box = document.getElementById('summaryBox');
     box.textContent = '';
+    box.className = '';
+    clearInterval(countdownTimer);
 
     if (!match.events) {
         if (match.status === 'upcoming')
-            box.appendChild(emptyHero('clock', 'Maç henüz başlamadı.',
-                'Başlama saati ' + formatDate(match.date) + ' ' + formatTime(match.date) + '. Gol, kart ve değişiklikler maç başlayınca burada görünecek.'));
+            renderWait(box, match);
         else if (detailId === match.id && !matchDetails.has(match.id)) {
             const p = document.createElement('p');
             p.className = 'tab-empty';
@@ -11498,15 +11684,29 @@ function renderSummary(match) {
         out: sub.out
     }))).sort((a, b) => (a.minute || 0) - (b.minute || 0) || (a.extra || 0) - (b.extra || 0));
 
-    if (events.some(e => e.minute <= 45)) {
+    /* Olay varsa ya da maç canlıysa beyaz panel ve zaman çizgisi; yoksa eski boş ekran */
+    const list = document.createElement('div');
+    if (events.length || match.status === 'live') {
+        box.className = 'sum-panel';
+        list.className = 'timeline';
+        box.appendChild(list);
+    } else
+        box.appendChild(emptyHero('list', 'Henüz önemli bir olay yok.', 'Maça ait kart, gol, değişiklik veya kritik bir gelişme bulunmuyor.'));
+
+    if (events.some(e => e.minute <= 45) || (!events.length && match.status === 'live')) {
         const first = document.createElement('div');
         first.className = 'half-line';
         first.textContent = 'İLK YARI';
-        box.appendChild(first);
+        list.appendChild(first);
     }
 
-    if (!events.length)
-        box.appendChild(emptyHero('list', 'Henüz önemli bir olay yok.', 'Maça ait kart, gol, değişiklik veya kritik bir gelişme bulunmuyor.'));
+    /* Maç başladı ama henüz olay yok */
+    if (!events.length && match.status === 'live') {
+        const kick = document.createElement('div');
+        kick.className = 'half-line kickoff';
+        kick.textContent = 'Maç başladı';
+        list.appendChild(kick);
+    }
 
     events.forEach(event => {
 
@@ -11515,7 +11715,7 @@ function renderSummary(match) {
             const line = document.createElement('div');
             line.className = 'half-line';
             line.textContent = 'İKİNCİ YARI';
-            box.appendChild(line);
+            list.appendChild(line);
         }
 
         const row = document.createElement('div');
@@ -11570,14 +11770,21 @@ function renderSummary(match) {
         row.appendChild(home);
         row.appendChild(minute);
         row.appendChild(away);
-        box.appendChild(row);
+        list.appendChild(row);
     });
+
+    if (events.length && match.status === 'live') {
+        const note = document.createElement('p');
+        note.className = 'sum-note';
+        note.textContent = 'Yeni olaylar geldikçe burada görünecek.';
+        box.appendChild(note);
+    }
 
     if (match.status === 'done' && match.score) {
         const end = document.createElement('div');
         end.className = 'half-line';
         end.textContent = 'MAÇ SONU · ' + match.score[0] + ' - ' + match.score[1];
-        box.appendChild(end);
+        (list.parentNode ? list : box).appendChild(end);
     }
 }
 
@@ -12381,6 +12588,8 @@ function emptyDetail() {
     ['sbLeague', 'sbHome', 'sbAway', 'sbScoreText', 'sbStatus', 'summaryBox', 'statsBox', 'lineupBox', 'oddsBox']
         .forEach(id => { document.getElementById(id).textContent = ''; });
     document.getElementById('sbStatus').className = '';
+    document.getElementById('summaryBox').className = '';
+    clearInterval(countdownTimer);
 
     const today = days.get(TODAY);
     const p = document.createElement('p');
