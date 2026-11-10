@@ -2584,10 +2584,10 @@ body.has-layer .ac-kapa svg {
     padding-top: .15em;
     font-size: min(.65rem, 2.8vw);
     font-weight: 800;
-    /* İnce çerçeve (koyu formada beyaz, açık formada siyah) ve gölge */
+    /* İnce çerçeve (beyaz; .light ile siyah) ve gölge */
     --edge: #fff;
-    filter: drop-shadow(.0625rem 0 0 var(--edge)) drop-shadow(-.0625rem 0 0 var(--edge))
-        drop-shadow(0 .0625rem 0 var(--edge)) drop-shadow(0 -.0625rem 0 var(--edge))
+    filter: drop-shadow(.03rem 0 0 var(--edge)) drop-shadow(-.03rem 0 0 var(--edge))
+        drop-shadow(0 .03rem 0 var(--edge)) drop-shadow(0 -.03rem 0 var(--edge))
         drop-shadow(0 .1rem .15rem rgba(0, 0, 0, .45));
 }
 
@@ -2629,9 +2629,21 @@ body.has-layer .ac-kapa svg {
     color: #fff;
 }
 
-/* Yedekler: her takım ayrı kutu; başlık takım renginde, içinde forma ve ad */
-.bench {
+/* Yedekler: her takım ayrı kutu, kendi yarısının altında; başlık takım renginde, içinde forma ve ad */
+.benches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .4em;
+    align-items: start;
     margin-top: .7em;
+}
+
+.bench.away {
+    grid-column: 2;
+}
+
+.bench {
+    min-width: 0;
     border-radius: .6em;
     overflow: hidden;
     background: #fff;
@@ -2656,9 +2668,9 @@ body.has-layer .ac-kapa svg {
 
 .bench-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(3.5rem, 1fr));
-    gap: .5em .15em;
-    padding: .6em .3em;
+    grid-template-columns: repeat(auto-fill, minmax(2.8rem, 1fr));
+    gap: .25em .1em;
+    padding: .4em .2em;
 }
 
 .bench .pp {
@@ -2668,15 +2680,8 @@ body.has-layer .ac-kapa svg {
     transform: none;
 }
 
-.bench .pp-shirt {
-    width: min(1.9rem, 8vw);
-    height: min(1.7rem, 7.2vw);
-    font-size: min(.75rem, 3.3vw);
-}
-
 .bench .pp-name {
     background: #1d2340;
-    font-size: min(.62rem, 2.8vw);
 }
 
 /* Oyuncunun olay işaretleri: gol solda üstte, kart sağda üstte, değişiklik sağda altta */
@@ -11839,6 +11844,9 @@ function pitchTeams(match) {
 function renderPitch(match, box, events) {
 
     const colors = shirtColors(match);
+    /* Forma çerçevesi: ev sahibi koyu formalıysa beyaz, açıksa siyah; deplasman tersi */
+    const homeBlack = !isDark(colors[0].field.bg);
+    const blackEdge = [homeBlack, !homeBlack];
 
     box.appendChild(pitchTeams(match));
 
@@ -11867,7 +11875,7 @@ function renderPitch(match, box, events) {
             const across = c / (n + 1) * 100;
 
             const color = r === 1 ? colors[side].keeper : colors[side].field;
-            const el = playerShirt(number, name, color, events[side].get(name));
+            const el = playerShirt(number, name, color, events[side].get(name), blackEdge[side]);
             el.style.left = (side === 0 ? depth : 100 - depth) + '%';
             el.style.top = (side === 0 ? 100 - across : across) + '%';
             pitch.appendChild(el);
@@ -11876,13 +11884,15 @@ function renderPitch(match, box, events) {
 
     box.appendChild(pitch);
 
-    /* Sahanın altında her takımın yedekleri ayrı kutuda */
+    /* Sahanın altında her takımın yedekleri ayrı kutuda, kendi yarısının altında */
+    const benches = document.createElement('div');
+    benches.className = 'benches';
     [match.home, match.away].forEach((team, side) => {
         const subs = (match.lineup[side] || [])[3] || [];
         if (!subs.length) return;
         const color = colors[side].field;
         const bench = document.createElement('div');
-        bench.className = 'bench';
+        bench.className = 'bench' + (side ? ' away' : '');
         const head = document.createElement('div');
         head.className = 'bench-head';
         /* Başlık takım renginde; açık renkli takımda lacivert */
@@ -11894,20 +11904,21 @@ function renderPitch(match, box, events) {
         bench.appendChild(head);
         const grid = document.createElement('div');
         grid.className = 'bench-grid';
-        subs.forEach(([number, name]) => grid.appendChild(playerShirt(number, name, color, events[side].get(name))));
+        subs.forEach(([number, name]) => grid.appendChild(playerShirt(number, name, color, events[side].get(name), blackEdge[side])));
         bench.appendChild(grid);
-        box.appendChild(bench);
+        benches.appendChild(bench);
     });
+    if (benches.children.length) box.appendChild(benches);
 }
 
-/* Forma (numara, olay işaretleri) ve altında ad */
-function playerShirt(number, name, color, ev) {
+/* Forma (numara, olay işaretleri) ve altında ad; blackEdge: çerçeve siyah (yoksa beyaz) */
+function playerShirt(number, name, color, ev, blackEdge) {
 
     const el = document.createElement('div');
     el.className = 'pp';
 
     const shirt = document.createElement('div');
-    shirt.className = 'pp-shirt' + (isDark(color.bg) ? '' : ' light');
+    shirt.className = 'pp-shirt' + (blackEdge ? ' light' : '');
     shirt.style.setProperty('--shirt', color.bg);
     shirt.style.color = color.fg;
     shirt.textContent = number === null ? '' : number;
