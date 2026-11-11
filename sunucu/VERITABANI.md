@@ -80,13 +80,13 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanmış maçların içeriği R2'ye kaydedilir (`sunucu/sezon.js`). Satır biçimi: `203 2026-2027 Süper Lig` (lig no, sezon, açıklama; tek yıllık sezon `2026`). Sunucu dosyayı yalnızca açılırken okur: satır ekleyince `cd /opt/canli && sudo git pull && sudo systemctl restart canli`. Satır silinince kaydedilmiş dosyalar silinmez.
 
 - Sunucu her turda en fazla `SEZON_TUR_ISTEK` (ayarlar.js) API isteğiyle çalışır; API hakkı azalınca durur. Önce sezonun maç listesi (1 istek), sonra oynanmış maçların içeriği 20'şerli gruplar halinde (`mac/{no}.json`, canlı maçlarla aynı biçim).
-- Bitmiş sezon bir kez doldurulur (`tamam`), bir daha dokunulmaz. Devam eden sezonun listesi günde bir yenilenir, yeni biten maçların içeriği çekilir; canlı takip edilen maç bitince satırı sezon dosyasında hemen güncellenir.
+- Sezonlar dosyadaki sırayla işlenir; yeni satırlar sona eklenir. Bitmiş sezon (ve bitiş yılı geçmişte kalan sezon, ör. 2000-2001) bir kez doldurulur (`tamam`), bir daha dokunulmaz. Devam eden sezonun listesi günde bir yenilenir, yeni biten maçların içeriği çekilir; canlı takip edilen maç bitince satırı sezon dosyasında hemen güncellenir.
 - Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil) takım adları dosyasına eklenir.
 - `sezon/durum.json` (tarayıcıda `https://canli-ejw.pages.dev/veri/sezon/durum.json`): her sezon için `durum` (`bekliyor`, `dolduruluyor`, `devam ediyor`, `tamam`), `mac` (sezondaki maç), `biten`, `icerik_yazilan`, `icerigi_eksik` (API'nin istatistik, kadro ve olay vermediği maç), `son_liste`, `hata`.
 - `sezon/ic/{lig}-{yıl}.json`: içeriği yazılmış maçların numaraları (sunucu yeniden açılınca kaldığı yerden sürsün diye; okuyucudan okunmaz).
 - `sezon/takimlar.json`: her takımın bulunduğu sezon dosyaları (sezon listesi her çekildiğinde eklenir; silinmez).
-- Takım sayfası (maç sayfasındaki takım adına basınca): takımın kaydedilmiş bütün turnuvaları (her birinin en son sezonu), lig adı başlığıyla; sıra: önce lig, sonra Avrupa kupaları (2, 3, 848), sonra kupalar (adında Kupa / Cup / Pokal / Shield geçen). Alt başlıkta sezon.
-- Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): aynı dosyadan hafta hafta (oklar ve açılır liste); açılışta bugüne en yakın maçın haftası.
+- Takım ve lig sayfasında üstte sezon menüsü (kaydedilmiş sezonlar, en yenisi seçili). Takım sayfası (maç sayfasındaki takım adına basınca): seçilen sezonda takımın kaydedilmiş bütün turnuvaları, lig adı başlığıyla; sıra: önce lig, sonra Avrupa kupaları (2, 3, 848), sonra kupalar (adında Kupa / Cup / Pokal / Shield geçen).
+- Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): seçilen sezonun dosyasından hafta hafta (oklar ve açılır liste); açılışta bugüne en yakın maçın haftası.
 - Takım ve lig sayfası, maça basınca açılan maç sayfası üst üste yeni sayfa olarak açılır; mavi top ve geri tuşu yalnızca en üsttekini kapatır. Maç içeriği maç odasından / R2 maç dosyasından gelir.
 
 ## Odalar

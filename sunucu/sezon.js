@@ -10,7 +10,8 @@
  *   R2 sezon/ic/{lig}-{yıl}.json : içeriği yazılmış maçların numaraları (sunucu yeniden açılınca kaldığı yerden sürsün diye)
  *
  * Her turda en fazla SEZON_TUR_ISTEK istek (API hakkı azaldıysa hiç): önce sezonun maç listesi (1 istek), sonra
- * oynanmış maçların içeriği 20'şerli gruplar halinde. Bitmiş sezon bir kez doldurulur ("tamam").
+ * oynanmış maçların içeriği 20'şerli gruplar halinde. Bitmiş sezon (ya da bitiş yılı geçmişte kalan) bir kez doldurulur ("tamam").
+ * Sezonlar dosyadaki sırayla işlenir: yeni satırlar sona eklenirse güncel sezonların günlük işi beklemez.
  * Devam eden sezonun listesi günde bir yenilenir; yeni biten maçların içeriği de çekilir. Maç bitince (index.js)
  * satırı sezon dosyasında hemen güncellenir.
  */
@@ -142,7 +143,9 @@ async function sezonAdim(s) {
         return true;
     }
 
-    const yeni = s.devam ? 'devam ediyor' : 'tamam';
+    /* Bitiş yılı geçmişte kalan sezon (2000-2001, 2025...) API ne derse desin bitmiştir: bir daha güncellenmez */
+    const eski = Number(s.sezon.slice(-4)) < new Date().getFullYear();
+    const yeni = s.devam && !eski ? 'devam ediyor' : 'tamam';
     if (d.durum !== yeni) {
         d.durum = yeni;
         console.log('Sezon ' + anahtar + ': ' + yeni + ' (' + d.icerik_yazilan + ' maçın içeriği)');
