@@ -1895,11 +1895,6 @@ body[data-tab="empty"] #emptyLayer {
     transition: transform .32s ease, visibility 0s;
 }
 
-/* Maç sayfası açıkken sarı topla açılan Kuponlarım, maç sayfasının üstüne gelir */
-#emptyLayer.raised {
-    z-index: 32;
-}
-
 /* -----------------------------
    ALT DÜĞME (mavi top)
 ----------------------------- */
@@ -1914,7 +1909,7 @@ body[data-tab="empty"] #emptyLayer {
     /* Maç sayfası ve açılan her şeyin üstünde görünür */
     z-index: 33;
 
-    /* Ana sayfada gizli; sarı top gibi büyüyerek belirir */
+    /* Ana sayfada gizli; büyüyerek belirir */
     opacity: 0;
     visibility: hidden;
     transform: translateX(-50%) scale(.6);
@@ -1974,56 +1969,6 @@ body:has(#oddsSheet.open) .alt-menu {
 body[data-tab="empty"] .ac-kapa svg,
 body.has-layer .ac-kapa svg {
     transform: rotate(180deg);
-}
-
-/*
- * KAYITLI ORANLAR TOPU (koyu sarı)
- * Sonuçlanmamış kayıtlı oran varsa mavi topun hizasında, sağda görünür; kaç oran olduğu yazar.
- * Basınca Kayıtlı Oranlarım açılır; top yerinde kalır.
- */
-#couponBall {
-    position: fixed;
-    right: var(--side-gap);
-    bottom: calc(.875rem + env(safe-area-inset-bottom, 0px));
-
-    /* Maç sayfasının da üstünde durur (oranlar orada da seçilebilir) */
-    z-index: 32;
-    width: 4.5rem;
-    height: 4.5rem;
-    padding: 0;
-    border: .3125rem solid #fff;
-    border-radius: 50%;
-    background: linear-gradient(180deg, #f7c428 0%, #e8aa10 100%);
-
-    /* Renksiz hafif gölge: beyaz çember beyaz kartların üstünde de görünsün */
-    box-shadow: 0 .375rem 1.125rem rgba(0, 0, 0, .18);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.1;
-
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(.6);
-    transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s;
-}
-
-#couponBall.show {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
-    transition: opacity .2s ease, transform .2s ease, visibility 0s;
-}
-
-#couponBall:active {
-    transform: scale(.94);
-}
-
-#couponBall .cb-count {
-    font-size: .8125rem;
-    font-weight: 800;
 }
 
 /* Kaydedilen oran: koyu sarı */
@@ -5448,11 +5393,6 @@ body.has-layer .ac-kapa svg {
     </div>
 </div>
 
-<!-- KAYITLI ORANLAR TOPU (sonuçlanmamış kayıtlı oran varsa görünür) -->
-<button id="couponBall" type="button" aria-label="Kayıtlı oranları aç">
-    <span class="cb-count"></span>
-</button>
-
 <!-- MAÇIN ORANLARI SAYFASI (Oranlar menüsünden) -->
 <div id="oddsSheet">
 <div class="os-inner">
@@ -6415,7 +6355,6 @@ function refreshViews() {
         renderSaved();
         renderOdds();
         renderSavedOdds();
-        renderSavedOddsBall();
         refreshDetail();
         refreshOddsPage();
     });
@@ -8452,7 +8391,6 @@ function savedOddsChanged() {
         box.classList.toggle('picked', isSavedOdd(box.dataset.match, box.dataset.key));
     });
 
-    renderSavedOddsBall();
     renderSavedOdds();
 }
 
@@ -8527,22 +8465,6 @@ function settleSavedOdds() {
     });
     if (changed)
         writeJSON(SAVED_ODDS_KEY, savedOdds);
-}
-
-/* Sonuçlanmamış (maçı bitmemiş) kayıtlar: topta sayısı yazar */
-function openSavedOdds() {
-    return savedOdds.filter(p => p.r === undefined && p.t + 3 * 3600000 > Date.now());
-}
-
-function renderSavedOddsBall() {
-
-    const ball = document.getElementById('couponBall');
-    const open = openSavedOdds();
-
-    ball.classList.toggle('show', open.length > 0);
-
-    if (open.length)
-        ball.querySelector('.cb-count').textContent = open.length + ' oran';
 }
 
 /* Kayıttaki maç: listede varsa güncel hali, yoksa kayıttaki bilgilerle */
@@ -9282,17 +9204,6 @@ function closeTopPage() {
     const name = 'page' + pageStack.length;
     popPage();
     layerClosed(name);
-}
-
-/* Bütün sayfalar hemen kapanır (maç sayfası kapanırken); geçmişten silinecek katman adları döner */
-function closePages() {
-    flushPage();
-    const names = pageStack.map((entry, i) => 'page' + (i + 1));
-    pageStack.length = 0;
-    pageBase = null;
-    teamBox.classList.remove('open', 'page-top');
-    detailSheet.classList.remove('page-top');
-    return names;
 }
 
 /* Maç sayfasındaki takım adları ve lig satırı (analiz görünümünde değil) */
@@ -10957,7 +10868,6 @@ renderLive();
 renderSaved();
 renderOdds();
 renderSavedOdds();
-renderSavedOddsBall();
 startData();
 
 
@@ -11732,24 +11642,23 @@ function layerOpened(name, url) {
     syncBall();
 }
 
-/* more: onunla birlikte kapanan katmanlar (maç sayfasının üstündeki sayfalar) */
-function layerClosed(name, more = []) {
+function layerClosed(name) {
 
     if (waitingLayers.some(item => item.name === name)) {
         waitingLayers = waitingLayers.filter(item => item.name !== name);
         return;
     }
 
-    const names = [name].concat(more).filter(item => openLayers.includes(item));
+    const index = openLayers.indexOf(name);
 
-    if (!names.length)
+    if (index < 0)
         return;
 
-    names.forEach(item => openLayers.splice(openLayers.indexOf(item), 1));
+    openLayers.splice(index, 1);
     syncBall();
 
     ignoredPops++;
-    history.go(-names.length);
+    history.back();
 }
 
 /*
@@ -11799,16 +11708,8 @@ window.addEventListener('popstate', event => {
 const acKapa = document.getElementById('acKapa');
 
 const emptyLayer = document.getElementById('emptyLayer');
-let settleTimer = null;
 
 function setTab(name) {
-
-    clearTimeout(settleTimer);
-
-    settleTimer = setTimeout(() => {
-        if (name !== 'empty')
-            emptyLayer.classList.remove('raised');
-    }, 340);
 
     document.body.dataset.tab = name;
     acKapa.setAttribute('aria-label', name === 'empty' ? 'Ana sayfaya dön' : 'Sayfayı aç');
@@ -11865,8 +11766,7 @@ acKapa.addEventListener('click', () => {
         else if (calendarPop.classList.contains('open')) closeCalendar();
         else if (openLeagueMenu) closeLeagueMenu();
         else if (homeMenu.classList.contains('open')) closeHomeMenu();
-        else if (document.body.dataset.tab === 'empty' &&
-                 (emptyLayer.classList.contains('raised') || !detailSheet.classList.contains('open')))
+        else if (document.body.dataset.tab === 'empty' && !detailSheet.classList.contains('open'))
             showTab('home');
         else if (pageStack.length) closeTopPage();
         else if (oddsSheet.classList.contains('open')) closeOddsPage();
@@ -11876,41 +11776,13 @@ acKapa.addEventListener('click', () => {
     syncBall();
 });
 
-/* Sarı top: Kuponlarım açılır */
-/* Pencere kapalıyken sekme kaymadan, doğrudan seçilir */
+/* Kayıtlı Oranlarım: pencere kapalıyken sekme kaymadan, doğrudan seçilir */
 function setMyPageInstant(name) {
     myMain.classList.add('swiping');
     setMyPage(name);
     myTrack.getBoundingClientRect();
     myMain.classList.remove('swiping');
 }
-
-/* Sarı top Kayıtlı Oranlarım'ı açar / kapatır; mavi top her zamanki gibi çalışır. */
-
-document.getElementById('couponBall').addEventListener('click', () => {
-
-    /* Maç sayfası ya da oran sayfası açıkken Kayıtlı Oranlarım onların üstüne gelir */
-    const detailOpen = detailSheet.classList.contains('open') || oddsSheet.classList.contains('open');
-    const layerOpen = document.body.dataset.tab === 'empty';
-
-    /* Kayıtlı Maçlarım'dan açılan maç sayfasındayken: maç sayfası kapanır,
-       alttaki pencere Kuponlarım'a geçer */
-    if (layerOpen && detailOpen && !emptyLayer.classList.contains('raised')) {
-        setMyPageInstant('coupons');
-        closeDetail();
-        return;
-    }
-
-    /* Açıkken tekrar basınca mavi top gibi kapanır, kalınan yere dönülür */
-    if (layerOpen) {
-        showTab('home');
-        return;
-    }
-
-    emptyLayer.classList.toggle('raised', detailOpen);
-    setMyPageInstant('coupons');
-    showTab('empty');
-});
 
 
 /* =================================================
@@ -13260,9 +13132,8 @@ function hideDetail() {
 }
 
 function closeDetail() {
-    const pages = closePages();
     hideDetail();
-    layerClosed('detail', pages);
+    layerClosed('detail');
 }
 
 
