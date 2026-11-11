@@ -120,7 +120,7 @@ module.exports = {
     BUGUN_KAYMA: 4,                 /* "bugün" = şu an − 4 saat (gün 04:00'te değişir, sitede de aynı) */
     SABAH: [4, 7],                  /* 04:00–06:59 başlayan maç kendi takvim gününün listesine de yazılır */
     TUR_ARALIK: 20000,              /* canlı saatlerde: canlı skor ve yazma 20 sn */
-    SEZON_TUR_ISTEK: 2,             /* sezon işi (sezon.js) bir turda en fazla bu kadar API isteği yapar */
+    SEZON_TUR_ISTEK: 10,            /* sezon işi (sezon.js) bir turda en fazla bu kadar API isteği yapar */
     ODA_GUN_SAKLA: 4,               /* gün odaları dünden eskiyse boşaltılır; geriye bu kadar güne bakılır (R2'de kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 2 * 60000,        /* canlı maç detayı: 2 dk */
