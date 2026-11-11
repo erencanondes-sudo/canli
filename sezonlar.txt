@@ -1,0 +1,8 @@
+# SEZONLAR: maçları ve maç içerikleri R2'ye kaydedilecek lig sezonları (sunucu/sezon.js, sunucu/VERITABANI.md → "Sezonlar").
+# Her satır: lig no, sezon, açıklama. İki yıllık sezon "2026-2027", tek yıllık (Brezilya, MLS...) "2026".
+# Lig numaraları: sunucu/ayarlar.js → LIGLER.
+# Satır ekleyince sunucuda:  cd /opt/canli && sudo git pull && sudo systemctl restart canli
+# İlerleme: https://canli-ejw.pages.dev/veri/sezon/durum.json
+# Satır silinince kaydedilmiş dosyalar silinmez.
+
+203 2026-2027 Süper Lig

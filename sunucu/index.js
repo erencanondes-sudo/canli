@@ -8,6 +8,7 @@
  *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
  *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
+ *   6. Sırası gelen sezon işi (sezon.js: sezonlar.txt'deki liglerin sezon maçları ve içerikleri R2'ye, turda birkaç istek)
  * Yönetim sayfasından (Firestore): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; istek/{...} maçı yeniden çektirir
  *   ya da hızlı kaydı sildirir; analiz_dizin/futbol'daki surum gün odasına aktarılır.
  * Hızlı kaynak (bilgisayardaki program) gün odasına kendisi yazar; sunucu dün ve bugünün odasını dinleyerek öğrenir.
@@ -19,6 +20,7 @@ const B = require('./bicim');
 const db = require('./veritabani');
 const depo = require('./depo');
 const oda = require('./oda');
+const sezon = require('./sezon');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
 
@@ -278,6 +280,7 @@ async function detayCek(nolar) {
             }
             if (OYNANMAYACAK.has(d)) k.sonHal = true;
             if (f.lineups && f.lineups.length) k.kadro = true;
+            sezon.macDegisti(f);
 
             /* Maç içeriği maç odasına; maç bitince olaylarla birlikte tam (istatistik vermeyen liglerde de).
                Maç kesinleşince (bitişten 2 saat sonraki son çekiş) içerik R2'ye mac/{no}.json yazılır, oda boşaltılır.
@@ -289,6 +292,7 @@ async function detayCek(nolar) {
                     if (bitti && k.duzeltildi) {
                         await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...icerik, g: Date.now() }));
                         oda.sil('mac/' + f.fixture.id);
+                        sezon.icerikYazildi(f.fixture.id);
                     } else {
                         oda.mac(f.fixture.id, icerik);
                     }
@@ -314,14 +318,15 @@ async function takimYaz() {
         takimHali = { s: eski.s || 0, t: eski.t || {} };
     }
     let degisti = !takimHali.s;
-    for (const k of maclar.values()) {
-        for (const takim of [k.f.teams.home, k.f.teams.away]) {
-            const ad = B.ad(takim.name);
-            if (takimHali.t[takim.id] === ad) continue;
-            takimHali.t[takim.id] = ad;
-            degisti = true;
-        }
-    }
+    const ekle = (no, ad) => {
+        if (takimHali.t[no] === ad) return;
+        takimHali.t[no] = ad;
+        degisti = true;
+    };
+    for (const k of maclar.values())
+        for (const takim of [k.f.teams.home, k.f.teams.away]) ekle(takim.id, B.ad(takim.name));
+    /* Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil) */
+    for (const [no, ad] of sezon.takimlar) ekle(no, ad);
     if (degisti) {
         takimHali.s = simdi();
         depo.yaz('takim.json', JSON.stringify(takimHali));
@@ -563,6 +568,8 @@ async function tur() {
         const ileri = tumu.slice(1);
         if (ileri.every(gun => hazir.includes(gun)))
             oran.kontrol(maclar, ileri, bugun);
+
+        await sezon.adim();
 
         temizle(dun);
         sonHata = null;

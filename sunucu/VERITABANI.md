@@ -3,7 +3,7 @@
 Odalar, bir dosya deposu ve veritabanları var:
 
 - **Odalar (Cloudflare Durable Objects, `oda/` klasörü, Worker adı `canli-oda`):** canlı veri. Gün odası (günün listesi, Özet, hızlı kaynak) ve maç odası (maçın içeriği). Telefon odaya açık bir hatla (WebSocket) bağlanır; oda değişenleri kendisi gönderir. Ayrıntı: aşağıda "Odalar".
-- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json` olarak okur. Okuyucu bugün, dün ve ilerideki günleri ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur.
+- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json`, `/veri/sezon/…` olarak okur. Okuyucu bugün, dün ve ilerideki günleri ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur.
 - **Cloudflare D1 (veritabanı `canli`):** kullanıcı bilgileri (rumuz, engellenenler, sayaç, şikayetler; aşağıda "Mesajlar").
 - **Realtime Database:** artık kullanılmıyor (kuralları her şeyi kapatır).
 - **Firestore:** oranlar, analizler, bildirim kayıtları, sunucu durumu; yönetim sayfasının elle düzeltme kilitleri ve istekleri.
@@ -15,6 +15,8 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 |---|---|---|---|---|---|
 | Gün odası `gun/{gün}` | Günün maçlarının satırları (`r`), Özet (`o`), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`). Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca hepsi, sonra değişenler) | Skor, dakika, durum, olay, hızlı skor değişince | satır ~40 bayt |
 | Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, olaylar }` (aşağıda "Maç içeriği"). Maç kesinleşince boşaltılır | Sunucu | Maç sayfası (açıkken) | Canlı maçta en sık 2 dk'da bir; maç bitince | ~2–4 KB |
+| R2 `sezon/{lig}-{yıl}.json` | Sezonun bütün maçları `{ "maç no": "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" }` (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Günde 1 ve o ligden maç bitince | lig başına ~15–20 KB |
+| R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |
 | R2 `takim.json` | Bütün takımların adları `{ s: sürüm (zaman, saniye), t: { "takım no": ad } }`. Silinmez | Sunucu | Site (yalnızca sürüm telefondakinden farklıysa; sürüm gün odasından `v.takim`), hızlı kaynak, yönetim sayfası | Yeni takım görülünce | takım başına ~20 bayt |
 | R2 `lig.json` | Liglerin kadro / istatistik verip vermediği `{ "lig no": 1 / 0 }` | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 1 KB |
 | Firestore `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez. Gün listesini, Özet'i ve maç içeriğini sunucu kilitten yazar; kilit konunca, değişince ve kalkınca maç API'den yeniden çekilir, konunca maçın hızlı kaydı silinir (yönetim sayfası yalnızca kilidi yazar; dün ve sonrası) | Yönetim sayfası | Sunucu (dinler), yönetim sayfası | Düzeltmede | ~40 bayt |
@@ -71,6 +73,17 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - Sunucu dün ve bugünün gün odasını dinleyerek hızlı skoru öğrenir (bildirim, R2 gün dosyası, 2 dk kontrolü); sildiğinde aynı adrese `ODA_ANAHTAR` ile yazar.
 
 ---
+
+## Sezonlar
+
+Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanmış maçların içeriği R2'ye kaydedilir (`sunucu/sezon.js`). Satır biçimi: `203 2026-2027 Süper Lig` (lig no, sezon, açıklama; tek yıllık sezon `2026`). Sunucu dosyayı yalnızca açılırken okur: satır ekleyince `cd /opt/canli && sudo git pull && sudo systemctl restart canli`. Satır silinince kaydedilmiş dosyalar silinmez.
+
+- Sunucu her turda en fazla `SEZON_TUR_ISTEK` (ayarlar.js) API isteğiyle çalışır; API hakkı azalınca durur. Önce sezonun maç listesi (1 istek), sonra oynanmış maçların içeriği 20'şerli gruplar halinde (`mac/{no}.json`, canlı maçlarla aynı biçim).
+- Bitmiş sezon bir kez doldurulur (`tamam`), bir daha dokunulmaz. Devam eden sezonun listesi günde bir yenilenir, yeni biten maçların içeriği çekilir; canlı takip edilen maç bitince satırı sezon dosyasında hemen güncellenir.
+- Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil) takım adları dosyasına eklenir.
+- `sezon/durum.json` (tarayıcıda `https://canli-ejw.pages.dev/veri/sezon/durum.json`): her sezon için `durum` (`bekliyor`, `dolduruluyor`, `devam ediyor`, `tamam`), `mac` (sezondaki maç), `biten`, `icerik_yazilan`, `icerigi_eksik` (API'nin istatistik, kadro ve olay vermediği maç), `son_liste`, `hata`.
+- `sezon/ic/{lig}-{yıl}.json`: içeriği yazılmış maçların numaraları (sunucu yeniden açılınca kaldığı yerden sürsün diye; okuyucudan okunmaz).
+- Takım sayfası (maç sayfasındaki takım adına basınca): o ligin kaydedilmiş en son sezonundan takımın maçları. Maça basınca maç sayfası açılır; içerik maç odasından / R2 maç dosyasından gelir.
 
 ## Odalar
 

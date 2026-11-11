@@ -4232,8 +4232,8 @@ body.has-layer .ac-kapa svg {
 #detailSheet .an-pane .inj-st { font-weight: 800; color: #a62634; white-space: nowrap; }
 #detailSheet .an-pane .inj-st.q { color: #9a5b13; }
 
-/* ---------- Başarı Karnesi (alttan açılır) ---------- */
-#karneBox {
+/* ---------- Başarı Karnesi ve takım sayfası (alttan açılır) ---------- */
+#karneBox, #teamBox {
     position: fixed;
     inset: 0;
     z-index: 46;
@@ -4245,13 +4245,13 @@ body.has-layer .ac-kapa svg {
     transition: opacity .18s ease, visibility 0s linear .18s;
 }
 
-#karneBox.open {
+#karneBox.open, #teamBox.open {
     opacity: 1;
     visibility: visible;
     transition: opacity .18s ease, visibility 0s;
 }
 
-#karneSheet {
+#karneSheet, #teamSheet {
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
@@ -4264,9 +4264,9 @@ body.has-layer .ac-kapa svg {
     transition: transform .22s ease;
 }
 
-#karneBox.open #karneSheet { transform: none; }
+#karneBox.open #karneSheet, #teamBox.open #teamSheet { transform: none; }
 
-#karneHead {
+#karneHead, #teamHead {
     position: sticky;
     top: 0;
     display: flex;
@@ -4277,7 +4277,7 @@ body.has-layer .ac-kapa svg {
     font-size: 1.05em;
 }
 
-#karneClose {
+#karneClose, #teamClose {
     padding: .3em .7em;
     border: none;
     border-radius: .6em;
@@ -4286,6 +4286,37 @@ body.has-layer .ac-kapa svg {
     font-weight: 800;
     color: #1d2340;
 }
+
+#teamHead small { display: block; margin-top: .15em; font-size: .78em; font-weight: 600; color: #6b7080; }
+
+/* Takım sayfasındaki maç satırı: tarih, rakip (E: ev, D: deplasman), skor ya da saat, sonuç */
+.tm-row {
+    display: flex;
+    width: 100%;
+    gap: .6em;
+    align-items: center;
+    margin-bottom: .35em;
+    padding: .65em .8em;
+    border: 1px solid #e5e8f0;
+    border-radius: .8em;
+    background: white;
+    font: inherit;
+    color: #1d2340;
+    text-align: left;
+}
+
+.tm-date { min-width: 3.2em; font-size: .85em; font-weight: 700; color: #6b7080; }
+.tm-side { min-width: 1.4em; font-size: .78em; font-weight: 800; color: #9aa0ad; }
+.tm-opp { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-score { font-weight: 800; }
+.tm-res { min-width: 1.6em; padding: .15em .35em; border-radius: .4em; font-size: .78em; font-weight: 800; text-align: center; color: white; }
+.tm-res.g { background: #0c7a58; }
+.tm-res.b { background: #8a8f9c; }
+.tm-res.m { background: #c0392b; }
+.tm-row.next { border-color: #2f6fed; }
+
+#sbHome, #sbAway { cursor: pointer; }
+#detailSheet.an-mode #sbHome, #detailSheet.an-mode #sbAway { cursor: default; }
 
 .karne-part {
     margin-bottom: .8em;
@@ -5313,6 +5344,14 @@ body.has-layer .ac-kapa svg {
     <div id="karneSheet">
         <div id="karneHead"><b>Başarı Karnesi</b><button id="karneClose" aria-label="Kapat">✕</button></div>
         <div id="karneBody"></div>
+    </div>
+</div>
+
+<!-- Takım sayfası: maç sayfasındaki takım adına basınca alttan açılır (ligin sezon maçlarından) -->
+<div id="teamBox" role="dialog" aria-modal="true">
+    <div id="teamSheet">
+        <div id="teamHead"><div><b id="teamName"></b><small id="teamSeason"></small></div><button id="teamClose" aria-label="Kapat">✕</button></div>
+        <div id="teamBody"></div>
     </div>
 </div>
 
@@ -8554,7 +8593,7 @@ function cachedDoc(path, onLoad) {
 
 /* Maç sayfası için: günün listesindeki maç ya da Oranlar menüsündeki maç */
 function findMatch(id) {
-    return MATCH_BY_ID.get(id) || ODDS_MATCH_BY_ID.get(id);
+    return MATCH_BY_ID.get(id) || ODDS_MATCH_BY_ID.get(id) || seasonMatch(id);
 }
 
 /* Menü satırındaki 8 sayı (VERITABANI.md → "Menü satırı") */
@@ -8822,6 +8861,144 @@ karneBox.addEventListener('click', event => {
         return;
     hideKarne();
     layerClosed('karne');
+});
+
+/* =================================================
+   TAKIM SAYFASI: maç sayfasındaki takım adına basınca. Ligin kaydedilmiş en son sezonu (R2 sezon/durum.json)
+   bir kez, sezon maçları (R2 sezon/{lig}-{yıl}.json) bir kez okunur; takımın maçları tarih sırasıyla, bugüne en yakın
+   maç görünecek şekilde. Maça basınca maç sayfası o maça geçer (içerik maç odasından / R2 maç dosyasından).
+   Sezon dosyasının satırı: "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" (VERITABANI.md → "Sezonlar").
+================================================= */
+const teamBox = document.getElementById('teamBox');
+const SEASON_MATCHES = new Map();   /* maç no → maç (takım sayfasından açılan, günlerin listesinde olmayan) */
+const seasonFiles = new Map();      /* "lig-yıl" → sezon maçları (okunuyor / okundu) */
+let seasonIndex = null;             /* R2 sezon/durum.json */
+
+/* Takım sayfasından açılan maç: içerik gelince (maç odası / R2) olaylar da ondan */
+function seasonMatch(id) {
+    const match = SEASON_MATCHES.get(id);
+    const detail = match && matchDetails.get(id);
+    if (detail) {
+        Object.assign(match, detail);
+        if (!match.events && detail.olaylar && match.status !== 'upcoming')
+            match.events = rowEvents(detail.olaylar);
+    }
+    return match;
+}
+
+function seasonRows(key) {
+    if (!seasonFiles.has(key))
+        seasonFiles.set(key, readFile('sezon/' + key).catch(() => {
+            seasonFiles.delete(key);
+            return null;
+        }));
+    return seasonFiles.get(key);
+}
+
+function openTeam(team, leagueId) {
+    document.getElementById('teamName').textContent = team.name;
+    document.getElementById('teamSeason').textContent = '';
+    document.getElementById('teamBody').innerHTML = '<p class="tab-empty">Yükleniyor…</p>';
+    teamBox.classList.add('open');
+    layerOpened('team');
+
+    if (!seasonIndex)
+        seasonIndex = readFile('sezon/durum').catch(() => {
+            seasonIndex = null;
+            return null;
+        });
+    seasonIndex.then(index => {
+        const seasons = Object.entries((index && index.sezonlar) || {}).filter(([, s]) => s.lig === leagueId && s.mac);
+        const [key, info] = seasons.sort(([a], [b]) => a.localeCompare(b)).pop() || [];
+        return key ? seasonRows(key).then(rows => renderTeam(team, info, rows)) : renderTeam(team, null, null);
+    });
+}
+
+function renderTeam(team, info, rows) {
+    if (!teamBox.classList.contains('open') || document.getElementById('teamName').textContent !== team.name)
+        return;
+    const body = document.getElementById('teamBody');
+    body.textContent = '';
+    if (!rows) {
+        body.innerHTML = '<p class="tab-empty">Bu lig için sezon maçları henüz kaydedilmedi.</p>';
+        return;
+    }
+    document.getElementById('teamSeason').textContent = (info.ad || '') + ' ' + info.sezon;
+
+    const list = Object.entries(rows).map(([no, text]) => {
+        const parts = text.split(',');
+        return rowToMatch(parts[0], no, parts.slice(1).join(','), null);
+    }).filter(m => m.home.id === team.id || m.away.id === team.id).sort((a, b) => a.date - b.date);
+
+    const now = Date.now();
+    let next = null;
+    list.forEach(m => {
+        const home = m.home.id === team.id;
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'tm-row';
+        const add = (cls, text) => {
+            const el = document.createElement('span');
+            el.className = cls;
+            el.textContent = text;
+            row.appendChild(el);
+            return el;
+        };
+        add('tm-date', String(m.date.getDate()).padStart(2, '0') + '.' + String(m.date.getMonth() + 1).padStart(2, '0'));
+        add('tm-side', home ? 'E' : 'D');
+        add('tm-opp', (home ? m.away : m.home).name);
+        if (m.score && m.status !== 'upcoming') {
+            add('tm-score', m.score[0] + ' - ' + m.score[1]);
+            if (m.status === 'done') {
+                const mine = m.score[home ? 0 : 1];
+                const theirs = m.score[home ? 1 : 0];
+                const res = mine > theirs ? 'g' : mine < theirs ? 'm' : 'b';
+                add('tm-res ' + res, { g: 'G', b: 'B', m: 'M' }[res]);
+            }
+        } else {
+            add('tm-score', OTHER_LABELS[m.code] || formatTime(m.date));
+        }
+        if (!next && m.date.getTime() + 3 * 3600000 >= now) {
+            next = row;
+            row.classList.add('next');
+        }
+        row.addEventListener('click', () => {
+            if (!MATCH_BY_ID.has(m.id) && !ODDS_MATCH_BY_ID.has(m.id))
+                SEASON_MATCHES.set(m.id, m);
+            closeTeam();
+            openDetail(m.id);
+        });
+        body.appendChild(row);
+    });
+
+    if (!list.length)
+        body.innerHTML = '<p class="tab-empty">Bu takımın bu sezon maçı yok.</p>';
+    (next || body.lastElementChild || body).scrollIntoView({ block: 'center' });
+}
+
+function hideTeam() {
+    teamBox.classList.remove('open');
+}
+
+function closeTeam() {
+    hideTeam();
+    layerClosed('team');
+}
+
+document.getElementById('teamClose').addEventListener('click', closeTeam);
+
+teamBox.addEventListener('click', event => {
+    if (event.target === teamBox)
+        closeTeam();
+});
+
+/* Maç sayfasındaki takım adları (analiz görünümünde değil) */
+[['sbHome', 'home'], ['sbAway', 'away']].forEach(([id, side]) => {
+    document.getElementById(id).addEventListener('click', () => {
+        const match = detailId && !detailSheet.classList.contains('an-mode') ? findMatch(detailId) : null;
+        if (match)
+            openTeam(match[side], match.league.id);
+    });
 });
 
 /*
@@ -11222,6 +11399,7 @@ const LAYER_HIDERS = {
     oddsPage: hideOddsPage,
     profile: hideProfile,
     karne: hideKarne,
+    team: hideTeam,
     confirm: hideConfirm,
     calendar: hideCalendar
 };
