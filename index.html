@@ -9178,6 +9178,7 @@ const pageStack = [];      /* { kind: 'match', id, tab } / { kind: 'team', team 
 let pageBase = null;       /* ilk sayfa açılırken açık olan maç sayfası (yoksa null) */
 let pageTimer = null;
 let pagePending = null;
+let teamEntry = null;      /* takım sayfası öğesinde şu an duran sayfa */
 
 const pageEl = entry => entry.kind === 'match' ? detailSheet : teamBox;
 
@@ -9189,9 +9190,32 @@ function instant(el, fn) {
     el.style.transition = '';
 }
 
+/* Takım / lig sayfası üstte başka bir takım / lig sayfası açılırken saklanır, dönünce aynen geri konur (kaydırma yeriyle) */
 function drawPage(entry) {
     if (entry.kind === 'match')
         return showDetail(entry.id, entry.tab);
+
+    const sheet = document.getElementById('teamSheet');
+    const body = document.getElementById('teamBody');
+    if (teamEntry && teamEntry !== entry && pageStack.includes(teamEntry) && body.querySelector('.tm-row, .lg-weeks'))
+        teamEntry.saved = {
+            name: document.getElementById('teamName').textContent,
+            season: document.getElementById('teamSeason').textContent,
+            nodes: Array.from(body.childNodes),
+            scroll: sheet.scrollTop
+        };
+    teamEntry = entry;
+
+    if (entry.saved) {
+        teamOpenId++;
+        document.getElementById('teamName').textContent = entry.saved.name;
+        document.getElementById('teamSeason').textContent = entry.saved.season;
+        body.replaceChildren(...entry.saved.nodes);
+        teamBox.classList.add('open');
+        sheet.scrollTop = entry.saved.scroll;
+        entry.saved = null;
+        return;
+    }
     if (entry.kind === 'team')
         drawTeam(entry.team);
     else
