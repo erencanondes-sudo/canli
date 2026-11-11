@@ -6,6 +6,7 @@
  *                               (gün: maçın günü, gün listesindeki gibi; geri kalanı canlı skor satırı)
  *   R2 mac/{no}.json          : oynanmış maçların içeriği (canlı maçlardaki gibi)
  *   R2 sezon/durum.json       : her sezonun durumu (sen bakarsın)
+ *   R2 sezon/takimlar.json    : takım dizini { takım no: ["lig-yıl", ...] } hangi takım hangi sezon dosyalarında (takım sayfası için)
  *   R2 sezon/ic/{lig}-{yıl}.json : içeriği yazılmış maçların numaraları (sunucu yeniden açılınca kaldığı yerden sürsün diye)
  *
  * Her turda en fazla SEZON_TUR_ISTEK istek (API hakkı azaldıysa hiç): önce sezonun maç listesi (1 istek), sonra
@@ -49,10 +50,12 @@ function dosyaOku() {
 const sezonlar = new Map();   /* "lig-yıl" → { lig, yil, sezon, ad, satirlar: { no: satır } | null, yazilan: Set | null, liste: son liste anı } */
 const takimlar = new Map();   /* takım no → ad (sezon listelerinde görülen) */
 let durum = null;             /* R2 sezon/durum.json */
+let dizin = null;             /* R2 sezon/takimlar.json */
 let hazir = null;
 
 async function hazirla() {
     durum = await depo.oku('sezon/durum.json') || { sezonlar: {} };
+    dizin = await depo.oku('sezon/takimlar.json') || {};
     for (const s of dosyaOku()) {
         const anahtar = s.lig + '-' + s.yil;
         sezonlar.set(anahtar, { ...s, satirlar: null, yazilan: null, liste: 0 });
@@ -81,10 +84,25 @@ async function listeCek(s) {
         takimlar.set(f.teams.away.id, B.ad(f.teams.away.name));
     }
     s.liste = Date.now();
+    dizinYaz(s.lig + '-' + s.yil, liste);
     s.biten = liste.filter(f => BITTI.has(f.fixture.status.short)).map(f => f.fixture.id);
     /* Bitmemiş (ertelenmiş, iptal hariç) maçı kalmayan sezon bitmiştir */
     s.devam = liste.some(f => !BITTI.has(f.fixture.status.short) && !OYNANMAYACAK.has(f.fixture.status.short));
     depo.yaz('sezon/' + s.lig + '-' + s.yil + '.json', JSON.stringify(s.satirlar));
+}
+
+/* Sezon listesindeki takımlar dizine eklenir (değiştiyse yazılır) */
+function dizinYaz(anahtar, liste) {
+    let degisti = false;
+    for (const f of liste) {
+        for (const no of [f.teams.home.id, f.teams.away.id]) {
+            const kayit = dizin[no] || (dizin[no] = []);
+            if (kayit.includes(anahtar)) continue;
+            kayit.push(anahtar);
+            degisti = true;
+        }
+    }
+    if (degisti) depo.yaz('sezon/takimlar.json', JSON.stringify(dizin));
 }
 
 async function icerikCek(s, nolar) {

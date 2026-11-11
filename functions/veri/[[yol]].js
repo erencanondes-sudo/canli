@@ -1,6 +1,6 @@
 /*
  * R2 okuyucusu (Cloudflare Pages Function): /veri/gun/{gün}.json, /veri/ozet/{gün}.json, /veri/mac/{maç no}.json,
- * /veri/takim.json, /veri/lig.json, /veri/sezon/{lig}-{yıl}.json ve /veri/sezon/durum.json
+ * /veri/takim.json, /veri/lig.json, /veri/sezon/{lig}-{yıl}.json, /veri/sezon/durum.json ve /veri/sezon/takimlar.json
  * R2 kovası projeye DEPO adıyla bağlı (Pages → Settings → Bindings). Yapı: sunucu/VERITABANI.md → "R2".
  * Önbellek: bugün, dün ve ilerideki günler tutulmaz (her açılışta en son hali); daha eski günler 1 saat (değişmezler).
  * Maç dosyası maç kesinleşince yazılır: 1 saat (yönetim sayfasından düzeltilirse yeniden yazılır).
@@ -18,7 +18,7 @@ export async function onRequestGet({ request, params, env }) {
 
     const yol = (params.yol || []).join('/');
     const gunDosyasi = /^(gun|ozet)\/(\d{4}-\d{2}-\d{2})\.json$/.exec(yol);
-    if (!gunDosyasi && !/^(mac\/\d{1,10}|takim|lig|sezon\/\d{1,6}-\d{4}|sezon\/durum)\.json$/.test(yol))
+    if (!gunDosyasi && !/^(mac\/\d{1,10}|takim|lig|sezon\/\d{1,6}-\d{4}|sezon\/durum|sezon\/takimlar)\.json$/.test(yol))
         return new Response('', { status: 404, headers: IZIN });
 
     /* Dün (Türkiye saati, gün 04:00'te değişir) */

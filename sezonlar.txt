@@ -6,3 +6,7 @@
 # Satır silinince kaydedilmiş dosyalar silinmez.
 
 203 2026-2027 Süper Lig
+206 2026-2027 Türkiye Kupası
+2 2026-2027 Şampiyonlar Ligi
+3 2026-2027 Avrupa Ligi
+848 2026-2027 Konferans Ligi

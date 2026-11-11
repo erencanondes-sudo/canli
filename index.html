@@ -4314,6 +4314,8 @@ body.has-layer .ac-kapa svg {
 .tm-res.b { background: #8a8f9c; }
 .tm-res.m { background: #c0392b; }
 .tm-row.next { border-color: #2f6fed; }
+.tm-head { margin: 1em 0 .45em; font-size: .82em; font-weight: 800; color: #6b7080; }
+.tm-head:first-child { margin-top: 0; }
 
 #sbHome, #sbAway, #sbLeague, .league-head { cursor: pointer; }
 #detailSheet.an-mode #sbHome, #detailSheet.an-mode #sbAway, #detailSheet.an-mode #sbLeague { cursor: default; }
@@ -8902,9 +8904,10 @@ karneBox.addEventListener('click', event => {
 });
 
 /* =================================================
-   TAKIM SAYFASI ve LİG SAYFASI (aynı alttan açılan kutu): ligin kaydedilmiş en son sezonu (R2 sezon/durum.json)
-   bir kez, sezon maçları (R2 sezon/{lig}-{yıl}.json) bir kez okunur.
-   Takım sayfası (maç sayfasındaki takım adına basınca): takımın maçları tarih sırasıyla, bugüne en yakın maç görünecek şekilde.
+   TAKIM SAYFASI ve LİG SAYFASI (aynı alttan açılan kutu): sezonların durumu (R2 sezon/durum.json), takım dizini
+   (R2 sezon/takimlar.json) ve sezon maçları (R2 sezon/{lig}-{yıl}.json) birer kez okunur.
+   Takım sayfası (maç sayfasındaki takım adına basınca): takımın kaydedilmiş bütün turnuvaları (her birinin en son sezonu),
+   lig adı başlığıyla; önce lig, sonra Avrupa kupaları, sonra kupalar. Maçlar tarih sırasıyla, bugüne en yakın maç görünecek şekilde.
    Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): hafta hafta; açılışta bugüne en yakın maçın haftası.
    Maça basınca maç sayfası o maça geçer (içerik maç odasından / R2 maç dosyasından).
    Sezon dosyasının satırı: "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" (VERITABANI.md → "Sezonlar").
@@ -8913,6 +8916,7 @@ const teamBox = document.getElementById('teamBox');
 const SEASON_MATCHES = new Map();   /* maç no → maç (takım sayfasından açılan, günlerin listesinde olmayan) */
 const seasonFiles = new Map();      /* "lig-yıl" → sezon maçları (okunuyor / okundu) */
 let seasonIndex = null;             /* R2 sezon/durum.json */
+let teamIndex = null;               /* R2 sezon/takimlar.json */
 
 /* Takım sayfasından açılan maç: içerik gelince (maç odası / R2) olaylar da ondan */
 function seasonMatch(id) {
@@ -8935,23 +8939,29 @@ function seasonRows(key) {
     return seasonFiles.get(key);
 }
 
-/* Ligin kaydedilmiş en son sezonu: { info, list: maçlar (tarih sırasıyla) } ya da null */
-function seasonFor(leagueId) {
+/* Sezonun maçları (tarih sırasıyla) ya da null */
+function seasonList(key) {
+    return seasonRows(key).then(rows => rows && Object.entries(rows).map(([no, text]) => {
+        const parts = text.split(',');
+        return rowToMatch(parts[0], no, parts.slice(1).join(','), null);
+    }).sort((a, b) => a.date - b.date));
+}
+
+function readSeasonIndex() {
     if (!seasonIndex)
         seasonIndex = readFile('sezon/durum').catch(() => {
             seasonIndex = null;
             return null;
         });
-    return seasonIndex.then(index => {
+    return seasonIndex;
+}
+
+/* Ligin kaydedilmiş en son sezonu: { info, list } ya da null */
+function seasonFor(leagueId) {
+    return readSeasonIndex().then(index => {
         const seasons = Object.entries((index && index.sezonlar) || {}).filter(([, s]) => s.lig === leagueId && s.mac);
         const [key, info] = seasons.sort(([a], [b]) => a.localeCompare(b)).pop() || [];
-        return key ? seasonRows(key).then(rows => rows && {
-            info: info,
-            list: Object.entries(rows).map(([no, text]) => {
-                const parts = text.split(',');
-                return rowToMatch(parts[0], no, parts.slice(1).join(','), null);
-            }).sort((a, b) => a.date - b.date)
-        }) : null;
+        return key ? seasonList(key).then(list => list && { info: info, list: list }) : null;
     });
 }
 
@@ -8993,49 +9003,84 @@ function seasonRowClick(row, m) {
     });
 }
 
-function openTeam(team, leagueId) {
+/* Takım sayfasında turnuvaların sırası: lig, Avrupa kupaları, kupalar (adında Kupa / Cup / Pokal / Shield geçen) */
+const EURO_CUPS = new Set([2, 3, 848]);
+const leagueGroup = id => EURO_CUPS.has(id) ? 1 : /Kupa|Cup|Pokal|Shield/.test(leagueInfo(id).name) ? 2 : 0;
+
+function openTeam(team) {
     const open = openSeasonBox(team.name);
-    seasonFor(leagueId).then(season => {
-        if (!seasonReady(open, season))
+    if (!teamIndex)
+        teamIndex = readFile('sezon/takimlar').catch(() => {
+            teamIndex = null;
+            return null;
+        });
+    Promise.all([teamIndex, readSeasonIndex()]).then(([index, seasons]) => {
+        /* Her turnuvanın en son sezonu ("lig-yıl") */
+        const newest = new Map();
+        ((index && index[team.id]) || []).forEach(key => {
+            const [league, year] = key.split('-').map(Number);
+            if (!newest.has(league) || newest.get(league).year < year)
+                newest.set(league, { key: key, year: year });
+        });
+        const leagues = Array.from(newest.keys()).sort((a, b) =>
+            leagueGroup(a) - leagueGroup(b) || LEAGUES.indexOf(leagueInfo(a)) - LEAGUES.indexOf(leagueInfo(b)));
+        return Promise.all(leagues.map(league => seasonList(newest.get(league).key))).then(lists => ({
+            title: Array.from(new Set(leagues.map(league => (((seasons && seasons.sezonlar) || {})[newest.get(league).key] || {}).sezon).filter(Boolean))).join(' / '),
+            sections: leagues.map((league, i) => ({
+                league: league,
+                list: (lists[i] || []).filter(m => m.home.id === team.id || m.away.id === team.id)
+            })).filter(section => section.list.length)
+        }));
+    }).then(({ title, sections }) => {
+        if (open !== teamOpenId || !teamBox.classList.contains('open'))
             return;
         const body = document.getElementById('teamBody');
-        const list = season.list.filter(m => m.home.id === team.id || m.away.id === team.id);
-        const next = nearestMatch(list);
+        body.textContent = '';
+        document.getElementById('teamSeason').textContent = title;
+        if (!sections.length) {
+            body.innerHTML = '<p class="tab-empty">Bu takımın kaydedilmiş sezon maçı yok.</p>';
+            return;
+        }
+        const next = nearestMatch(sections.flatMap(section => section.list).sort((a, b) => a.date - b.date));
 
-        list.forEach(m => {
-            const home = m.home.id === team.id;
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'tm-row' + (m === next ? ' next' : '');
-            const add = (cls, text) => {
-                const el = document.createElement('span');
-                el.className = cls;
-                el.textContent = text;
-                row.appendChild(el);
-            };
-            add('tm-date', String(m.date.getDate()).padStart(2, '0') + '.' + String(m.date.getMonth() + 1).padStart(2, '0'));
-            add('tm-side', home ? 'E' : 'D');
-            add('tm-opp', (home ? m.away : m.home).name);
-            if (m.score && m.status !== 'upcoming') {
-                add('tm-score', m.score[0] + ' - ' + m.score[1]);
-                if (m.status === 'done') {
-                    const mine = m.score[home ? 0 : 1];
-                    const theirs = m.score[home ? 1 : 0];
-                    const res = mine > theirs ? 'g' : mine < theirs ? 'm' : 'b';
-                    add('tm-res ' + res, { g: 'G', b: 'B', m: 'M' }[res]);
+        sections.forEach(section => {
+            const head = document.createElement('div');
+            head.className = 'tm-head';
+            head.textContent = leagueInfo(section.league).name;
+            body.appendChild(head);
+
+            section.list.forEach(m => {
+                const home = m.home.id === team.id;
+                const row = document.createElement('button');
+                row.type = 'button';
+                row.className = 'tm-row' + (m === next ? ' next' : '');
+                const add = (cls, text) => {
+                    const el = document.createElement('span');
+                    el.className = cls;
+                    el.textContent = text;
+                    row.appendChild(el);
+                };
+                add('tm-date', String(m.date.getDate()).padStart(2, '0') + '.' + String(m.date.getMonth() + 1).padStart(2, '0'));
+                add('tm-side', home ? 'E' : 'D');
+                add('tm-opp', (home ? m.away : m.home).name);
+                if (m.score && m.status !== 'upcoming') {
+                    add('tm-score', m.score[0] + ' - ' + m.score[1]);
+                    if (m.status === 'done') {
+                        const mine = m.score[home ? 0 : 1];
+                        const theirs = m.score[home ? 1 : 0];
+                        const res = mine > theirs ? 'g' : mine < theirs ? 'm' : 'b';
+                        add('tm-res ' + res, { g: 'G', b: 'B', m: 'M' }[res]);
+                    }
+                } else {
+                    add('tm-score', OTHER_LABELS[m.code] || formatTime(m.date));
                 }
-            } else {
-                add('tm-score', OTHER_LABELS[m.code] || formatTime(m.date));
-            }
-            seasonRowClick(row, m);
-            body.appendChild(row);
+                seasonRowClick(row, m);
+                body.appendChild(row);
+            });
         });
 
-        if (!list.length)
-            body.innerHTML = '<p class="tab-empty">Bu takımın bu sezon maçı yok.</p>';
         const target = body.querySelector('.next') || body.lastElementChild;
-        if (target)
-            target.scrollIntoView({ block: 'center' });
+        target.scrollIntoView({ block: 'center' });
     });
 }
 
@@ -9117,7 +9162,7 @@ teamBox.addEventListener('click', event => {
     document.getElementById(id).addEventListener('click', () => {
         const match = detailId && !detailSheet.classList.contains('an-mode') ? findMatch(detailId) : null;
         if (match && side)
-            openTeam(match[side], match.league.id);
+            openTeam(match[side]);
         else if (match)
             openLeague(match.league.id);
     });

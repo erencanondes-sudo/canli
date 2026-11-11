@@ -16,6 +16,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Gün odası `gun/{gün}` | Günün maçlarının satırları (`r`), Özet (`o`), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`). Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca hepsi, sonra değişenler) | Skor, dakika, durum, olay, hızlı skor değişince | satır ~40 bayt |
 | Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, olaylar }` (aşağıda "Maç içeriği"). Maç kesinleşince boşaltılır | Sunucu | Maç sayfası (açıkken) | Canlı maçta en sık 2 dk'da bir; maç bitince | ~2–4 KB |
 | R2 `sezon/{lig}-{yıl}.json` | Sezonun bütün maçları `{ "maç no": "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" }` (aşağıda "Sezonlar") | Sunucu | Takım ve lig sayfası (bir kez; 5 dk önbellek) | Günde 1 ve o ligden maç bitince | lig başına ~15–20 KB |
+| R2 `sezon/takimlar.json` | Takım dizini `{ takım no: ["lig-yıl", ...] }`: takım hangi sezon dosyalarında (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Sezon listesinde yeni takım görülünce | ~birkaç KB |
 | R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |
 | R2 `takim.json` | Bütün takımların adları `{ s: sürüm (zaman, saniye), t: { "takım no": ad } }`. Silinmez | Sunucu | Site (yalnızca sürüm telefondakinden farklıysa; sürüm gün odasından `v.takim`), hızlı kaynak, yönetim sayfası | Yeni takım görülünce | takım başına ~20 bayt |
 | R2 `lig.json` | Liglerin kadro / istatistik verip vermediği `{ "lig no": 1 / 0 }` | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 1 KB |
@@ -83,7 +84,8 @@ Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanm�
 - Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil) takım adları dosyasına eklenir.
 - `sezon/durum.json` (tarayıcıda `https://canli-ejw.pages.dev/veri/sezon/durum.json`): her sezon için `durum` (`bekliyor`, `dolduruluyor`, `devam ediyor`, `tamam`), `mac` (sezondaki maç), `biten`, `icerik_yazilan`, `icerigi_eksik` (API'nin istatistik, kadro ve olay vermediği maç), `son_liste`, `hata`.
 - `sezon/ic/{lig}-{yıl}.json`: içeriği yazılmış maçların numaraları (sunucu yeniden açılınca kaldığı yerden sürsün diye; okuyucudan okunmaz).
-- Takım sayfası (maç sayfasındaki takım adına basınca): o ligin kaydedilmiş en son sezonundan takımın maçları.
+- `sezon/takimlar.json`: her takımın bulunduğu sezon dosyaları (sezon listesi her çekildiğinde eklenir; silinmez).
+- Takım sayfası (maç sayfasındaki takım adına basınca): takımın kaydedilmiş bütün turnuvaları (her birinin en son sezonu), lig adı başlığıyla; sıra: önce lig, sonra Avrupa kupaları (2, 3, 848), sonra kupalar (adında Kupa / Cup / Pokal / Shield geçen). Alt başlıkta sezon.
 - Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): aynı dosyadan hafta hafta (oklar ve açılır liste); açılışta bugüne en yakın maçın haftası.
 - İkisinde de maça basınca maç sayfası açılır; içerik maç odasından / R2 maç dosyasından gelir.
 
