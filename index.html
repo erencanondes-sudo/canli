@@ -1897,7 +1897,7 @@ body[data-tab="empty"] #emptyLayer {
 
 /* Maç sayfası açıkken sarı topla açılan Kuponlarım, maç sayfasının üstüne gelir */
 #emptyLayer.raised {
-    z-index: 31;
+    z-index: 32;
 }
 
 /* -----------------------------
@@ -1924,6 +1924,7 @@ body[data-tab="empty"] #emptyLayer {
 /* Yalnızca maç sayfası, oran sayfası ya da Kayıtlı Maçlarım / Kayıtlı Oranlarım açıkken görünür (kapatmak için) */
 body[data-tab="empty"] .alt-menu,
 body:has(#detailSheet.open) .alt-menu,
+body:has(#teamBox.open) .alt-menu,
 body:has(#oddsSheet.open) .alt-menu {
     opacity: 1;
     visibility: visible;
@@ -4233,7 +4234,7 @@ body.has-layer .ac-kapa svg {
 #detailSheet .an-pane .inj-st.q { color: #9a5b13; }
 
 /* ---------- Başarı Karnesi ve takım sayfası (alttan açılır) ---------- */
-#karneBox, #teamBox {
+#karneBox {
     position: fixed;
     inset: 0;
     z-index: 46;
@@ -4245,13 +4246,13 @@ body.has-layer .ac-kapa svg {
     transition: opacity .18s ease, visibility 0s linear .18s;
 }
 
-#karneBox.open, #teamBox.open {
+#karneBox.open {
     opacity: 1;
     visibility: visible;
     transition: opacity .18s ease, visibility 0s;
 }
 
-#karneSheet, #teamSheet {
+#karneSheet {
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
@@ -4264,7 +4265,40 @@ body.has-layer .ac-kapa svg {
     transition: transform .22s ease;
 }
 
-#karneBox.open #karneSheet, #teamBox.open #teamSheet { transform: none; }
+#karneBox.open #karneSheet { transform: none; }
+
+/* Takım ve lig sayfası: maç sayfası gibi (reklamın altından, alttan açılır) */
+#teamBox {
+    position: fixed;
+    top: 100px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background: #f4f5f7;
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility 0s linear .28s;
+}
+
+#teamBox.open {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform .28s ease, visibility 0s;
+}
+
+/* Üst üste açılan sayfalarda en üstteki */
+#detailSheet.page-top, #teamBox.page-top { z-index: 31; }
+
+#teamSheet {
+    height: 100%;
+    max-width: var(--content-width);
+    margin: 0 auto;
+    overflow-y: auto;
+    padding: 0 1rem 6rem;
+    font-size: .875rem;
+    color: #1d2340;
+}
 
 #karneHead, #teamHead {
     position: sticky;
@@ -4277,7 +4311,7 @@ body.has-layer .ac-kapa svg {
     font-size: 1.05em;
 }
 
-#karneClose, #teamClose {
+#karneClose {
     padding: .3em .7em;
     border: none;
     border-radius: .6em;
@@ -4289,7 +4323,7 @@ body.has-layer .ac-kapa svg {
 
 #teamHead small { display: block; margin-top: .15em; font-size: .78em; font-weight: 600; color: #6b7080; }
 
-/* Takım sayfasındaki maç satırı: tarih, rakip (E: ev, D: deplasman), skor ya da saat, sonuç */
+/* Takım ve lig sayfasındaki maç satırı: tarih, ev sahibi, skor ya da saat, deplasman, (takım sayfasında) sonuç */
 .tm-row {
     display: flex;
     width: 100%;
@@ -4306,10 +4340,8 @@ body.has-layer .ac-kapa svg {
 }
 
 .tm-date { min-width: 3.2em; font-size: .85em; font-weight: 700; color: #6b7080; }
-.tm-side { min-width: 1.4em; font-size: .78em; font-weight: 800; color: #9aa0ad; }
-.tm-opp { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tm-score { font-weight: 800; }
 .tm-res { min-width: 1.6em; padding: .15em .35em; border-radius: .4em; font-size: .78em; font-weight: 800; text-align: center; color: white; }
+.tm-res:empty { visibility: hidden; }
 .tm-res.g { background: #0c7a58; }
 .tm-res.b { background: #8a8f9c; }
 .tm-res.m { background: #c0392b; }
@@ -5382,10 +5414,10 @@ body.has-layer .ac-kapa svg {
     </div>
 </div>
 
-<!-- Takım sayfası ve lig sayfası: alttan açılır (ligin sezon maçlarından) -->
+<!-- Takım sayfası ve lig sayfası: maç sayfası gibi alttan açılan tam sayfa (sezon maçlarından) -->
 <div id="teamBox" role="dialog" aria-modal="true">
     <div id="teamSheet">
-        <div id="teamHead"><div><b id="teamName"></b><small id="teamSeason"></small></div><button id="teamClose" aria-label="Kapat">✕</button></div>
+        <div id="teamHead"><div><b id="teamName"></b><small id="teamSeason"></small></div></div>
         <div id="teamBody"></div>
     </div>
 </div>
@@ -7922,7 +7954,7 @@ function renderLive() {
         /* Başlığa basınca (zil dışında) lig sayfası */
         head.addEventListener('click', event => {
             if (!event.target.closest('.league-bell'))
-                openLeague(league.id);
+                pushPage({ kind: 'league', id: league.id });
         });
 
         block.appendChild(head);
@@ -8904,12 +8936,13 @@ karneBox.addEventListener('click', event => {
 });
 
 /* =================================================
-   TAKIM SAYFASI ve LİG SAYFASI (aynı alttan açılan kutu): sezonların durumu (R2 sezon/durum.json), takım dizini
+   TAKIM SAYFASI ve LİG SAYFASI (aynı sayfa öğesi; maç sayfasının üstünde yeni sayfa olarak alttan açılır): sezonların durumu (R2 sezon/durum.json), takım dizini
    (R2 sezon/takimlar.json) ve sezon maçları (R2 sezon/{lig}-{yıl}.json) birer kez okunur.
    Takım sayfası (maç sayfasındaki takım adına basınca): takımın kaydedilmiş bütün turnuvaları (her birinin en son sezonu),
-   lig adı başlığıyla; önce lig, sonra Avrupa kupaları, sonra kupalar. Maçlar tarih sırasıyla, bugüne en yakın maç görünecek şekilde.
+   lig adı başlığıyla; önce lig, sonra Avrupa kupaları, sonra kupalar. Maçlar tarih sırasıyla ("Ev 2 - 1 Dep" ve takımın sonucu G/B/M),
+   bugüne en yakın maç görünecek şekilde.
    Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): hafta hafta; açılışta bugüne en yakın maçın haftası.
-   Maça basınca maç sayfası o maça geçer (içerik maç odasından / R2 maç dosyasından).
+   Maça basınca maç sayfası üstte yeni sayfa olarak açılır (içerik maç odasından / R2 maç dosyasından); aşağıda "Üst üste sayfalar".
    Sezon dosyasının satırı: "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" (VERITABANI.md → "Sezonlar").
 ================================================= */
 const teamBox = document.getElementById('teamBox');
@@ -8965,15 +8998,13 @@ function seasonFor(leagueId) {
     });
 }
 
-/* Kutuyu açar; başlık değişince (başka sayfa açıldıysa) gelen veri çizilmez */
+/* Sayfayı boşaltır; başka sayfa çizildiyse gelen veri çizilmez */
 let teamOpenId = 0;
 
 function openSeasonBox(title) {
     document.getElementById('teamName').textContent = title;
     document.getElementById('teamSeason').textContent = '';
     document.getElementById('teamBody').innerHTML = '<p class="tab-empty">Yükleniyor…</p>';
-    teamBox.classList.add('open');
-    layerOpened('team');
     return ++teamOpenId;
 }
 
@@ -8993,13 +9024,12 @@ function seasonReady(open, season) {
 /* İlk oynanmamış (ya da son 3 saatte başlamış) maç */
 const nearestMatch = list => list.find(m => m.date.getTime() + 3 * 3600000 >= Date.now());
 
-/* Maç satırına basınca maç sayfası o maça geçer */
+/* Maç satırına basınca maç sayfası üstte yeni sayfa olarak açılır */
 function seasonRowClick(row, m) {
     row.addEventListener('click', () => {
         if (!MATCH_BY_ID.has(m.id) && !ODDS_MATCH_BY_ID.has(m.id))
             SEASON_MATCHES.set(m.id, m);
-        closeTeam();
-        openDetail(m.id);
+        pushPage({ kind: 'match', id: m.id });
     });
 }
 
@@ -9007,7 +9037,7 @@ function seasonRowClick(row, m) {
 const EURO_CUPS = new Set([2, 3, 848]);
 const leagueGroup = id => EURO_CUPS.has(id) ? 1 : /Kupa|Cup|Pokal|Shield/.test(leagueInfo(id).name) ? 2 : 0;
 
-function openTeam(team) {
+function drawTeam(team) {
     const open = openSeasonBox(team.name);
     if (!teamIndex)
         teamIndex = readFile('sezon/takimlar').catch(() => {
@@ -9061,18 +9091,16 @@ function openTeam(team) {
                     row.appendChild(el);
                 };
                 add('tm-date', String(m.date.getDate()).padStart(2, '0') + '.' + String(m.date.getMonth() + 1).padStart(2, '0'));
-                add('tm-side', home ? 'E' : 'D');
-                add('tm-opp', (home ? m.away : m.home).name);
-                if (m.score && m.status !== 'upcoming') {
-                    add('tm-score', m.score[0] + ' - ' + m.score[1]);
-                    if (m.status === 'done') {
-                        const mine = m.score[home ? 0 : 1];
-                        const theirs = m.score[home ? 1 : 0];
-                        const res = mine > theirs ? 'g' : mine < theirs ? 'm' : 'b';
-                        add('tm-res ' + res, { g: 'G', b: 'B', m: 'M' }[res]);
-                    }
+                add('lg-home', m.home.name);
+                add('lg-mid', m.score && m.status !== 'upcoming' ? m.score[0] + ' - ' + m.score[1] : OTHER_LABELS[m.code] || formatTime(m.date));
+                add('lg-away', m.away.name);
+                if (m.score && m.status === 'done') {
+                    const mine = m.score[home ? 0 : 1];
+                    const theirs = m.score[home ? 1 : 0];
+                    const res = mine > theirs ? 'g' : mine < theirs ? 'm' : 'b';
+                    add('tm-res ' + res, { g: 'G', b: 'B', m: 'M' }[res]);
                 } else {
-                    add('tm-score', OTHER_LABELS[m.code] || formatTime(m.date));
+                    add('tm-res', '');
                 }
                 seasonRowClick(row, m);
                 body.appendChild(row);
@@ -9085,7 +9113,7 @@ function openTeam(team) {
 }
 
 /* Lig sayfası: haftalar ilk maçlarının tarihine göre sıralı */
-function openLeague(leagueId) {
+function drawLeague(leagueId) {
     const league = leagueInfo(leagueId);
     const open = openSeasonBox(league.name);
     seasonFor(leagueId).then(season => {
@@ -9141,30 +9169,116 @@ function openLeague(leagueId) {
     });
 }
 
-function hideTeam() {
-    teamBox.classList.remove('open');
+/*
+   ÜST ÜSTE SAYFALAR: maç sayfasının üstünde takım / lig sayfası, onun üstünde maç sayfası... Mavi top ve geri tuşu
+   yalnızca en üstteki sayfayı kapatır. İki sayfa öğesi var (maç sayfası, takım sayfası); sıradakiler hep birbirinin
+   ardı olduğu için en üstteki açılırken altındaki de açık durur, kapanınca altındaki yeniden çizilir.
+*/
+const pageStack = [];      /* { kind: 'match', id, tab } / { kind: 'team', team } / { kind: 'league', id } */
+let pageBase = null;       /* ilk sayfa açılırken açık olan maç sayfası (yoksa null) */
+let pageTimer = null;
+let pagePending = null;
+
+const pageEl = entry => entry.kind === 'match' ? detailSheet : teamBox;
+
+/* Kayma olmadan açar / kapatır */
+function instant(el, fn) {
+    el.style.transition = 'none';
+    fn();
+    el.getBoundingClientRect();
+    el.style.transition = '';
 }
 
-function closeTeam() {
-    hideTeam();
-    layerClosed('team');
+function drawPage(entry) {
+    if (entry.kind === 'match')
+        return showDetail(entry.id, entry.tab);
+    if (entry.kind === 'team')
+        drawTeam(entry.team);
+    else
+        drawLeague(entry.id);
+    teamBox.classList.add('open');
 }
 
-document.getElementById('teamClose').addEventListener('click', closeTeam);
+function pushPage(entry) {
+    flushPage();
+    if (!pageStack.length)
+        pageBase = detailSheet.classList.contains('open') && detailId ? { kind: 'match', id: detailId } : null;
+    const under = pageStack[pageStack.length - 1] || pageBase;
+    if (under && under.kind === 'match')
+        under.tab = detailTab;
+    pageStack.push(entry);
 
-teamBox.addEventListener('click', event => {
-    if (event.target === teamBox)
-        closeTeam();
-});
+    const el = pageEl(entry);
+    (el === detailSheet ? teamBox : detailSheet).classList.remove('page-top');
+    el.classList.add('page-top');
+    instant(el, () => el.classList.remove('open'));
+    drawPage(entry);
+
+    const name = 'page' + pageStack.length;
+    LAYER_HIDERS[name] = popPage;
+    layerOpened(name, entry.kind === 'match' ? LINK_PREFIX + encodeURIComponent(entry.id) : undefined);
+}
+
+/* En üstteki kayarak kapanır; bitince altındaki sayfanın altı yeniden çizilir */
+function popPage() {
+    flushPage();
+    const old = pageStack.pop();
+    if (!old)
+        return;
+    const top = pageStack[pageStack.length - 1] || pageBase;
+    const below = pageStack.length ? pageStack[pageStack.length - 2] || pageBase : null;
+    if (!pageStack.length)
+        pageBase = null;
+    const oldEl = pageEl(old);
+    oldEl.classList.remove('open');
+
+    pagePending = () => {
+        oldEl.classList.remove('page-top');
+        if (top)
+            pageEl(top).classList.add('page-top');
+        if (below && pageEl(below) === oldEl)
+            instant(oldEl, () => drawPage(below));
+        else if (oldEl === detailSheet)
+            hideDetail();
+    };
+    pageTimer = setTimeout(flushPage, 300);
+}
+
+function flushPage() {
+    if (!pagePending)
+        return;
+    const fn = pagePending;
+    pagePending = null;
+    clearTimeout(pageTimer);
+    fn();
+}
+
+/* Mavi top / geri: en üstteki sayfa */
+function closeTopPage() {
+    const name = 'page' + pageStack.length;
+    popPage();
+    layerClosed(name);
+}
+
+/* Bütün sayfalar hemen kapanır (maç sayfası kapanırken); geçmişten silinecek katman adları döner */
+function closePages() {
+    flushPage();
+    const names = pageStack.map((entry, i) => 'page' + (i + 1));
+    pageStack.length = 0;
+    pageBase = null;
+    teamBox.classList.remove('open', 'page-top');
+    detailSheet.classList.remove('page-top');
+    return names;
+}
 
 /* Maç sayfasındaki takım adları ve lig satırı (analiz görünümünde değil) */
 [['sbHome', 'home'], ['sbAway', 'away'], ['sbLeague', null]].forEach(([id, side]) => {
     document.getElementById(id).addEventListener('click', () => {
         const match = detailId && !detailSheet.classList.contains('an-mode') ? findMatch(detailId) : null;
         if (match && side)
-            openTeam(match[side]);
+            pushPage({ kind: 'team', team: match[side] });
         else if (match)
-            openLeague(match.league.id);
+            pushPage({ kind: 'league', id: match.league.id });
     });
 });
 
@@ -11566,7 +11680,6 @@ const LAYER_HIDERS = {
     oddsPage: hideOddsPage,
     profile: hideProfile,
     karne: hideKarne,
-    team: hideTeam,
     confirm: hideConfirm,
     calendar: hideCalendar
 };
@@ -11595,23 +11708,24 @@ function layerOpened(name, url) {
     syncBall();
 }
 
-function layerClosed(name) {
+/* more: onunla birlikte kapanan katmanlar (maç sayfasının üstündeki sayfalar) */
+function layerClosed(name, more = []) {
 
     if (waitingLayers.some(item => item.name === name)) {
         waitingLayers = waitingLayers.filter(item => item.name !== name);
         return;
     }
 
-    const index = openLayers.indexOf(name);
+    const names = [name].concat(more).filter(item => openLayers.includes(item));
 
-    if (index < 0)
+    if (!names.length)
         return;
 
-    openLayers.splice(index, 1);
+    names.forEach(item => openLayers.splice(openLayers.indexOf(item), 1));
     syncBall();
 
     ignoredPops++;
-    history.back();
+    history.go(-names.length);
 }
 
 /*
@@ -11699,6 +11813,7 @@ function ballAction() {
         openLeagueMenu ||
         homeMenu.classList.contains('open') ||
         detailSheet.classList.contains('open') ||
+        teamBox.classList.contains('open') ||
         oddsSheet.classList.contains('open') ||
         document.body.dataset.tab === 'empty')
         return 'close';
@@ -11729,6 +11844,7 @@ acKapa.addEventListener('click', () => {
         else if (document.body.dataset.tab === 'empty' &&
                  (emptyLayer.classList.contains('raised') || !detailSheet.classList.contains('open')))
             showTab('home');
+        else if (pageStack.length) closeTopPage();
         else if (oddsSheet.classList.contains('open')) closeOddsPage();
         else closeDetail();
     }
@@ -13010,6 +13126,12 @@ function closeOddsPage() {
 let detailWaiting = false;
 
 function openDetail(id, tab = 'summary') {
+    showDetail(id, tab);
+    layerOpened('detail', LINK_PREFIX + encodeURIComponent(id));
+}
+
+/* Maç sayfasını çizer ve açar (geçmişe eklemeden; üst üste sayfalarda da) */
+function showDetail(id, tab = 'summary') {
 
     const match = findMatch(id);
 
@@ -13038,8 +13160,6 @@ function openDetail(id, tab = 'summary') {
     detailTrack.classList.remove('dragging');
 
     detailSheet.classList.add('open');
-
-    layerOpened('detail', LINK_PREFIX + encodeURIComponent(id));
 }
 
 /* Skor tablosu ve sekmeler (yeni veri gelince sekme ve kaydırma yerinde kalır) */
@@ -13107,6 +13227,7 @@ function refreshDetail() {
 }
 
 function hideDetail() {
+    flushPage();
     detailSheet.classList.remove('open');
     detailId = null;
     detailWaiting = false;
@@ -13115,8 +13236,9 @@ function hideDetail() {
 }
 
 function closeDetail() {
+    const pages = closePages();
     hideDetail();
-    layerClosed('detail');
+    layerClosed('detail', pages);
 }
 
 
@@ -13264,7 +13386,11 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('keydown', event => {
-    if (detailId && event.key === 'Escape')
+    if (event.key !== 'Escape')
+        return;
+    if (pageStack.length)
+        closeTopPage();
+    else if (detailId)
         closeDetail();
 });
 

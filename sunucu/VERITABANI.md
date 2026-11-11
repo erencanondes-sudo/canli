@@ -87,7 +87,7 @@ Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanm�
 - `sezon/takimlar.json`: her takımın bulunduğu sezon dosyaları (sezon listesi her çekildiğinde eklenir; silinmez).
 - Takım sayfası (maç sayfasındaki takım adına basınca): takımın kaydedilmiş bütün turnuvaları (her birinin en son sezonu), lig adı başlığıyla; sıra: önce lig, sonra Avrupa kupaları (2, 3, 848), sonra kupalar (adında Kupa / Cup / Pokal / Shield geçen). Alt başlıkta sezon.
 - Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): aynı dosyadan hafta hafta (oklar ve açılır liste); açılışta bugüne en yakın maçın haftası.
-- İkisinde de maça basınca maç sayfası açılır; içerik maç odasından / R2 maç dosyasından gelir.
+- Takım ve lig sayfası, maça basınca açılan maç sayfası üst üste yeni sayfa olarak açılır; mavi top ve geri tuşu yalnızca en üsttekini kapatır. Maç içeriği maç odasından / R2 maç dosyasından gelir.
 
 ## Odalar
 
