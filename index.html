@@ -2135,6 +2135,17 @@ body.has-layer .ac-kapa svg {
     margin-top: .85em;
 }
 
+/* Maç sayfası: armalar ve skor reklamın 16px altında, lig/tarih yazısı takım adlarının altında */
+#scoreBoard {
+    padding-top: 1rem;
+}
+#scoreBoard .sb-teams {
+    margin-top: 0;
+}
+#scoreBoard .sb-league {
+    margin-top: .5rem;
+}
+
 .sb-team {
     display: flex;
     flex-direction: column;
@@ -2335,6 +2346,9 @@ body.has-layer .ac-kapa svg {
  * Hepsi aynı taban genişlikten başlar, kalan yer eşit paylaşılır; fark aynen korunur.
  */
 #detailTabs button { flex: 1 1 .625rem; }
+
+/* Maç sayfasında sekme satırı 2px daha alçak (üstten ve alttan 1px) */
+#detailTabs button { padding: .5375rem 1px .4375rem; }
 #detailTabs [data-tab="summary"]  { flex-basis: .375rem; }
 #detailTabs [data-tab="lineup"],
 #detailTabs [data-tab="odds"]     { flex-basis: .5rem; }
@@ -2885,12 +2899,11 @@ body.has-layer .ac-kapa svg {
     padding-bottom: 0;
 }
 
+/* Sekme satırının hemen altından başlar, köşeler düz */
 .sum-panel {
     position: relative;
-    min-height: calc(100% - .6rem);
-    margin-top: .6rem;
+    min-height: 100%;
     padding: .75rem .5rem calc(6rem + env(safe-area-inset-bottom, 0px));
-    border-radius: .75rem .75rem 0 0;
     /* Ana sayfanın zemini */
     background: #f4f5f7;
 }
@@ -4794,6 +4807,12 @@ body.has-layer .ac-kapa svg {
     overflow: hidden;
     /* Reklamın yanları: sayfa zemini */
     background: #f4f5f7;
+    transition: background-color .28s ease;
+}
+
+/* Maç sayfası açıkken reklamın yanları sekme satırının altındaki zeminle aynı (sayfa kayarken renk de değişir) */
+body:has(#detailSheet.open) .ad-strip {
+    background: #0b1424;
 }
 
 .ad-box {
@@ -5481,8 +5500,6 @@ body.has-layer .ac-kapa svg {
 <div id="detailInner">
 
     <div id="scoreBoard">
-        <div class="sb-league" id="sbLeague"></div>
-
         <div class="sb-teams">
             <div class="sb-team" id="sbHome"></div>
             <div id="sbScore">
@@ -5491,6 +5508,8 @@ body.has-layer .ac-kapa svg {
             </div>
             <div class="sb-team" id="sbAway"></div>
         </div>
+
+        <div class="sb-league" id="sbLeague"></div>
     </div>
 
     <div id="detailPanel">
@@ -13295,15 +13314,15 @@ detailBody.addEventListener('touchend', endTabSwipe, { passive: true });
 detailBody.addEventListener('touchcancel', endTabSwipe, { passive: true });
 
 /*
- * Sekmelerin olduğu bölüm elle çekilmez; her açılışta skorun hemen
- * altındaki en yüksek noktanın biraz aşağısında sabit durur.
+ * Sekmelerin olduğu bölüm elle çekilmez; her açılışta lig/tarih yazısının
+ * biraz aşağısında sabit durur.
  */
 let detailLift = 0;
 
 function maxDetailLift() {
     const board = scoreBoard.getBoundingClientRect();
-    const score = document.getElementById('sbScore').getBoundingClientRect();
-    return Math.max(0, board.bottom - (score.bottom + 10));
+    const league = document.getElementById('sbLeague').getBoundingClientRect();
+    return Math.max(0, board.bottom - (league.bottom + 10));
 }
 
 function applyDetailLift() {
