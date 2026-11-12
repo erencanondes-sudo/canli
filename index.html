@@ -2136,25 +2136,34 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Maç sayfası: armalar ve skor reklamın 16px altında, lig/tarih yazısı takım adlarının altında */
-/* Alt boşluk az: lig yazısı ile sekme satırı arası 8px */
+/* Alt boşluk az: lig yazısı ile sekme satırı arası 7px */
 #scoreBoard {
     padding-top: 1rem;
     padding-bottom: .0125rem;
 }
+#detailSheet #detailHead {
+    padding-top: .3375rem;
+}
 #scoreBoard .sb-teams {
     margin-top: 0;
 }
-/* Lig/tarih yazısı 10px (Oranlar sayfasındakinden 1px küçük), takım adlarıyla arası 7px */
+/* Lig/tarih yazısı 9px (Oranlar sayfasındakinden 2px küçük), takım adlarıyla arası 5px */
 #scoreBoard .sb-league {
-    margin-top: .4375rem;
-    font-size: .625rem;
+    margin-top: .375rem;
+    font-size: .5625rem;
 }
-/* Arma 1px, skor yazısı 3px küçük */
+/* Arma 3px, skor yazısı 5px, takım adı ve durum etiketi 1px küçük (Oranlar sayfasına göre) */
 #scoreBoard .sb-crest {
-    width: calc(3.9em - .0625rem);
+    width: calc(3.9em - .1875rem);
 }
 #scoreBoard #sbScoreText {
-    font-size: min(calc(1.8em - .1875rem), calc(7.2vw - .1875rem));
+    font-size: min(calc(1.8em - .3125rem), calc(7.2vw - .3125rem));
+}
+#scoreBoard .sb-team span {
+    font-size: .7375rem;
+}
+#scoreBoard #sbStatus {
+    font-size: .5775rem;
 }
 
 .sb-team {
@@ -2358,8 +2367,9 @@ body.has-layer .ac-kapa svg {
  */
 #detailTabs button { flex: 1 1 .625rem; }
 
-/* Maç sayfasında sekme satırı 2px daha alçak (üstten ve alttan 1px) */
+/* Maç sayfasında sekme satırı 2px daha alçak (üstten ve alttan 1px), altındaki boşluk 1px az */
 #detailTabs button { padding: .5375rem 1px .4375rem; }
+#detailTabs { margin-bottom: .5375rem; }
 #detailTabs [data-tab="summary"]  { flex-basis: .375rem; }
 #detailTabs [data-tab="lineup"],
 #detailTabs [data-tab="odds"]     { flex-basis: .5rem; }
