@@ -325,8 +325,9 @@ async function takimYaz() {
     };
     for (const k of maclar.values())
         for (const takim of [k.f.teams.home, k.f.teams.away]) ekle(takim.id, B.ad(takim.name));
-    /* Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil) */
-    for (const [no, ad] of sezon.takimlar) ekle(no, ad);
+    /* Sezon listelerinde görülen takımlar (artık ligde olmayanlar dahil): yalnızca dosyada yoksa; eski sezondaki ad
+       güncel adın üstüne yazılmaz (yazılsaydı ad her turda gidip gelir, sürüm her turda değişirdi) */
+    for (const [no, ad] of sezon.takimlar) if (!(no in takimHali.t)) ekle(no, ad);
     if (degisti) {
         takimHali.s = simdi();
         depo.yaz('takim.json', JSON.stringify(takimHali));
