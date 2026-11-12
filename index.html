@@ -1532,6 +1532,19 @@ button {
     transition: none;
 }
 
+/*
+ * Canlı Skor sayfası en üstte aşağı, en altta yukarı çekilince esner (reklamın altındaki alanın içinde),
+ * bırakınca yumuşakça yerine döner. Kenarda tarayıcı kendi çekme hareketini yapmaz.
+ */
+.home-page[data-page="live"] {
+    overscroll-behavior-y: contain;
+    transition: transform .35s cubic-bezier(.25, .8, .25, 1);
+}
+
+.home-page[data-page="live"].pulling {
+    transition: none;
+}
+
 .home-page {
     flex: none;
     width: 20%;
@@ -11982,6 +11995,86 @@ function endHomeSwipe() {
 
 homeMain.addEventListener('touchend', endHomeSwipe, { passive: true });
 homeMain.addEventListener('touchcancel', endHomeSwipe, { passive: true });
+
+/* Canlı Skor sayfasında esneme: en üstte aşağı, en altta yukarı çekince */
+const livePage = document.querySelector('.home-page[data-page="live"]');
+let livePull = null;
+
+livePage.addEventListener('touchstart', event => {
+
+    livePull = event.touches.length === 1
+        ? { x: event.touches[0].clientX, y: event.touches[0].clientY, last: event.touches[0].clientY, vertical: null, edge: 0, from: 0 }
+        : null;
+
+}, { passive: true });
+
+livePage.addEventListener('touchmove', event => {
+
+    if (!livePull)
+        return;
+
+    const x = event.touches[0].clientX;
+    const y = event.touches[0].clientY;
+    const last = livePull.last;
+
+    livePull.last = y;
+
+    if (livePull.vertical === null) {
+
+        if (Math.abs(x - livePull.x) < 6 && Math.abs(y - livePull.y) < 6)
+            return;
+
+        livePull.vertical = Math.abs(y - livePull.y) > Math.abs(x - livePull.x);
+    }
+
+    if (!livePull.vertical)
+        return;
+
+    /* Kenara gelince esneme o andaki parmak yerinden başlar */
+    if (!livePull.edge) {
+
+        const atTop = livePage.scrollTop <= 0;
+        const atBottom = livePage.scrollTop + livePage.clientHeight >= livePage.scrollHeight - 1;
+
+        if (atTop && y > last)
+            livePull.edge = 1;
+        else if (atBottom && y < last)
+            livePull.edge = -1;
+        else
+            return;
+
+        livePull.from = last;
+        livePage.classList.add('pulling');
+    }
+
+    const distance = (y - livePull.from) * livePull.edge;
+
+    /* Ters yöne dönüp başlangıcı geçince esneme biter, normal kaydırma sürer */
+    if (distance <= 0) {
+        livePull.edge = 0;
+        livePage.classList.remove('pulling');
+        livePage.style.transform = '';
+        return;
+    }
+
+    event.preventDefault();
+
+    /* Çektikçe zorlaşır; en fazla sayfa boyunun dörtte biri kadar */
+    const max = livePage.clientHeight / 4;
+
+    livePage.style.transform = 'translateY(' + (livePull.edge * max * distance / (distance + max)) + 'px)';
+
+}, { passive: false });
+
+function endLivePull() {
+
+    livePull = null;
+    livePage.classList.remove('pulling');
+    livePage.style.transform = '';
+}
+
+livePage.addEventListener('touchend', endLivePull, { passive: true });
+livePage.addEventListener('touchcancel', endLivePull, { passive: true });
 
 
 /* =================================================
