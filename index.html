@@ -2415,12 +2415,12 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Kadro: üstte görünüm düğmeleri (Saha Dizilişi / Oyuncu Listesi) */
-/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge; şerit sayfa zemininden biraz koyu gri, köşesiz */
+/* Saha Dizilişi | Oyuncu Listesi: ana sayfadaki Canlı Skor / Maçlarım düğmeleri gibi iki ayrı beyaz düğme, solunda simge */
 .lineup-switch {
     display: flex;
-    gap: .2em;
+    gap: .5em;
     margin-bottom: .7em;
-    background: #e4e7ec;
+    padding: .6rem .5rem 0;
 }
 
 .lineup-switch button {
@@ -2429,15 +2429,14 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     justify-content: center;
     gap: .5em;
-    /* Satırın tam boyu: eski şerit iç boşluğu düğmeye eklendi, satır yüksekliği aynı */
-    padding: calc(.4em + .2rem) .4em;
-    border: .0625rem solid transparent;
-    border-radius: 0;
-    background: none;
+    padding: .4em .3em;
+    border: 1px solid #d5d8de;
+    border-radius: .625rem;
+    background: white;
     font: inherit;
     font-size: .875rem;
-    font-weight: 700;
-    color: #6b7385;
+    font-weight: 800;
+    color: #444;
     cursor: pointer;
 }
 
@@ -2454,12 +2453,11 @@ body.has-layer .ac-kapa svg {
 .lineup-switch button:first-child { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M2 5h20v14H2z M12 5v14 M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M2 9h3v6H2 M22 9h-3v6h3%22/%3E%3C/svg%3E"); }
 .lineup-switch button:last-child  { --icon: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M9 6h12 M9 12h12 M9 18h12 M3.5 6h.01 M3.5 12h.01 M3.5 18h.01%22/%3E%3C/svg%3E"); }
 
-/* Seçili: sekmelerdeki gibi parlak mavi */
+/* Seçili: ana sayfadaki seçili düğme gibi açık mavi zemin, mavi yazı */
 .lineup-switch button.on {
-    border-color: #6cc2ff;
-    background: linear-gradient(180deg, #2f7cf0, #1a52c4);
-    box-shadow: 0 0 .6rem rgba(40, 140, 255, .45);
-    color: #fff;
+    border-color: #1a73e8;
+    background: #eef4ff;
+    color: #1a73e8;
 }
 
 .lineup-switch button:disabled {
@@ -2619,7 +2617,7 @@ body.has-layer .ac-kapa svg {
     color: #fff;
 }
 
-/* Yedekler: her takım ayrı kutu, kendi yarısının altında; başlık lacivert, içinde liste */
+/* Yedekler: her takım ayrı beyaz kart (ana sayfadaki lig kartı gibi), kendi yarısının altında; başlık lig başlığı gibi */
 .benches {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2634,20 +2632,24 @@ body.has-layer .ac-kapa svg {
 
 .bench {
     min-width: 0;
-    border-radius: .6em;
+    border-radius: 1rem;
     overflow: hidden;
-    background: #e9ecf1;
+    background: white;
+    box-shadow: 0 1px .375rem rgba(0,0,0,.10);
 }
 
 .bench-head {
     display: flex;
     align-items: center;
     gap: .6em;
-    padding: .4em .7em;
+    padding: .6em .9em;
     font-size: .8125rem;
-    font-weight: 700;
+    font-weight: 800;
     color: #fff;
-    background: #1d2340;
+    background:
+        radial-gradient(ellipse 60% 160% at 62% -30%, rgba(90, 140, 240, .45), transparent 70%),
+        #1d2340;
+    box-shadow: inset 0 1px 0 rgba(130, 195, 255, .45);
 }
 
 .bench-head span {
@@ -2658,13 +2660,13 @@ body.has-layer .ac-kapa svg {
 }
 
 .bench-list {
-    padding: 0 .5em;
+    padding: 0 .7em;
     font-size: .8125rem;
 }
 
-/* Yedek listesi açık kutuda: ayraç çizgisi kutudan biraz koyu */
+/* Yedek listesi: ayraç çizgisi ana sayfadaki maç satırlarınınki gibi */
 #detailSheet .tab-page[data-page="lineup"] .bench .lineup-player {
-    border-bottom-color: #d8dce4;
+    border-bottom-color: #e6e9f0;
 }
 
 #detailSheet .tab-page[data-page="lineup"] .bench .lineup-player:last-child {
