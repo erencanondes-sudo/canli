@@ -2429,14 +2429,14 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Kadro: üstte görünüm düğmeleri (Saha Dizilişi / Oyuncu Listesi) */
-/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge */
+/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge; şerit zemini sekme satırınınki */
 .lineup-switch {
     display: flex;
     gap: .2em;
     margin-bottom: .7em;
     padding: .2em;
     border-radius: .75rem;
-    background: #1c2433;
+    background: linear-gradient(180deg, #112640, #0a1729);
 }
 
 .lineup-switch button {
@@ -2445,7 +2445,7 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     justify-content: center;
     gap: .5em;
-    padding: .55em .4em;
+    padding: .4em .4em;
     border: .0625rem solid transparent;
     border-radius: .6rem;
     background: none;
@@ -2839,8 +2839,7 @@ body.has-layer .ac-kapa svg {
     padding-top: 0;
 }
 
-/* İstatistik ve Oranlar biraz aşağıdan (eski 1rem ile 0 arası) */
-#detailSheet:not(.an-mode) .tab-page[data-page="stats"],
+/* Oranlar biraz aşağıdan (eski 1rem ile 0 arası) */
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"] {
     padding-top: .5rem;
 }
@@ -3164,8 +3163,8 @@ body.has-layer .ac-kapa svg {
 
 /*
  * İstatistik: Özet gibi tek kart (lacivert çerçeve, açık zemin, düz köşeler).
- * Üstte ve altta lacivert şerit (başlık, son güncelleme); her satırda ev değeri | ad | deplasman değeri,
- * altında tek çubuk: ev sahibi mavi, deplasman koyu sarı.
+ * Üstte başlık, altta son güncelleme (zeminsiz); satırlar arasında ayraç yok. Her satırda
+ * ev değeri | ad | deplasman değeri, altında tek çubuk: ev sahibi mavi, deplasman koyu sarı.
  */
 #detailSheet:not(.an-mode) .tab-page[data-page="stats"] {
     padding-left: .3rem;
@@ -3180,21 +3179,15 @@ body.has-layer .ac-kapa svg {
 
 .stat-head {
     padding: .45em;
-    background: linear-gradient(180deg, #24447a, #1a3462);
     text-align: center;
     font-size: .875rem;
     font-weight: 800;
     letter-spacing: .02em;
-    color: white;
+    color: #1d2340;
 }
 
 .stat-line {
-    padding: .35em .9em .45em;
-    border-bottom: 1px solid #dde5f0;
-}
-
-.stat-line:last-of-type {
-    border-bottom: 0;
+    padding: .5em .9em .6em;
 }
 
 /* Ad her zaman satırın tam ortasında: iki yandaki sütun eşit genişlikte */
@@ -3245,18 +3238,18 @@ body.has-layer .ac-kapa svg {
 
 /*
  * ORANLAR (maç sayfasının Oranlar sekmesi ve Oranlar'dan açılan sayfa)
- * Her oran türü ayrı koyu kart: solda renkli başlık ve simge, sağda beyaz oran kutuları.
+ * Her oran türü ayrı beyaz kart (maç satırı gibi): solda başlık, sağda Oranlar sayfasındaki
+ * karttaki gibi açık gri oran kutuları (ad solda, oran sağda, tek satır).
  */
 
 .odds-block {
     display: grid;
     grid-template-columns: minmax(0, 36%) 1fr;
     margin-bottom: .75em;
-    border: 1px solid rgba(90, 160, 255, .7);
-    border-radius: .9rem;
+    border-radius: 1rem;
     overflow: hidden;
-    background: linear-gradient(180deg, #15335f, #0d2142);
-    box-shadow: 0 0 .65rem -.15rem rgba(60, 140, 255, .8);
+    background: white;
+    box-shadow: 0 1px .375rem rgba(0, 0, 0, .10);
 }
 
 .odds-title {
@@ -3264,37 +3257,37 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     margin: 0;
     padding: .6em .75em;
-    font-size: .8125rem;
-    font-weight: 600;
+    font-size: .75rem;
+    font-weight: 700;
     line-height: 1.25;
-    color: white;
+    color: #555a66;
 }
 
 .odds-block .odds-row {
     align-self: center;
     margin: 0;
-    padding: .3em;
-    gap: .3em;
-    font-size: .9375rem;
+    padding: .5em .55em;
+    gap: .4em;
+    font-size: .875rem;
 }
 
 .odds-block .odd {
-    /* Alçak: üst / alt boşluk az, iki satır birbirine yakın */
-    padding: .12em 0;
-    line-height: 1;
-    border-radius: .55rem;
-    background: linear-gradient(180deg, #ffffff, #e2e7ef);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .3em;
+    padding: .45em .55em;
+    white-space: nowrap;
 }
 
 .odds-block .odd span {
-    margin-bottom: -.05em;
-    color: #3a4256;
+    display: inline;
+    font-size: .71em;
 }
 
 .odds-block .odd b {
-    font-size: .8rem;
+    font-size: .84em;
     font-weight: 800;
-    color: #0f1626;
 }
 
 .odds-block .odd.empty b {
@@ -3316,16 +3309,15 @@ body.has-layer .ac-kapa svg {
     color: #8f9bb0;
 }
 
-/* İstatistik altındaki "Son güncelleme": lacivert alt şerit, solunda yenileme simgesi */
+/* İstatistik altındaki "Son güncelleme": zeminsiz, solunda yenileme simgesi */
 .stat-updated {
     display: flex;
     align-items: center;
     gap: .4em;
     margin: 0;
     padding: .55em .9em;
-    background: linear-gradient(180deg, #24447a, #1a3462);
     font-size: .8125rem;
-    color: #c9d6ec;
+    color: #6b7385;
 }
 
 .stat-updated::before {
