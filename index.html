@@ -2429,14 +2429,13 @@ body.has-layer .ac-kapa svg {
 }
 
 /* Kadro: üstte görünüm düğmeleri (Saha Dizilişi / Oyuncu Listesi) */
-/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge; şerit zemini sekme satırınınki */
+/* Saha Dizilişi | Oyuncu Listesi: tek şerit içinde iki düğme, solunda simge; satırın zemini sekmelerin arkasındaki zemin, köşesiz */
 .lineup-switch {
     display: flex;
     gap: .2em;
     margin-bottom: .7em;
     padding: .2em;
-    border-radius: .75rem;
-    background: linear-gradient(180deg, #112640, #0a1729);
+    background: #0b1424;
 }
 
 .lineup-switch button {
@@ -2839,8 +2838,11 @@ body.has-layer .ac-kapa svg {
     padding-top: 0;
 }
 
-/* Oranlar biraz aşağıdan (eski 1rem ile 0 arası) */
+/* Oranlar ve Yorumlar biraz aşağıdan */
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"] {
+    padding-top: 1rem;
+}
+#detailSheet:not(.an-mode) .tab-page[data-page="comments"] {
     padding-top: .5rem;
 }
 
@@ -3171,9 +3173,11 @@ body.has-layer .ac-kapa svg {
     padding-right: .3rem;
 }
 
+/* Altta çizgi yok */
 #statsBox:has(.stat-line) {
     overflow: hidden;
     border: 1px solid #1f3c6e;
+    border-bottom: 0;
     background: #fafafb;
 }
 
@@ -3316,15 +3320,15 @@ body.has-layer .ac-kapa svg {
     gap: .4em;
     margin: 0;
     padding: .55em .9em;
-    font-size: .8125rem;
+    font-size: .75rem;
     color: #6b7385;
 }
 
 .stat-updated::before {
     content: '';
     flex: none;
-    width: 1.25em;
-    height: 1.25em;
+    width: 1.1em;
+    height: 1.1em;
     background: currentColor;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
@@ -12456,7 +12460,8 @@ function renderStats(match) {
         hv = hv === undefined ? h : hv;
         av = av === undefined ? a : av;
 
-        const total = (hv + av) || 1;
+        /* İkisi de 0 ise çubuk yarı yarıya */
+        const total = hv + av;
 
         const line = document.createElement('div');
         line.className = 'stat-line';
@@ -12471,8 +12476,8 @@ function renderStats(match) {
         spans[2].textContent = a;
 
         const bars = line.querySelectorAll('.stat-bars div');
-        bars[0].style.flex = String(Math.max(hv, 0.001) / total);
-        bars[1].style.flex = String(Math.max(av, 0.001) / total);
+        bars[0].style.flex = total ? String(Math.max(hv, 0.001) / total) : '1';
+        bars[1].style.flex = total ? String(Math.max(av, 0.001) / total) : '1';
 
         box.appendChild(line);
     });
