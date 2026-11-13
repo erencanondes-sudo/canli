@@ -2434,7 +2434,6 @@ body.has-layer .ac-kapa svg {
     display: flex;
     gap: .2em;
     margin-bottom: .7em;
-    padding: .2em;
     background: #e4e7ec;
 }
 
@@ -2444,9 +2443,10 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     justify-content: center;
     gap: .5em;
-    padding: .4em .4em;
+    /* Satırın tam boyu: eski şerit iç boşluğu düğmeye eklendi, satır yüksekliği aynı */
+    padding: calc(.4em + .2rem) .4em;
     border: .0625rem solid transparent;
-    border-radius: .6rem;
+    border-radius: 0;
     background: none;
     font: inherit;
     font-size: .875rem;
@@ -2840,7 +2840,12 @@ body.has-layer .ac-kapa svg {
 
 /* Oranlar ve Yorumlar biraz aşağıdan */
 #detailSheet:not(.an-mode) .tab-page[data-page="odds"] {
-    padding-top: 1.5rem;
+    padding-top: 1.25rem;
+}
+
+/* İstatistik başlığının üstünde çok az boşluk */
+#detailSheet:not(.an-mode) .tab-page[data-page="stats"] {
+    padding-top: .125rem;
 }
 #detailSheet:not(.an-mode) .tab-page[data-page="comments"] {
     padding-top: 1rem;
@@ -3058,14 +3063,6 @@ body.has-layer .ac-kapa svg {
     color: #1d2340;
 }
 
-/* Canlı maçta olayların altında */
-.sum-note {
-    margin: .9em 0 0;
-    text-align: center;
-    font-size: .75rem;
-    color: #9aa1b0;
-}
-
 /* Maç başlamadı: panelin ortasında geri sayım, başlık, açıklama, haber ver düğmesi */
 .sum-panel.sum-wait {
     display: flex;
@@ -3191,7 +3188,7 @@ body.has-layer .ac-kapa svg {
 }
 
 .stat-line {
-    padding: .5em .9em .6em;
+    padding: .6em .9em .7em;
 }
 
 /* Ad her zaman satırın tam ortasında: iki yandaki sütun eşit genişlikte */
@@ -3320,15 +3317,15 @@ body.has-layer .ac-kapa svg {
     gap: .4em;
     margin: 0;
     padding: .55em .9em;
-    font-size: .75rem;
+    font-size: .6875rem;
     color: #6b7385;
 }
 
 .stat-updated::before {
     content: '';
     flex: none;
-    width: 1.1em;
-    height: 1.1em;
+    width: 1em;
+    height: 1em;
     background: currentColor;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 11a8 8 0 0 0-14.3-4.8M4 4v3.5h3.5 M4 13a8 8 0 0 0 14.3 4.8M20 20v-3.5h-3.5%22/%3E%3C/svg%3E") center / contain no-repeat;
@@ -12403,13 +12400,6 @@ function renderSummary(match) {
         kick.className = 'half-line kickoff';
         kick.textContent = 'İkinci yarı başladı';
         list.appendChild(kick);
-    }
-
-    if (events.length && match.status === 'live') {
-        const note = document.createElement('p');
-        note.className = 'sum-note';
-        note.textContent = 'Yeni olaylar geldikçe burada görünecek.';
-        box.appendChild(note);
     }
 
     if (match.status === 'done' && match.score) {
