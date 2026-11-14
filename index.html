@@ -12049,8 +12049,8 @@ livePage.addEventListener('touchmove', event => {
 
     event.preventDefault();
 
-    /* Çektikçe zorlaşır; en fazla sayfa boyunun dörtte biri kadar */
-    const max = livePage.clientHeight / 4;
+    /* Çektikçe zorlaşır; en fazla sayfa boyunun onda biri kadar */
+    const max = livePage.clientHeight / 10;
 
     livePage.style.transform = 'translateY(' + (livePull.edge * max * distance / (distance + max)) + 'px)';
 
