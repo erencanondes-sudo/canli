@@ -7017,24 +7017,30 @@ function dayLoading() {
 }
 
 /*
- * Maç sayfası açıkken maç odası (mac/{no}): istatistik, kadro, (maç bitince) olaylar ve yorumlar (her maçta).
- * Odada içerik yoksa ("y") maç kesinleşmiş olabilir: R2 mac/{no}.json okunur (istatistik vermeyen ligde başlamamış
- * maçta okunmaz). Yorumlar için oda açık kalır. Maç sayfası kapanınca bağlantı kapanır.
+ * Maç sayfası açıkken maç odası (mac/{no}): istatistik, kadro, (maç bitince) olaylar ve yorumlar.
+ * Odada içerik yoksa ("y") maç kesinleşmiştir: R2 mac/{no}.json okunur (istatistik vermeyen ligde başlamamış maçta okunmaz).
+ * Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 4 saat geçmiş; sunucu maç bitince ~2 saat sonra kesinleştirir)
+ * içerik önce R2'den okunur, odaya yalnızca Yorumlar sekmesi açılınca bağlanılır (R2'de dosya yoksa hemen).
+ * Maç sayfası kapanınca bağlantı kapanır.
  */
 const detailPos = new Map();   /* maç no → { k, s } (yalnızca açık olan maç için tutulur) */
 let detailRoom = null;          /* açık maç odası (kapatma fonksiyonu; send ile istek gönderilir) */
+let detailNeedsRoom = null;     /* kesinleşmiş maçta odaya bağlanma (Yorumlar sekmesi açılınca) */
+
+const settledMatch = match => match.status === 'done' && Date.now() - match.date.getTime() >= 4 * 3600000;
 
 function watchDetail(match) {
 
     unwatchDetail();
 
     const id = match.id;
-    resetComments(id);
     const position = detailPos.get(id) || { k: null, s: 0 };
     detailPos.clear();
     detailPos.set(id, position);
+    let shown = false;
 
     const show = (doc, time) => {
+        shown = true;
         matchDetails.set(id, {
             stats: doc.istatistik || null,
             lineup: doc.kadro || null,
@@ -7051,22 +7057,43 @@ function watchDetail(match) {
     };
     detailUnsub = unsub;
 
-    close = openRoom('mac/' + id, position, message => {
+    const connect = () => {
+        if (close || detailUnsub !== unsub)
+            return;
+        detailNeedsRoom = null;
+        resetComments(id);
+        close = openRoom('mac/' + id, position, message => {
+            if (detailUnsub !== unsub)
+                return;
+            if (message.t === 'm') {
+                show(message.d || {}, message.g);
+            } else if (message.t === 'y') {
+                if (!shown && (leagueHasDetail(match.league.id) || match.status !== 'upcoming'))
+                    readFile('mac/' + id).then(doc => {
+                        if (doc && detailUnsub === unsub)
+                            show(doc, doc.g);
+                    }, () => {});
+            } else {
+                commentMessage(id, message);
+            }
+        });
+        detailRoom = close;
+    };
+
+    if (!settledMatch(match)) {
+        connect();
+        return;
+    }
+
+    detailNeedsRoom = connect;
+    readFile('mac/' + id).then(doc => {
         if (detailUnsub !== unsub)
             return;
-        if (message.t === 'm') {
-            show(message.d || {}, message.g);
-        } else if (message.t === 'y') {
-            if (leagueHasDetail(match.league.id) || match.status !== 'upcoming')
-                readFile('mac/' + id).then(doc => {
-                    if (doc && detailUnsub === unsub)
-                        show(doc, doc.g);
-                }, () => {});
-        } else {
-            commentMessage(id, message);
-        }
-    });
-    detailRoom = close;
+        if (doc)
+            show(doc, doc.g);
+        else
+            connect();
+    }, () => connect());
 }
 
 function unwatchDetail() {
@@ -7074,6 +7101,7 @@ function unwatchDetail() {
         detailUnsub();
     detailUnsub = null;
     detailRoom = null;
+    detailNeedsRoom = null;
     resetComments(null);
 }
 
@@ -10921,8 +10949,8 @@ startData();
 /* =================================================
    MESAJLAR (maç sayfası, Yorumlar): sunucu/VERITABANI.md → "Mesajlar"
    -------------------------------------------------
-   Yorumlar maç odasında (maç sayfası açıkken bağlı olunan oda, watchDetail). Oda bağlanınca son 10 yorumu gönderir;
-   Yorumlar sekmesi açılınca 10 eski yorum daha, "Daha fazla göster" ile her seferinde 20 daha istenir (en fazla 200).
+   Yorumlar maç odasında (watchDetail). Oda bağlanınca son 20 yorumu gönderir; "Daha fazla göster" ile her seferinde
+   20 daha istenir (en fazla 200). Kesinleşmiş maçta odaya yalnızca Yorumlar sekmesi açılınca bağlanılır.
    Yeni yorum, silinen yorum ve oy sayıları maç sayfası açık olduğu sürece anında gelir.
    Yazmak, oy vermek ve şikayet için Google ile giriş ve rumuz gerekir (ilk girişte kurallar kabul edilir); istekle birlikte
    Firebase giriş kimliği gönderilir, oda doğrular. Küfür / bağlantı kontrolü, günde 20 mesaj, 100 karakter, oy en fazla
@@ -10947,7 +10975,7 @@ const CM_ICONS = {
  * room: odasına bağlı olunan maç (yorumlar bu maçın), list: yorumlar (yeniden eskiye), match: Yorumlar sekmesi açık olan maç,
  * extended: sekme açılınca istenen 10 ek yorum istendi mi
  */
-const cm = { room: null, list: null, noMore: false, loadingMore: false, extended: false, match: null, open: null, replyTo: null };
+const cm = { room: null, list: null, noMore: false, loadingMore: false, match: null, open: null, replyTo: null };
 let blocked = new Set(readJSON(BLOCK_KEY, []));
 let myVotes = readJSON(VOTE_KEY, {});
 let myReports = new Set(readJSON(REPORT_KEY, []));
@@ -11042,12 +11070,9 @@ function commentMessage(id, message) {
     if (cm.room !== id)
         return;
     if (message.t === 'c0') {
-        /* Bağlanınca (yeniden bağlanınca da) son 10 yorum; sekme açıksa 10 tane daha */
+        /* Bağlanınca (yeniden bağlanınca da) son 20 yorum */
         cm.list = message.c || [];
-        cm.noMore = cm.list.length < 10;
-        cm.extended = false;
-        if (cm.match === id)
-            extendComments();
+        cm.noMore = cm.list.length < 20;
     } else if (message.t === 'c' && cm.list) {
         if (!cm.list.some(c => c.id === message.c.id))
             cm.list.unshift(message.c);
@@ -11082,14 +11107,6 @@ async function olderComments(count) {
     if (answer.c.length < count)
         cm.noMore = true;
     renderComments();
-}
-
-function extendComments() {
-    if (cm.extended || !cm.list)
-        return;
-    cm.extended = true;
-    if (!cm.noMore)
-        olderComments(10);
 }
 
 function moreComments() {
@@ -11362,8 +11379,9 @@ function startComments(id) {
     cmNote('');
     loginNext = null;
     document.getElementById('cmLogin').hidden = true;
-    if (cm.room === id)
-        extendComments();
+    /* Kesinleşmiş maçta odaya ancak şimdi bağlanılır */
+    if (detailNeedsRoom && detailId === id)
+        detailNeedsRoom();
     renderComments();
 }
 
@@ -11377,7 +11395,6 @@ function resetComments(id) {
     cm.room = id;
     cm.list = null;
     cm.noMore = false;
-    cm.extended = false;
     cm.open = null;
 }
 

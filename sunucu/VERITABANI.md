@@ -277,7 +277,7 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık; yazmak, oy ve şikayet için 
 |---|---|
 | Yorum | `{ id, u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), y?: yanıtlanan yorum, b: beğeni, d: beğenmeme }`. Değiştirilemez, yazan silebilir. Yalnızca sunucunun "açık" bildirdiği maçlara yazılır (sunucu gördüğü her maçı bildirir). Şimdilik hiç silinmez; maç kesinleşince yalnızca maç içeriği odadan silinir, yorumlar kalır |
 | Oy | Yorum ve kişi başına `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi yorumuna oy verilemez; sayılar oda tarafından tutulur |
-| Okuma | Maç sayfası açılınca (her maçta) odaya bağlanılır: son 10 yorum gelir. Yorumlar sekmesi açılınca 10 eski yorum daha, "Daha fazla göster" ile her seferinde 20 daha (en fazla 200). Yeni yorum, silinen yorum ve oy sayıları sayfa açıkken anında gelir |
+| Okuma | Canlı ve başlamamış maçta maç sayfası açılınca odaya bağlanılır (içerik ve yorumlar). Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 4 saat geçmiş) içerik önce R2'den okunur, odaya yalnızca Yorumlar sekmesi açılınca bağlanılır (R2'de dosya yoksa hemen). Bağlanınca son 20 yorum gelir, "Daha fazla göster" ile her seferinde 20 daha (en fazla 200). Yeni yorum, silinen yorum ve oy sayıları sayfa açıkken anında gelir |
 | Mesajların biçimi | `oda/src/index.js` → MAÇ ODASI açıklaması (`c0`, `c`, `x`, `b`, `r` mesajları; `daha`, `yaz`, `sil`, `oy`, `sikayet` istekleri) |
 
 **Kullanıcı bilgileri D1'de** (Cloudflare D1, veritabanı `canli`; `oda/src/d1.js`), hesap işlemleri `/hesap` adresinden (`oda/src/hesap.js`; site Pages'teki geçitten, `functions/hesap`):

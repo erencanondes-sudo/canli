@@ -371,7 +371,7 @@ export class GunOdasi extends Oda {
  *   { t: "m", k, s, g, d }  içerik (bağlanınca ve her değişince)
  *   { t: "h", k, s }        yeniden bağlanış: telefondaki içerik güncel
  *   { t: "y" }              odada içerik yok (maç kesinleştiyse içerik R2'de: mac/{no}.json)
- *   { t: "c0", c: [...] }   bağlanınca son 10 yorum (yeniden eskiye)
+ *   { t: "c0", c: [...] }   bağlanınca son 20 yorum (yeniden eskiye)
  *   { t: "c", c }           yeni yorum;  { t: "x", id } yorum silindi;  { t: "b", id, b, d } oy sayıları
  *   { t: "r", n, ... }      telefonun isteğine cevap (n: isteğin numarası): { ok: true, ... } ya da { hata: "kod" }
  * Telefondan gelen istekler (JSON, n: isteğin numarası):
@@ -427,7 +427,7 @@ export class MacOdasi extends Oda {
         else
             ws.send(JSON.stringify({ t: 'm', k: kimlik, s: sira, g: Number(this.bilgi('g')), d: JSON.parse(d) }));
 
-        ws.send(JSON.stringify({ t: 'c0', c: this.yorumlar(null, 10) }));
+        ws.send(JSON.stringify({ t: 'c0', c: this.yorumlar(null, 20) }));
     }
 
     /* Yorumlar, yeniden eskiye (once verilirse ondan eskiler) */
