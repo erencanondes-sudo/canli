@@ -14,7 +14,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
 | Gün odası `gun/{gün}` | Günün maçlarının satırları (`r`), Özet (`o`), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`). Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca hepsi, sonra değişenler) | Skor, dakika, durum, olay, hızlı skor değişince | satır ~40 bayt |
-| Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, olaylar }` (aşağıda "Maç içeriği"). Maç kesinleşince boşaltılır | Sunucu | Maç sayfası (açıkken) | Canlı maçta en sık 2 dk'da bir; maç bitince | ~2–4 KB |
+| Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, olaylar }` (aşağıda "Maç içeriği"). Maç kesinleşince boşaltılır | Sunucu | Maç sayfası (açıkken) | Canlı maçta ve bitişten sonraki 10 dk en sık 2 dk'da bir; maç bitince | ~2–4 KB |
 | R2 `sezon/{lig}-{yıl}.json` | Sezonun bütün maçları `{ "maç no": "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" }` (aşağıda "Sezonlar") | Sunucu | Takım ve lig sayfası (bir kez; 5 dk önbellek) | Günde 1 ve o ligden maç bitince | lig başına ~15–20 KB |
 | R2 `sezon/takimlar.json` | Takım dizini `{ takım no: ["lig-yıl", ...] }`: takım hangi sezon dosyalarında (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Sezon listesinde yeni takım görülünce | ~birkaç KB |
 | R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |

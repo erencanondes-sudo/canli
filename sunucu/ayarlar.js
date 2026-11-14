@@ -138,6 +138,7 @@ module.exports = {
 
     KADRO_ONCESI: 3600,             /* maçtan bu kadar saniye önce kadro aranır */
     KADRO_ARALIK: 300,              /* kadro bu kadar saniyede bir aranır */
+    BITIS_SONRASI: 10 * 60,         /* maç bitince bu kadar saniye daha detayı canlıdaki gibi çekilir (geç düşen istatistikler) */
     DUZELTME_SONRA: 2 * 3600,       /* maç bitince bu kadar saniye sonra son kez çekilir */
 
     ISTEK_ARALIK: 400,              /* iki API isteği arası en az (ms) */

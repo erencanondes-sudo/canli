@@ -255,6 +255,7 @@ function detaySec() {
         if (k.kontrol || (BITTI.has(d) && !k.sonHal)) secim.push(no);
         else if (yedek) continue;
         else if (CANLI.has(d)) { if (canliSaat && detayli.get(lig)) secim.push(no); }
+        else if (BITTI.has(d) && k.bitis && t - k.bitis < A.BITIS_SONRASI) { if (canliSaat && detayli.get(lig)) secim.push(no); }
         else if (BITTI.has(d) && !k.duzeltildi && t - k.bitis >= A.DUZELTME_SONRA) secim.push(no);
         else if (d === 'NS' && detayli.get(lig) && !k.kadro &&
                  k.f.fixture.timestamp - t <= A.KADRO_ONCESI && t - k.kadroDeneme >= A.KADRO_ARALIK) {
