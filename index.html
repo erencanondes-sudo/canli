@@ -7019,7 +7019,7 @@ function dayLoading() {
 /*
  * Maç sayfası açıkken maç odası (mac/{no}): istatistik, kadro, (maç bitince) olaylar ve yorumlar.
  * Odada içerik yoksa ("y") maç kesinleşmiştir: R2 mac/{no}.json okunur (istatistik vermeyen ligde başlamamış maçta okunmaz).
- * Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 4 saat geçmiş; sunucu maç bitince ~2 saat sonra kesinleştirir)
+ * Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 5 saat geçmiş; sunucu maç bitince ~2 saat sonra kesinleştirir)
  * içerik önce R2'den okunur, odaya yalnızca Yorumlar sekmesi açılınca bağlanılır (R2'de dosya yoksa hemen).
  * Maç sayfası kapanınca bağlantı kapanır.
  */
@@ -7027,7 +7027,7 @@ const detailPos = new Map();   /* maç no → { k, s } (yalnızca açık olan ma
 let detailRoom = null;          /* açık maç odası (kapatma fonksiyonu; send ile istek gönderilir) */
 let detailNeedsRoom = null;     /* kesinleşmiş maçta odaya bağlanma (Yorumlar sekmesi açılınca) */
 
-const settledMatch = match => match.status === 'done' && Date.now() - match.date.getTime() >= 4 * 3600000;
+const settledMatch = match => match.status === 'done' && Date.now() - match.date.getTime() >= 5 * 3600000;
 
 function watchDetail(match) {
 
