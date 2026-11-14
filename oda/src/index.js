@@ -221,10 +221,10 @@ export class GunOdasi extends Oda {
         this.sql.exec('CREATE TABLE IF NOT EXISTS gunluk (s INTEGER PRIMARY KEY, v TEXT)');
     }
 
-    /* Odanın tamamı: { r: {no: satır}, o: {no: [olaylar]}, h: {...}, u: {...}, v: {takim, analiz} } */
-    hal() {
-        const hal = { r: {}, o: {}, h: {}, u: {}, v: {} };
-        for (const { tur, no, v } of this.sql.exec('SELECT tur, no, v FROM veri'))
+    /* Odanın tamamı ya da istenen alanları: { r: {no: satır}, o: {no: [olaylar]}, h: {...}, u: {...}, v: {takim, analiz} } */
+    hal(turler = ['r', 'o', 'h', 'u', 'v']) {
+        const hal = Object.fromEntries(turler.map(tur => [tur, {}]));
+        for (const { tur, no, v } of this.sql.exec('SELECT tur, no, v FROM veri WHERE tur IN (' + turler.map(() => '?').join(', ') + ')', ...turler))
             hal[tur][no] = tur === 'o' ? JSON.parse(v) : tur === 'v' ? Number(v) : v;
         return hal;
     }
@@ -339,9 +339,10 @@ export class GunOdasi extends Oda {
             }
         }
 
-        const hal = this.hal();
-        ws.send(JSON.stringify({ t: 'l', k: kimlik, s: sira, z, r: hal.r, h: hal.h, u: hal.u, v: hal.v }));
-        ws.send(JSON.stringify({ t: 'o', o: hal.o }));
+        /* Önce liste okunup gönderilir; Özet (büyük olabilir) ondan sonra okunur, liste onu beklemez */
+        const liste = this.hal(['r', 'h', 'u', 'v']);
+        ws.send(JSON.stringify({ t: 'l', k: kimlik, s: sira, z, ...liste }));
+        ws.send(JSON.stringify({ t: 'o', o: this.hal(['o']).o }));
     }
 
     async bak() {
