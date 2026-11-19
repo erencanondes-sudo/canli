@@ -10631,7 +10631,8 @@ const kpOddText = v => v < 10 && v % 1 ? v.toFixed(2) : String(v);
 const kpSliderToOdd = v => { const r = Math.pow(KP_SLIDER_MAX, Math.max(0, Math.min(1000, Number(v))) / 1000); return r < 10 ? Math.round(r * 2) / 2 : Math.round(r); };
 const kpOddToSlider = o => Math.round(Math.log(Math.max(1, Math.min(KP_SLIDER_MAX, Number(o) || 1))) / Math.log(KP_SLIDER_MAX) * 1000);
 
-function kpSyncOdd(fromInput) {
+/* fromInput: elle yazılıyor (kutu güncellenmez); sliding: çubuk kaydırılıyor (hazır oranlar işaretlenmez, bırakınca işaretlenir) */
+function kpSyncOdd(fromInput, sliding) {
     const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
     document.getElementById('kpOddLbl').textContent = 'Maç başı ~' + per;
     if (!fromInput)
@@ -10640,7 +10641,7 @@ function kpSyncOdd(fromInput) {
     slider.value = kpOddToSlider(kp.target);
     /* Topun solu dolu renk */
     slider.style.setProperty('--kp-fill', (slider.value / 10) + '%');
-    document.querySelectorAll('#kpPresets button').forEach(b => b.classList.toggle('active', Math.abs(Number(b.dataset.odd) - kp.target) < .05));
+    document.querySelectorAll('#kpPresets button').forEach(b => b.classList.toggle('active', !sliding && Math.abs(Number(b.dataset.odd) - kp.target) < .05));
 }
 
 function kpSyncCount() {
@@ -10767,7 +10768,13 @@ document.getElementById('kpSlider').addEventListener('input', event => {
     if (kp.waiting)
         return;
     kp.target = Math.max(1, Math.min(1000, kpSliderToOdd(event.target.value)));
-    kpSyncOdd();
+    kpSyncOdd(false, true);
+});
+
+/* Çubuk bırakılınca: oran hazır oranlardan biriyse o işaretlenir */
+document.getElementById('kpSlider').addEventListener('change', () => {
+    if (!kp.waiting)
+        kpSyncOdd();
 });
 
 document.getElementById('kpOdd').addEventListener('input', event => {
@@ -10814,7 +10821,8 @@ function kpSyncFilter() {
     kpLeagueBtn.firstChild.textContent = kp.leagues.size ? 'Ligler (' + kp.leagues.size + ') ' : 'Ligler ';
     kpLeagueBtn.classList.toggle('active', kp.leagues.size > 0);
     kpLeagueBtn.disabled = !kp.sports.includes('futbol');
-    document.getElementById('kpFilterLbl').textContent = (kp.leagues.size ? kp.leagues.size + ' lig' : 'Tüm ligler') +
+    const total = Array.from(kp.leagues).reduce((n, name) => n + ((counts && counts.get(name)) || 0), 0);
+    document.getElementById('kpFilterLbl').textContent = (kp.leagues.size ? kp.leagues.size + ' lig (' + total + ' maç)' : 'Tüm ligler') +
         (kp.minOdd ? ' · en az ' + kp.minOdd.toFixed(2) : '');
 }
 
