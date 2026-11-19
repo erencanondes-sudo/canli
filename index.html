@@ -4497,7 +4497,7 @@ body.has-layer .ac-kapa svg {
     font-size: .875rem;
     font-weight: 800;
     color: #0c7a58;
-    text-align: right;
+    text-align: center;
 }
 #kpLeagueMenu p { margin: 0; padding: .65em .9em; font-size: .875rem; font-weight: 600; color: #8a8f9c; }
 .kp-min { flex: 1 1 0; min-width: 0; justify-content: space-between; }
@@ -10831,7 +10831,12 @@ function kpBuildLeagueMenu() {
         kpLeagueMenu.appendChild(p);
         return;
     }
-    Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, 'tr')).forEach(name => {
+    /* Ana sayfadaki lig sırası (adı eşleşen); eşleşmeyenler sonda, alfabetik */
+    const order = name => {
+        const i = LEAGUES.findIndex(l => l.name.toLocaleLowerCase('tr') === String(name).toLocaleLowerCase('tr'));
+        return i < 0 ? Infinity : i;
+    };
+    Array.from(counts.keys()).sort((a, b) => order(a) - order(b) || String(a).localeCompare(String(b), 'tr')).forEach(name => {
         const label = document.createElement('label');
         const input = document.createElement('input');
         const text = document.createElement('span');
