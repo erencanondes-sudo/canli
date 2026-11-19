@@ -4480,6 +4480,25 @@ body.has-layer .ac-kapa svg {
 .kp-row .kp-league button.active { border-color: #1d2340; background: #1d2340; color: white; }
 #kpLeagueMenu { width: min(21em, 90vw); min-width: 0; max-height: 50vh; overflow-y: auto; }
 #kpLeagueMenu label { white-space: normal; }
+/* Menünün en üstünde Tamam: liste kayarken yerinde kalır */
+#kpLeagueMenu .kp-menu-done {
+    position: sticky;
+    top: -.3em;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    margin-top: -.3em;
+    padding: .75em .9em;
+    border: none;
+    border-bottom: 1px solid #eceef3;
+    border-radius: .75rem .75rem 0 0;
+    background: white;
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 800;
+    color: #0c7a58;
+    text-align: right;
+}
 #kpLeagueMenu p { margin: 0; padding: .65em .9em; font-size: .875rem; font-weight: 600; color: #8a8f9c; }
 .kp-min { flex: 1 1 0; min-width: 0; justify-content: space-between; }
 #kpMin {
@@ -4567,8 +4586,11 @@ body.has-layer .ac-kapa svg {
 
 #kpRunRow { justify-content: center; margin-top: 1.25em; }
 
+/* Sıfırla ve Kuponu Oluştur yan yana; Kuponu Oluştur iki katı genişlikte */
+#kpRunRow #kpReset { flex: 0 1 25%; }
+
 #kpRun {
-    flex: 0 1 70%;
+    flex: 0 1 50%;
     border: none;
     border-radius: .8em;
     background: #1d2340;
@@ -5298,6 +5320,7 @@ body:has(#oddsSheet.open) .ad-strip::before {
                         </div>
                     </div>
                     <div class="kp-actions" id="kpRunRow">
+                        <button class="kp-light" id="kpReset">Sıfırla</button>
                         <button id="kpRun">Kuponu Oluştur</button>
                     </div>
                 </div></div>
@@ -10796,6 +10819,12 @@ function kpSyncFilter() {
 function kpBuildLeagueMenu() {
     const counts = kpLeagueCounts();
     kpLeagueMenu.textContent = '';
+    const done = document.createElement('button');
+    done.type = 'button';
+    done.className = 'kp-menu-done';
+    done.textContent = 'Tamam';
+    done.addEventListener('click', closeLeagueMenu);
+    kpLeagueMenu.appendChild(done);
     if (!counts || !counts.size) {
         const p = document.createElement('p');
         p.textContent = !counts ? 'Maçlar yükleniyor…' : 'Seçili günlerde başlamamış futbol maçı yok.';
@@ -10846,6 +10875,31 @@ document.getElementById('kpMin').addEventListener('input', event => {
     kp.minOdd = v >= 1 ? v : 0;
     kpSyncFilter();
     kpActive();
+});
+
+/* Sıfırla: onaylanınca seçimler başlangıç haline döner, kupon (sabitlenen maçlar dahil) silinir */
+function kpReset() {
+    kp.sports = ['futbol'];
+    document.querySelectorAll('#kpPools button').forEach(b => b.classList.toggle('active', b.dataset.pool === 'futbol'));
+    kpInitDays(false);
+    kp.leagues.clear();
+    kp.minOdd = 0;
+    document.getElementById('kpMin').value = '';
+    kp.count = 3;
+    kp.target = 5;
+    kp.coupon = [];
+    kp.generated = false;
+    kp.toast = '';
+    kpSyncCount();
+    kpSyncDays();
+    kpActive();
+    kpRender();
+}
+
+document.getElementById('kpReset').addEventListener('click', () => {
+    if (kp.waiting || kpUnfolding)
+        return;
+    askConfirm('Seçimler ve sabitlenen maçlar sıfırlanacak.', 'Tamam', kpReset);
 });
 
 /* ---------- Panelin kapanıp açılması ---------- */
