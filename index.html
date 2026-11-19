@@ -4385,9 +4385,10 @@ body.has-layer .ac-kapa svg {
 .karne-row > i i { display: block; height: 100%; background: #0c7a58; }
 
 /* =====================================================
-   AI KUPONU: robot paneli (spor, gün, maç sayısı, oran), bekleme animasyonu, kupon
+   AI KUPONU: robot paneli (spor, gün, lig ve en düşük oran, maç sayısı, oran), bekleme animasyonu, kupon
 ===================================================== */
-#kpPanelWrap { overflow: hidden; }
+/* Panel açılıp kapanırken taşan kısım gizlenir; açıkken lig menüsü panelden taşabilsin diye gizlenmez */
+#kpPanelWrap.collapsed, #kpPanelWrap.folding { overflow: hidden; }
 #kpPanelWrap.collapsed { height: 0; }
 
 #kpPanel {
@@ -4472,6 +4473,24 @@ body.has-layer .ac-kapa svg {
 }
 
 #kpMore { flex: 1.3 1 0; }
+
+/* Lig ve en düşük oran: ikisi aynı satırda, eşit genişlikte */
+.kp-league { flex: 1 1 0; min-width: 0; }
+.kp-league button { width: 100%; height: 100%; }
+.kp-row .kp-league button.active { border-color: #1d2340; background: #1d2340; color: white; }
+#kpLeagueMenu { width: min(21em, 90vw); min-width: 0; max-height: 50vh; overflow-y: auto; }
+#kpLeagueMenu label { white-space: normal; }
+#kpLeagueMenu p { margin: 0; padding: .65em .9em; font-size: .875rem; font-weight: 600; color: #8a8f9c; }
+.kp-min { flex: 1 1 0; min-width: 0; justify-content: space-between; }
+#kpMin {
+    width: 3.4em;
+    border: none;
+    font: inherit;
+    font-size: 1.15em;
+    font-weight: 800;
+    color: #1d2340;
+    text-align: right;
+}
 
 .kp-odd-row { display: flex; align-items: center; gap: .6em; }
 /* Oran çubuğu: ince iz, büyük top; dokunma alanı çubuğun tüm yüksekliği */
@@ -5232,10 +5251,10 @@ body:has(#oddsSheet.open) .ad-strip::before {
             <div class="home-page" data-page="ai">
                 <!-- Kupon oluşunca: kriter özeti, Kriterleri Düzenle ve Alternatif Üret -->
                 <div id="kpBar" hidden>
-                    <div class="kp-bar-top"><span class="kp-crit" id="kpBarText"></span><em>Kupon hazır</em></div>
+                    <div class="kp-bar-top"><span class="kp-crit" id="kpBarText"></span><em id="kpBarState">Kupon hazır</em></div>
                     <div class="kp-actions"><button class="kp-light" id="kpEdit">Kriterleri Düzenle</button><button class="kp-light" id="kpAltBar">Alternatif Üret</button></div>
                 </div>
-                <!-- Robot paneli: spor, gün, maç sayısı, oran -->
+                <!-- Robot paneli: spor, gün, lig ve en düşük oran, maç sayısı, oran -->
                 <div id="kpPanelWrap"><div id="kpPanel">
                     <div class="kp-head">
                         <span class="kp-avatar" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3.5 14.5L7.5 10.2L11.2 12.6L16.5 6.2" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="10.2" r="1.5" fill="#fff"/><circle cx="11.2" cy="12.6" r="1.5" fill="#fff"/><circle cx="16.5" cy="6.2" r="2" fill="#5eead4"/></svg></span>
@@ -5248,6 +5267,16 @@ body:has(#oddsSheet.open) .ad-strip::before {
                     <div class="kp-block">
                         <div class="kp-label"><span>Tarih Seçimi</span><b id="kpDateLbl"></b></div>
                         <div class="kp-row" id="kpDays"></div>
+                    </div>
+                    <div class="kp-block">
+                        <div class="kp-label"><span>Lig ve En Düşük Oran</span><b id="kpFilterLbl">Tüm ligler</b></div>
+                        <div class="kp-row">
+                            <div class="league-filter kp-league">
+                                <button id="kpLeagueBtn">Ligler <span class="caret">▾</span></button>
+                                <div class="league-menu" id="kpLeagueMenu"></div>
+                            </div>
+                            <label class="kp-odd-num kp-min"><span>EN DÜŞÜK ORAN</span><input type="number" id="kpMin" min="1" step="0.05" inputmode="decimal" placeholder="Yok"></label>
+                        </div>
                     </div>
                     <div class="kp-block">
                         <div class="kp-label"><span>Maç Sayısı</span><b id="kpCountLbl">3 Maç</b></div>
@@ -10230,7 +10259,7 @@ const KP_RECENT_KEY = 'aiKuponSonMaclar';
 const KP_SLIDER_MAX = 50;
 
 let kpShown = false;
-const kp = { sports: ['futbol'], days: [], selected: [], count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false };
+const kp = { sports: ['futbol'], days: [], selected: [], leagues: new Set(), minOdd: 0, count: 3, target: 5, waiting: false, coupon: [], toast: '', generated: false };
 
 /* Türkiye saatiyle takvim günü ve saat */
 function kpClock() {
@@ -10302,7 +10331,10 @@ function kpAllMatches(clock) {
     return list;
 }
 
-/* Kupona girebilecek maçlar (seçili sporlar ve günler, başlamamış); sayıları ve durum yazısını da günceller */
+/*
+ * Kupona girebilecek maçlar (seçili sporlar ve günler, başlamamış; futbolda seçili ligler; en düşük orandan düşük
+ * tercihler çıkarılır, tercihi kalmayan maç girmez); sayıları ve durum yazısını da günceller
+ */
 function kpActive() {
     const clock = kpClock();
     const all = kpAllMatches(clock);
@@ -10310,7 +10342,9 @@ function kpActive() {
     const counts = document.querySelectorAll('#kpPools span');
     counts[0].textContent = live.filter(m => !m.nba).length;
     counts[1].textContent = live.filter(m => m.nba).length;
-    const pool = live.filter(m => kp.sports.includes(m.sport));
+    const pool = live.filter(m => kp.sports.includes(m.sport) && (m.nba || !kp.leagues.size || kp.leagues.has(m.league)))
+        .map(m => kp.minOdd ? { ...m, opts: m.opts.filter(o => o.odd >= kp.minOdd) } : m)
+        .filter(m => m.opts.length);
     document.getElementById('kpStatus').textContent = !all ? 'Maçlar yükleniyor…' :
         clock.hm + ' itibarıyla başlamamış maç sayısı ' + pool.length;
     return all ? pool : null;
@@ -10658,6 +10692,7 @@ function kpSyncDays() {
     const labels = kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock));
     document.getElementById('kpDateLbl').textContent = !labels.length ? 'Gün seçilmedi' :
         labels.length === 4 ? '4 Gün · Tüm günler' : labels.length + ' Gün · ' + labels.join(', ');
+    kpSyncFilter();
 }
 
 /* Gün, sayılar ve (başlamış maç varsa) kupon güncellenir */
@@ -10725,19 +10760,136 @@ document.querySelectorAll('#kpPresets button').forEach(b => b.addEventListener('
     kpSyncOdd();
 }));
 
+/* ---------- Lig (futbol; Analiz'deki gibi açılır menü, birden çok seçilir, boşsa hepsi) ve en düşük oran ---------- */
+const kpLeagueMenu = document.getElementById('kpLeagueMenu');
+const kpLeagueBtn = document.getElementById('kpLeagueBtn');
+
+/* Seçili günlerdeki başlamamış futbol maçlarının ligleri ve maç sayıları (havuz okunmadıysa null) */
+function kpLeagueCounts() {
+    const clock = kpClock();
+    const all = kpAllMatches(clock);
+    if (!all)
+        return null;
+    const counts = new Map();
+    all.forEach(m => {
+        if (!m.nba && kpUpcoming(m, clock) && kpInDays(m, clock))
+            counts.set(m.league, (counts.get(m.league) || 0) + 1);
+    });
+    return counts;
+}
+
+/* Seçili günlerde maçı kalmayan lig seçimden çıkar; düğme ve başlık güncellenir */
+function kpSyncFilter() {
+    const counts = kpLeagueCounts();
+    if (counts)
+        kp.leagues.forEach(name => {
+            if (!counts.has(name))
+                kp.leagues.delete(name);
+        });
+    kpLeagueBtn.firstChild.textContent = kp.leagues.size ? 'Ligler (' + kp.leagues.size + ') ' : 'Ligler ';
+    kpLeagueBtn.classList.toggle('active', kp.leagues.size > 0);
+    kpLeagueBtn.disabled = !kp.sports.includes('futbol');
+    document.getElementById('kpFilterLbl').textContent = (kp.leagues.size ? kp.leagues.size + ' lig' : 'Tüm ligler') +
+        (kp.minOdd ? ' · en az ' + kp.minOdd.toFixed(2) : '');
+}
+
+function kpBuildLeagueMenu() {
+    const counts = kpLeagueCounts();
+    kpLeagueMenu.textContent = '';
+    if (!counts || !counts.size) {
+        const p = document.createElement('p');
+        p.textContent = !counts ? 'Maçlar yükleniyor…' : 'Seçili günlerde başlamamış futbol maçı yok.';
+        kpLeagueMenu.appendChild(p);
+        return;
+    }
+    Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, 'tr')).forEach(name => {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        const text = document.createElement('span');
+        const count = document.createElement('small');
+        input.type = 'checkbox';
+        input.checked = kp.leagues.has(name);
+        text.textContent = name;
+        count.textContent = counts.get(name);
+        input.addEventListener('change', () => {
+            if (input.checked)
+                kp.leagues.add(name);
+            else
+                kp.leagues.delete(name);
+            kpSyncFilter();
+            kpActive();
+        });
+        label.append(input, text, count);
+        kpLeagueMenu.appendChild(label);
+    });
+}
+
+kpLeagueBtn.addEventListener('click', () => {
+    if (kp.waiting)
+        return;
+    if (openLeagueMenu === kpLeagueMenu) {
+        closeLeagueMenu();
+        return;
+    }
+    hideLeagueMenu();
+    kpBuildLeagueMenu();
+    kpLeagueMenu.classList.add('open');
+    openLeagueMenu = kpLeagueMenu;
+    layerOpened('leagueMenu');
+});
+
+/* Elle yazılır; boş ya da 1'den küçükse sınır yok */
+document.getElementById('kpMin').addEventListener('input', event => {
+    if (kp.waiting)
+        return;
+    const v = parseFloat(String(event.target.value).replace(',', '.'));
+    kp.minOdd = v >= 1 ? v : 0;
+    kpSyncFilter();
+    kpActive();
+});
+
 /* ---------- Panelin kapanıp açılması ---------- */
 const kpWrap = document.getElementById('kpPanelWrap');
 const kpPanel = document.getElementById('kpPanel');
 const kpBar = document.getElementById('kpBar');
 let kpUnfolding = false;
 
-function kpCollapse() {
+/* Üstteki özet: kriterler ve durum (hesaplanıyor / kupon hazır) */
+function kpShowBar(ready) {
     const clock = kpClock();
-    const parts = [kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock)).join(', '),
-        kp.count + ' Maç', kpOddText(kp.target) + ' Oran'];
-    document.getElementById('kpBarText').innerHTML = parts.map(t => '<b>' + t + '</b>').join('');
-    kpWrap.classList.add('collapsed');
+    const parts = [kp.days.filter(d => kp.selected.includes(d)).map(d => kpDayLabel(d, clock)).join(', ')]
+        .concat(kp.leagues.size && kp.sports.includes('futbol') ? [kp.leagues.size + ' Lig'] : [])
+        .concat(kp.minOdd ? ['En az ' + kp.minOdd.toFixed(2)] : [])
+        .concat([kp.count + ' Maç', kpOddText(kp.target) + ' Oran']);
+    document.getElementById('kpBarText').innerHTML = parts.map(t => '<b>' + escapeHTML(t) + '</b>').join('');
+    document.getElementById('kpBarState').textContent = ready ? 'Kupon hazır' : 'Hesaplanıyor…';
     kpBar.hidden = false;
+}
+
+/* Kuponu Oluştur: panel yukarı doğru kapanır (0.38 sn), yerine özet gelir */
+function kpFold() {
+    if (kpWrap.classList.contains('collapsed'))
+        return;
+    kpUnfolding = true;
+    const full = kpPanel.offsetHeight;
+    kpWrap.classList.add('folding');
+    const start = performance.now();
+    (function step(now) {
+        const u = Math.min(1, (now - start) / 380);
+        const ease = u * u * (3 - 2 * u);
+        kpWrap.style.height = (full * (1 - ease)).toFixed(1) + 'px';
+        kpPanel.style.opacity = (1 - .75 * ease).toFixed(3);
+        kpPanel.style.transform = 'translateY(' + (-.875 * ease).toFixed(3) + 'rem)';
+        if (u < 1)
+            return requestAnimationFrame(step);
+        kpWrap.classList.add('collapsed');
+        kpWrap.classList.remove('folding');
+        kpWrap.style.height = '';
+        kpPanel.style.opacity = '';
+        kpPanel.style.transform = '';
+        kpUnfolding = false;
+        kpShowBar(!kp.waiting);
+    })(start);
 }
 
 /* Kriterleri Düzenle: panel yaylı açılır (0.46 sn) */
@@ -10747,6 +10899,7 @@ document.getElementById('kpEdit').addEventListener('click', () => {
     kpUnfolding = true;
     kpBar.hidden = true;
     homeMain.scrollTo({ top: 0, behavior: 'smooth' });
+    kpWrap.classList.add('folding');
     kpWrap.classList.remove('collapsed');
     const full = kpPanel.offsetHeight;
     kpWrap.style.height = '0px';
@@ -10759,6 +10912,7 @@ document.getElementById('kpEdit').addEventListener('click', () => {
         kpPanel.style.transform = 'translateY(' + (-.875 * (1 - ease)).toFixed(3) + 'rem)';
         if (u < 1)
             return requestAnimationFrame(step);
+        kpWrap.classList.remove('folding');
         kpWrap.style.height = '';
         kpPanel.style.opacity = '';
         kpPanel.style.transform = '';
@@ -10794,6 +10948,10 @@ function kpGenerate(next) {
     const wait = 3000 + Math.random() * 4000, curve = kpCurve();
     kp.waiting = true;
     document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = true; });
+    if (kpWrap.classList.contains('collapsed'))
+        kpShowBar(false);
+    else
+        kpFold();
 
     const per = Math.pow(Math.max(1, kp.target), 1 / kp.count).toFixed(2);
     const box = document.getElementById('kpResult');
@@ -10824,7 +10982,8 @@ function kpGenerate(next) {
             return requestAnimationFrame(tick);
         kp.waiting = false;
         document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = false; });
-        kpCollapse();
+        if (!kpUnfolding)
+            kpShowBar(true);
         kpRender();
         homeMain.scrollTo({ top: 0, behavior: 'smooth' });
     })(start);
@@ -10904,6 +11063,7 @@ function kpRender() {
     if (!legs.length) {
         if (kp.generated)
             note(!kp.selected.length ? '<b>Gün seçilmedi:</b> Kupon için yukarıdan en az bir gün seç.'
+                : kp.leagues.size || kp.minOdd ? '<b>' + clock.hm + '</b> itibarıyla seçilen lig ve en düşük orana uyan başlamamış maç yok. Lig ekleyebilir ya da en düşük oranı azaltabilirsin.'
                 : '<b>' + clock.hm + '</b> itibarıyla seçilen günlerde başlamamış maç yok. Başka bir gün ya da spor seçebilirsin.');
         return;
     }
@@ -10923,7 +11083,8 @@ function kpRender() {
     if (kp.toast)
         note(escapeHTML(kp.toast));
     if (legs.length < kp.count)
-        note('<b>Not:</b> Seçilen günlerde uygun <b>' + legs.length + ' maç</b> bulunduğu için ' + legs.length + ' maçlık kupon oluşturuldu. Daha fazla maç için gün ekleyebilirsin.');
+        note('<b>Not:</b> Seçilen günlerde uygun <b>' + legs.length + ' maç</b> bulunduğu için ' + legs.length + ' maçlık kupon oluşturuldu. Daha fazla maç için gün' +
+            (kp.leagues.size || kp.minOdd ? ' ya da lig ekleyebilir, en düşük oranı azaltabilirsin.' : ' ekleyebilirsin.'));
     else if (kp.target > total * 1.45 && total < kp.target)
         note('<b>Not:</b> Dengeli oran dağılımı korunarak ' + legs.length + ' maçta ulaşılabilen en yüksek oran <b>' + total.toFixed(2) + '</b>; en yakın kupon sunuldu. Daha yüksek oran için maç sayısını artırabilirsin.');
     else if (kp.target < total * .72 && total > kp.target)
