@@ -4586,8 +4586,9 @@ body.has-layer .ac-kapa svg {
 
 #kpRunRow { justify-content: center; margin-top: 1.25em; }
 
-/* Sıfırla ve Kuponu Oluştur yan yana; Kuponu Oluştur iki katı genişlikte */
+/* Sıfırla sağa yaslı; Kuponu Oluştur (iki katı genişlikte) solda kalan yerin ortasında */
 #kpRunRow #kpReset { flex: 0 1 25%; }
+#kpRunRow #kpRun { margin: 0 auto; }
 
 #kpRun {
     flex: 0 1 50%;
@@ -5320,8 +5321,8 @@ body:has(#oddsSheet.open) .ad-strip::before {
                         </div>
                     </div>
                     <div class="kp-actions" id="kpRunRow">
-                        <button class="kp-light" id="kpReset">Sıfırla</button>
                         <button id="kpRun">Kuponu Oluştur</button>
+                        <button class="kp-light" id="kpReset">Sıfırla</button>
                     </div>
                 </div></div>
                 <!-- Bekleme animasyonu ya da kupon -->
