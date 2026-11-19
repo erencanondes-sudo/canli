@@ -10545,7 +10545,8 @@ function kpSolveLocked(pool, N, target) {
         return { allLocked: false, candidates: [locked] };
     return { allLocked: false, candidates: rest.map(rc => locked.map(l => ({ ...l, locked: true }))
         .concat(rc.map(c => ({ match: c.match, oIdx: c.oIdx, opt: c.opt, locked: false })))
-        .sort((a, b) => (a.match.ts || 0) - (b.match.ts || 0))) };
+        /* Yeni maçlar saat sırasıyla üstte, sabitlenenler en altta */
+        .sort((a, b) => (a.locked - b.locked) || (a.match.ts || 0) - (b.match.ts || 0))) };
 }
 
 /* Tek maçı değiştir: diğerlerine uyan, hedefi tutturan rastgele bir tercih (son değiştirilenler geri gelmez) */
