@@ -10947,7 +10947,7 @@ function kpGenerate(next) {
 
     const wait = 3000 + Math.random() * 4000, curve = kpCurve();
     kp.waiting = true;
-    document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = true; });
+    document.querySelectorAll('#kpRun, #kpAltBar, #kpEdit').forEach(b => { b.disabled = true; });
     if (kpWrap.classList.contains('collapsed'))
         kpShowBar(false);
     else
@@ -10981,7 +10981,7 @@ function kpGenerate(next) {
         if (t < 1)
             return requestAnimationFrame(tick);
         kp.waiting = false;
-        document.querySelectorAll('#kpRun, #kpAltBar').forEach(b => { b.disabled = false; });
+        document.querySelectorAll('#kpRun, #kpAltBar, #kpEdit').forEach(b => { b.disabled = false; });
         if (!kpUnfolding)
             kpShowBar(true);
         kpRender();
