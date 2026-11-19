@@ -4499,6 +4499,7 @@ body.has-layer .ac-kapa svg {
     color: #0c7a58;
     text-align: center;
 }
+#kpLeagueMenu .kp-menu-done span { padding: .3em 1.4em; border-radius: .6em; background: #e3f5ed; }
 #kpLeagueMenu p { margin: 0; padding: .65em .9em; font-size: .875rem; font-weight: 600; color: #8a8f9c; }
 .kp-min { flex: 1 1 0; min-width: 0; justify-content: space-between; }
 #kpMin {
@@ -5312,8 +5313,8 @@ body:has(#oddsSheet.open) .ad-strip::before {
                     <div class="kp-block" id="kpOddBlock">
                         <div class="kp-label"><span>Oran</span><b id="kpOddLbl"></b></div>
                         <div class="kp-odd-row">
-                            <input type="range" id="kpSlider" min="0" max="1000" step="1">
                             <label class="kp-odd-num"><span>ORAN</span><input type="number" id="kpOdd" min="1" max="1000" step="0.5" inputmode="decimal"></label>
+                            <input type="range" id="kpSlider" min="0" max="1000" step="1">
                         </div>
                         <div class="kp-row kp-presets" id="kpPresets">
                             <button data-odd="2">2</button><button data-odd="3.5">3.5</button><button data-odd="5">5</button>
@@ -10823,7 +10824,7 @@ function kpBuildLeagueMenu() {
     const done = document.createElement('button');
     done.type = 'button';
     done.className = 'kp-menu-done';
-    done.textContent = 'Tamam';
+    done.innerHTML = '<span>Tamam</span>';
     done.addEventListener('click', closeLeagueMenu);
     kpLeagueMenu.appendChild(done);
     if (!counts || !counts.size) {
