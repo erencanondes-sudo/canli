@@ -7741,7 +7741,7 @@ function scoreRow(match, showDate, showLeague) {
         name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
 
-        /* Kırmızı kart: adın skor tarafında küçük kırmızı kart; 1'den fazlaysa içinde sayı */
+        /* Kırmızı kart: adın dış tarafında (soldaki takımda solda, sağdakinde sağda) küçük kırmızı kart; 1'den fazlaysa içinde sayı */
         const reds = (match.reds || [])[index];
         if (reds) {
             const red = document.createElement('i');
@@ -7749,9 +7749,9 @@ function scoreRow(match, showDate, showLeague) {
             if (reds > 1)
                 red.textContent = reds;
             if (side === 'home')
-                el.appendChild(red);
-            else
                 el.insertBefore(red, name);
+            else
+                el.appendChild(red);
         }
 
         /* Gol bekleniyor: beklenen takımın dış tarafında yanıp sönen kırmızı nokta */
