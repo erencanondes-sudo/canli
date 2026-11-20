@@ -4817,6 +4817,21 @@ body.has-layer .ac-kapa svg {
     font-size: .9em;
 }
 
+.score-team .score-red {
+    flex: none;
+    min-width: .6em;
+    height: .82em;
+    padding: 0 .12em;
+    border-radius: .12em;
+    background: #d93025;
+    color: #fff;
+    font-style: normal;
+    font-size: .8em;
+    font-weight: 700;
+    line-height: .82em;
+    text-align: center;
+}
+
 /* =====================================================
    REKLAM (üst resmin üzerinde, tam genişlik, 100px boy)
    Dört reklam, video gibi sahne sahne oynar; her biri 15 saniye.
@@ -6033,12 +6048,12 @@ function rowEvents(list) {
 
 /*
  * Satır biçimi: sunucu/VERITABANI.md → "Canlı skor satırı"
- * "lig,hafta,ev,dep,saat,durum,ev gol,dep gol". Saat Türkiye saatidir (UTC+3).
+ * "lig,hafta,ev,dep,saat,durum,ev gol,dep gol,ev kırmızı,dep kırmızı". Saat Türkiye saatidir (UTC+3).
  * Olaylar günün Özet'inden gelir.
  */
 function rowToMatch(day, no, text, events) {
 
-    const [league, week, home, away, time, state, hg, ag] = text.split(',');
+    const [league, week, home, away, time, state, hg, ag, hr, ar] = text.split(',');
 
     /*
      * Durum: boş = başlamadı; "2H3725" = oynanan devre ve devrenin başladığı an (planlanan başlama
@@ -6075,6 +6090,7 @@ function rowToMatch(day, no, text, events) {
         minute: clock ? clock[0] : playing ? Number(playing[1]) : null,
         extra: clock ? clock[1] : playing && playing[2] ? Number(playing[2]) : null,
         score: hg === undefined || hg === '' ? null : [Number(hg), Number(ag)],
+        reds: [Number(hr) || 0, Number(ar) || 0],
         /* Olaylar bilinmiyorsa (eski günler, maç dokümanı gelmeden) null */
         events: status === 'upcoming' || !events ? null : rowEvents(events)
     };
@@ -6793,8 +6809,9 @@ async function readFile(path) {
 
 /*
  * GÜNLER
- * Bugün ve dün: gün odası (gun/{gün}). Bağlanınca önce liste (satırlar ve hızlı kaynak), hemen ardından Özet gelir;
- * sonra yalnızca değişen maçlar. Oda bağlanamazsa liste R2 gun/{gün}.json dosyasından bir kez okunur.
+ * Bugün ve dün: gün odası (gun/{gün}). Bağlanınca önce liste (satırlar ve hızlı kaynak) gelir; Özet ondan sonra
+ * R2 ozet/{gün}.json'dan okunur, eksikleri odadan istenir (aşağıda loadSummary); sonra yalnızca değişen maçlar.
+ * Oda bağlanamazsa liste R2 gun/{gün}.json dosyasından, Özet R2 ozet/{gün}.json'dan bir kez okunur.
  * Diğer günler: R2 gun/{gün}.json bir kez okunur. Son 7 günde (dünden önceki) Özet de R2 ozet/{gün}.json'dan bir kez okunur;
  * daha eski günlerde okunmaz (maç açılınca olaylar R2 maç dosyasından).
  * Uygulama arka plana geçince oda bağlantısı kapanır; öne gelince yeniden bağlanır ve yalnızca kaçırılan değişiklikler gelir
@@ -6926,6 +6943,14 @@ function openRoom(path, position, onMessage, failed) {
     return close;
 }
 
+/* Özet değişikliği ({ maç no: olaylar }, null = silindi) günün olaylarına */
+function applyEvents(events, changes) {
+    Object.entries(changes || {}).forEach(([no, list]) => {
+        if (list === null) delete events[no];
+        else events[no] = list;
+    });
+}
+
 /* Gün odasından gelen değişiklik: { r?, o?, h?, u? }, her biri { maç no: değer }, null = silindi */
 function applyDayChange(day, message) {
     if (message.r) {
@@ -6938,10 +6963,7 @@ function applyDayChange(day, message) {
     }
     if (message.o) {
         const events = dayEvents.get(day) || {};
-        Object.entries(message.o).forEach(([no, list]) => {
-            if (list === null) delete events[no];
-            else events[no] = list;
-        });
+        applyEvents(events, message.o);
         dayEvents.set(day, events);
     }
     takeFast(message.h, message.u, false);
@@ -6957,8 +6979,9 @@ function openDay(day) {
     /*
      * fresh: oda bu bağlantıda güncel hale geldi (liste ya da kaçırılan değişikliklerin hepsi işlendi).
      * waiting: yeniden bağlanınca gelecek kaçırılmış değişiklik sayısı.
+     * summary: Özet okunurken { file: R2 dosyası (odanın cevabı beklenirken), held: bu arada gelen Özet değişiklikleri }, sonra null.
      */
-    const state = { live: isLiveDay(day), loaded: false, fresh: false, waiting: 0, off: [] };
+    const state = { live: isLiveDay(day), loaded: false, fresh: false, waiting: 0, off: [], summary: null };
     days.set(day, state);
 
     const takeRows = rows => {
@@ -6995,7 +7018,38 @@ function openDay(day) {
         preloadFs();
     };
 
-    state.off.push(openRoom('gun/' + day, roomPos.get(day), message => {
+    /*
+     * ÖZET (bugün ve dün): listeden sonra R2 ozet/{gün}.json okunur (30 sn önbellekli). Dosya bu odanın ise (k) dosyanın
+     * sırasından (s) sonraki Özet değişiklikleri odadan istenir ({ a: "oz", s }); dosya yoksa baştan (s = 0).
+     * Okunurken gelen Özet değişiklikleri bekletilir: odanın cevabı onları da içerir. Oda cevap veremezse (o: null)
+     * dosyanın üstüne bekletilenler uygulanır.
+     */
+    const finishSummary = (base, gap) => {
+        const events = Object.assign({}, base);
+        if (gap)
+            applyEvents(events, gap);
+        else
+            state.summary.held.forEach(changes => applyEvents(events, changes));
+        state.summary = null;
+        dayEvents.set(day, events);
+        refreshViews();
+    };
+
+    const loadSummary = () => {
+        const summary = { file: null, held: [] };
+        state.summary = summary;
+        readFile('ozet/' + day).catch(() => null).then(data => {
+            if (days.get(day) !== state || state.summary !== summary)
+                return;
+            const file = { m: data && data.m || {} };
+            if ((!data || data.k === roomPos.get(day).k) && room.send({ a: 'oz', s: data ? data.s || 0 : 0 }))
+                summary.file = file;
+            else
+                finishSummary(file.m, null);
+        });
+    };
+
+    const room = openRoom('gun/' + day, roomPos.get(day), message => {
         if (days.get(day) !== state)
             return;
         if (message.z)
@@ -7016,15 +7070,23 @@ function openDay(day) {
                 takeAnVersion((message.v || {}).analiz ?? null);
             }
             ready();
-        } else if (message.t === 'o') {
-            dayEvents.set(day, message.o || {});
-            refreshViews();
+            loadSummary();
+        } else if (message.t === 'oz') {
+            if (state.summary && state.summary.file)
+                finishSummary(state.summary.file.m, message.o);
         } else if (message.t === 'h') {
             state.loaded = true;
             state.waiting = message.n || 0;
             if (!state.waiting)
                 ready();
+            /* Özet hiç okunmadıysa ya da okunması önceki bağlantıda yarım kaldıysa baştan */
+            if (state.summary || !dayEvents.has(day))
+                loadSummary();
         } else if (message.t === 'd') {
+            if (message.o && state.summary) {
+                state.summary.held.push(message.o);
+                message = Object.assign({}, message, { o: null });
+            }
             applyDayChange(day, message);
             if (day === TODAY && message.v && message.v.takim)
                 checkNames(message.v.takim);
@@ -7036,13 +7098,17 @@ function openDay(day) {
     }, () => {
         if (!state.loaded)
             readFile('gun/' + day).then(takeRows, failed);
+        /* Odaya bağlanılamadı: Özet yalnızca R2 dosyasından */
+        if (!dayEvents.has(day))
+            loadSummary();
         /* Odaya bağlanılamadı: sürümler bilinmez; sözlük telefonda yoksa indirilir */
         if (day === TODAY) {
             if (namesVersion) setNamesReady();
             else checkNames(-1);
             takeAnVersion(null);
         }
-    }));
+    });
+    state.off.push(room);
 }
 
 /*
@@ -7075,6 +7141,7 @@ function dayLoading() {
 
 /*
  * Maç sayfası açıkken maç odası (mac/{no}): istatistik, kadro, (maç bitince) olaylar ve yorumlar.
+ * Bağlanınca içeriğin tamamı ("m"), sonra yalnızca değişen alanlar ("p") gelir. Yorumlar Yorumlar sekmesi açılınca istenir.
  * Odada içerik yoksa ("y") maç kesinleşmiştir: R2 mac/{no}.json okunur (istatistik vermeyen ligde başlamamış maçta okunmaz).
  * Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 5 saat geçmiş; sunucu maç bitince ~2 saat sonra kesinleştirir)
  * içerik önce R2'den okunur, odaya yalnızca Yorumlar sekmesi açılınca bağlanılır (R2'de dosya yoksa hemen).
@@ -7086,6 +7153,25 @@ let detailNeedsRoom = null;     /* kesinleşmiş maçta odaya bağlanma (Yorumla
 
 const settledMatch = match => match.status === 'done' && Date.now() - match.date.getTime() >= 5 * 3600000;
 
+/* Maçın oranları: maç no → oranlar ({} = oran yok). Maç içeriğinin "oran" alanından (maç odası ya da R2 maç dosyası) */
+const MATCH_ODDS = new Map();
+
+/* İçerikte oran varsa alınır; full: içeriğin tamamı (oran yoksa maçın oranı yok) */
+function takeMatchOdds(id, doc, full) {
+    if ('oran' in doc)
+        MATCH_ODDS.set(id, doc.oran || {});
+    else if (full)
+        MATCH_ODDS.set(id, {});
+}
+
+/* Maçın içeriği hiç yok: oranı da yok (önceden bilinmiyorsa) */
+function noMatchOdds(id) {
+    if (MATCH_ODDS.has(id))
+        return;
+    MATCH_ODDS.set(id, {});
+    refreshViews();
+}
+
 function watchDetail(match) {
 
     unwatchDetail();
@@ -7096,9 +7182,12 @@ function watchDetail(match) {
     detailPos.set(id, position);
     let shown = false;
 
+    /* doc: içeriğin tamamı (değişen alanlar bunun üstüne yazılır) */
     const show = (doc, time) => {
         shown = true;
+        takeMatchOdds(id, doc, true);
         matchDetails.set(id, {
+            doc: doc,
             stats: doc.istatistik || null,
             lineup: doc.kadro || null,
             olaylar: doc.olaylar || null,
@@ -7122,14 +7211,23 @@ function watchDetail(match) {
         close = openRoom('mac/' + id, position, message => {
             if (detailUnsub !== unsub)
                 return;
+            /* Bağlanınca (yeniden bağlanınca da) ilk mesaj: Yorumlar açıksa son 20 yorum istenir */
+            if ((message.t === 'm' || message.t === 'h' || message.t === 'y') && cm.match === id)
+                loadComments(id);
             if (message.t === 'm') {
                 show(message.d || {}, message.g);
+            } else if (message.t === 'p') {
+                show(Object.assign({}, (matchDetails.get(id) || {}).doc, message.d), message.g);
             } else if (message.t === 'y') {
                 if (!shown && (leagueHasDetail(match.league.id) || match.status !== 'upcoming'))
                     readFile('mac/' + id).then(doc => {
                         if (doc && detailUnsub === unsub)
                             show(doc, doc.g);
-                    }, () => {});
+                        else
+                            noMatchOdds(id);
+                    }, () => noMatchOdds(id));
+                else
+                    noMatchOdds(id);
             } else {
                 commentMessage(id, message);
             }
@@ -7169,6 +7267,7 @@ document.addEventListener('visibilitychange', () => {
         lastScores.clear();
         Array.from(days.keys()).forEach(day => closeDay(day));
         unwatchDetail();
+        unwatchOddsPage();
         return;
     }
 
@@ -7179,6 +7278,8 @@ document.addEventListener('visibilitychange', () => {
 
     if (detailId && MATCH_BY_ID.has(detailId))
         watchDetail(MATCH_BY_ID.get(detailId));
+    if (oddsPageId)
+        watchOddsPage(oddsPageId);
 });
 
 
@@ -7639,6 +7740,19 @@ function scoreRow(match, showDate, showLeague) {
         const name = document.createElement('span');
         name.textContent = match[side].mid || match[side].name;
         el.appendChild(name);
+
+        /* Kırmızı kart: adın skor tarafında küçük kırmızı kart; 1'den fazlaysa içinde sayı */
+        const reds = (match.reds || [])[index];
+        if (reds) {
+            const red = document.createElement('i');
+            red.className = 'score-red';
+            if (reds > 1)
+                red.textContent = reds;
+            if (side === 'home')
+                el.appendChild(red);
+            else
+                el.insertBefore(red, name);
+        }
 
         /* Gol bekleniyor: beklenen takımın dış tarafında yanıp sönen kırmızı nokta */
         if (match.warnSide === side) {
@@ -8655,8 +8769,8 @@ function renderSavedOdds() {
 /*
  * BİR KEZ OKUNAN DOKÜMANLAR (oranlar, analizler): gzip ile sıkıştırılmış (z) dokümanlar gerekince
  * bir kez okunur, 1 saatten eskiyse yeniden okunur.
- *   Oranlar: sunucu/VERITABANI.md → "Oranlar" (oran_gun seçili gün, oran_lig seçilen lig,
- *   oran_mac maçın oranları açılınca; sunucu günde 2 kez yazar).
+ *   Oranlar: sunucu/VERITABANI.md → "Oranlar" (oran_gun seçili gün, oran_lig seçilen lig; sunucu günde 2 kez yazar).
+ *   Maçın bütün oranları maç içeriğiyle gelir (MATCH_ODDS).
  */
 const DOC_CACHE = new Map();          /* "oran_gun/2026-11-01" → { at, data, loading } */
 const ODDS_MATCH_BY_ID = new Map();   /* Oranlar menüsündeki, günün listesinde olmayan maçlar */
@@ -11303,11 +11417,7 @@ function commentMessage(id, message) {
     }
     if (cm.room !== id)
         return;
-    if (message.t === 'c0') {
-        /* Bağlanınca (yeniden bağlanınca da) son 20 yorum */
-        cm.list = message.c || [];
-        cm.noMore = cm.list.length < 20;
-    } else if (message.t === 'c' && cm.list) {
+    if (message.t === 'c' && cm.list) {
         if (!cm.list.some(c => c.id === message.c.id))
             cm.list.unshift(message.c);
     } else if (message.t === 'x' && cm.list) {
@@ -11319,6 +11429,16 @@ function commentMessage(id, message) {
             c.d = message.d;
         }
     }
+    renderComments();
+}
+
+/* Son 20 yorum (Yorumlar sekmesi açılınca ve oda yeniden bağlanınca); bundan sonra bu bağlantıya yeni yorumlar da gelir */
+async function loadComments(id) {
+    const answer = await roomCall({ a: 'daha', adet: 20 });
+    if (cm.room !== id || !answer.ok)
+        return;
+    cm.list = answer.c || [];
+    cm.noMore = cm.list.length < 20;
     renderComments();
 }
 
@@ -11613,9 +11733,11 @@ function startComments(id) {
     cmNote('');
     loginNext = null;
     document.getElementById('cmLogin').hidden = true;
-    /* Kesinleşmiş maçta odaya ancak şimdi bağlanılır */
+    /* Kesinleşmiş maçta odaya ancak şimdi bağlanılır (yorumlar bağlanınca istenir); bağlıysa yorumlar şimdi istenir */
     if (detailNeedsRoom && detailId === id)
         detailNeedsRoom();
+    else if (!cm.list)
+        loadComments(id);
     renderComments();
 }
 
@@ -13154,18 +13276,17 @@ function byScore(x, y) {
 
 const IYMS = ['1/1', '1/X', '1/2', 'X/1', 'X/X', 'X/2', '2/1', '2/X', '2/2'];
 
-/* Maç sayfasının Oranlar sekmesi: sekme açılınca okunur */
+/* Maç sayfasının Oranlar sekmesi */
 function renderDetailOdds(match) {
-    renderMatchOdds(match, document.getElementById('oddsBox'), detailTab === 'odds');
+    renderMatchOdds(match, document.getElementById('oddsBox'));
 }
 
-/* Maçın bütün oranları (oran_mac/{no}, bir kez okunur). load: henüz okunmadıysa okunsun mu */
-function renderMatchOdds(match, box, load) {
+/* Maçın bütün oranları (maç içeriğiyle gelir: MATCH_ODDS) */
+function renderMatchOdds(match, box) {
 
     box.textContent = '';
 
-    const path = 'oran_mac/' + match.id;
-    const data = load || DOC_CACHE.has(path) ? cachedDoc(path) : undefined;
+    const data = MATCH_ODDS.get(match.id);
 
     const message = text => {
         const p = document.createElement('p');
@@ -13340,6 +13461,7 @@ osBody.addEventListener('touchcancel', endOsSwipe, { passive: true });
 
 function openOddsPage(id) {
     oddsPageId = id;
+    watchOddsPage(id);
     fillOddsPage();
 
     /* Her açılışta Tümü sekmesi, en üstten (kayma görünmeden) */
@@ -13369,7 +13491,7 @@ function fillOddsPage() {
         match.status === 'live' ? 'CANLI' : match.status === 'done' ? 'MAÇ SONU' : 'OYNANACAK';
     osStatus.className = 'os-status ' + match.status;
 
-    renderMatchOdds(match, document.getElementById('oddsPageBox'), true);
+    renderMatchOdds(match, document.getElementById('oddsPageBox'));
 }
 
 function refreshOddsPage() {
@@ -13380,6 +13502,30 @@ function refreshOddsPage() {
 function hideOddsPage() {
     oddsSheet.classList.remove('open');
     oddsPageId = null;
+    unwatchOddsPage();
+}
+
+/* Oran sayfası açıkken maç odasına bağlanılır: oranlar maçın içeriğiyle gelir (maç sayfası aynı maça bağlıysa gerekmez) */
+let oddsPageRoom = null;
+
+function watchOddsPage(id) {
+    unwatchOddsPage();
+    if (detailId === id && detailRoom)
+        return;
+    oddsPageRoom = openRoom('mac/' + id, { k: null, s: 0 }, message => {
+        if (message.t === 'm' || message.t === 'p') {
+            takeMatchOdds(id, message.d || {}, message.t === 'm');
+            refreshViews();
+        } else if (message.t === 'y') {
+            noMatchOdds(id);
+        }
+    });
+}
+
+function unwatchOddsPage() {
+    if (oddsPageRoom)
+        oddsPageRoom();
+    oddsPageRoom = null;
 }
 
 function closeOddsPage() {
@@ -13517,11 +13663,6 @@ function setDetailTab(name, keepScroll) {
     detailSheet.querySelectorAll('#detailTabs button').forEach(button => {
         button.classList.toggle('active', button.dataset.tab === name);
     });
-
-    /* Oranlar sekmesine gelince maçın oranları okunur */
-    const match = name === 'odds' && detailId ? findMatch(detailId) : null;
-    if (match)
-        renderDetailOdds(match);
 
     /* Yorumlar sekmesine gelince maçın mesajları dinlenir */
     if (name === 'comments' && detailId)

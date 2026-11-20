@@ -124,6 +124,7 @@ module.exports = {
     ODA_GUN_SAKLA: 4,               /* gün odaları dünden eskiyse boşaltılır; geriye bu kadar güne bakılır (R2'de kalır) */
     BEKLEME_ARALIK: 60000,          /* canlı saatler dışında: yalnızca fikstür ve maç sonları, 1 dk */
     DETAY_ARALIK: 2 * 60000,        /* canlı maç detayı: 2 dk */
+    OZET_R2_ARALIK: 30000,          /* Özet R2'ye (ozet/{gün}.json) en fazla bu aralıkla yazılır (değiştiyse); sitede önbellek de 30 sn */
     FIKSTUR_BUGUN: 30 * 60000,      /* bugünün ve yarının fikstürü: 30 dk */
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
     ILERI_GUN: 7,                   /* bugünden sonra kaç günün fikstürü çekilir */

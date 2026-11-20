@@ -53,12 +53,6 @@ async function yazSikistir(yol, metin, ek = {}, aralik = 0) {
     return true;
 }
 
-/* Artık yazılmayacak dokümanı hafızadan siler (hafıza büyümesin) */
-function unut(yol) {
-    sonYazilan.delete(yol);
-    sonZaman.delete(yol);
-}
-
 /* Firestore dokümanını bir kez okur; z açılır, m olarak döner */
 async function oku(yol) {
     const snap = await db.doc(yol).get();
@@ -86,4 +80,4 @@ function koleksiyonDinle(ad, degisti) {
         e => console.error(ad + ' dinlenemedi: ' + e.message));
 }
 
-module.exports = { yaz, yazSikistir, oku, unut, sil, belgeDinle, koleksiyonDinle, yazmaSayisi: () => yazmaSayisi };
+module.exports = { yaz, yazSikistir, oku, sil, belgeDinle, koleksiyonDinle, yazmaSayisi: () => yazmaSayisi };

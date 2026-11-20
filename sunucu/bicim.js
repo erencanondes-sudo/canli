@@ -101,7 +101,8 @@ function durum(f) {
  * ertesi: maç listenin gününden sonraki takvim gününde başlıyor (00:00–06:59): saatin sonuna "+" eklenir.
  * devre: oynanan devrede durum yerine "2H3725" (devre + başlama saatinden kaç saniye sonra başladığı).
  */
-function satir(f, ertesi, devre) {
+/* kirmizi: [ev, dep] kırmızı kart sayısı (verilmezse yazılmaz; 0 boş) */
+function satir(f, ertesi, devre, kirmizi) {
     const alan = [
         f.league.id,
         hafta(f.league.round),
@@ -110,7 +111,9 @@ function satir(f, ertesi, devre) {
         saat(f.fixture.timestamp) + (ertesi ? '+' : ''),
         devre || durum(f),
         f.goals.home === null ? '' : f.goals.home,
-        f.goals.away === null ? '' : f.goals.away
+        f.goals.away === null ? '' : f.goals.away,
+        kirmizi && kirmizi[0] || '',
+        kirmizi && kirmizi[1] || ''
     ].map(String);
     while (alan.length && alan[alan.length - 1] === '') alan.pop();
     return alan.join(',');

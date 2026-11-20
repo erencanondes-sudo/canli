@@ -4,7 +4,8 @@
  *   1. Gerekirse fikstür (dün, bugün ve 7 gün ileri) ve liglerin veri kapsamı
  *   2. Canlı maç varsa canlı skor + olaylar
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
- *   4. Değişenleri yaz: takım adları ve lig bilgisi (R2); gün listesi ve Özet (gün odası + R2, değişince; hızlı kaynağın golünde de);
+ *   4. Değişenleri yaz: takım adları ve lig bilgisi (R2); gün listesi (gün odası + R2, değişince; hızlı kaynağın golünde de);
+ *      Özet (değişen maçlar gün odasına; R2'ye OZET_R2_ARALIK'ta bir, sıkıştırılmış);
  *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
  *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
@@ -284,13 +285,16 @@ async function detayCek(nolar) {
             sezon.macDegisti(f);
 
             /* Maç içeriği maç odasına; maç bitince olaylarla birlikte tam (istatistik vermeyen liglerde de).
-               Maç kesinleşince (bitişten 2 saat sonraki son çekiş) içerik R2'ye mac/{no}.json yazılır, oda boşaltılır.
+               Maç kesinleşince (bitişten 2 saat sonraki son çekiş) içerik odadaki oranlarla birlikte R2'ye mac/{no}.json yazılır,
+               oda boşaltılır.
                Bir maçın verisindeki sorun turu durdurmaz: o maç atlanır, günlüğe yazılır. */
             const bitti = BITTI.has(d);
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
                 try {
                     const icerik = B.macDokumani(f, bitti ? (k.olaylar || []) : null);
                     if (bitti && k.duzeltildi) {
+                        const oran = await oda.oranOku(f.fixture.id);
+                        if (oran && Object.keys(oran).length) icerik.oran = oran;
                         await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...icerik, g: Date.now() }));
                         oda.sil('mac/' + f.fixture.id);
                         sezon.icerikYazildi(f.fixture.id);
@@ -378,6 +382,14 @@ function devreMetni(k) {
     return kod + (k.devre.bas - basla);
 }
 
+/* Maçın kırmızı kartları [ev, dep] (olaylardan: kırmızı ve ikinci sarıdan kırmızı) */
+function kirmizilar(k) {
+    const sayi = [0, 0];
+    for (const e of k.olaylar || [])
+        if (e[3] === 'k' && (e[4] === 'k' || e[4] === 'sk') && (e[2] === 0 || e[2] === 1)) sayi[e[2]]++;
+    return sayi;
+}
+
 function gunYaz(gun) {
     const satirlar = {};
     const duz = {};
@@ -387,12 +399,13 @@ function gunYaz(gun) {
         /* Kendi gününün listesinde, ertesi takvim gününde başlıyorsa saatin sonunda "+" */
         const ertesi = k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun;
         const devre = devreMetni(k);
-        const satir = B.satir(k.f, ertesi, devre);
+        const kirmizi = kirmizilar(k);
+        const satir = B.satir(k.f, ertesi, devre, kirmizi);
         satirlar[no] = satir;
 
         const skor = CANLI.has(durumu(k)) && !elle.has(no) && bildirim.hizliSkoru(no);
         const hizli = /^(\d+)-(\d+)$/.exec(skor || '');
-        duz[no] = hizli ? B.satir({ ...k.f, goals: { home: Number(hizli[1]), away: Number(hizli[2]) } }, ertesi, devre) : satir;
+        duz[no] = hizli ? B.satir({ ...k.f, goals: { home: Number(hizli[1]), away: Number(hizli[2]) } }, ertesi, devre, kirmizi) : satir;
     }
 
     const surumler = {};
@@ -459,8 +472,9 @@ function hizliSilMac(no) {
 
 /*
  * ÖZET (oynanan ve biten maçların olayları), dün ve bugün için:
- *   Gün odası gun/{gün}: o = { maç no: [olaylar] }. Oda yalnızca olayları değişen maçları telefonlara iletir.
- *   R2 ozet/{gün}.json: { m: { maç no: [olaylar] } } (arşiv). Değişince yazılır.
+ *   Gün odası gun/{gün}: o = yalnızca olayları değişen maçlar. Oda saklamaz, telefonlara iletir ve günlüğüne yazar.
+ *   R2 ozet/{gün}.json: { k, s, m: { maç no: [olaylar] } } (arşiv), gzip ile sıkıştırılmış. OZET_R2_ARALIK'ta bir, değiştiyse
+ *     yazılır: odanın aldığı hal ve o andaki oda kimliği (k) ve sırası (s). Telefon dosyayı okuyunca s'den sonrakileri odadan ister.
  * Sunucu yeni açıldıysa olayları henüz çekilmemiş maçların eski kaydı R2'deki dosyadan korunur.
  */
 const ozetHali = new Map();   /* gün → { maç no: olaylar } (son yazılan) */
@@ -482,9 +496,19 @@ async function ozetYaz(gun) {
         if (CANLI.has(d) || BITTI.has(d)) ozet[no] = k.olaylar.map(B.kisaOlay);
     }
     ozetHali.set(gun, ozet);
+    oda.ozet(gun, ozet);
+}
 
-    oda.gun(gun, { o: ozet });
-    depo.yaz('ozet/' + gun + '.json', JSON.stringify({ m: ozet }));
+/* R2 Özet dosyaları: odanın aldığı hal değiştiyse (zamanlayıcıyla, OZET_R2_ARALIK'ta bir) */
+const ozetR2Surum = new Map();   /* gün → son yazılan sürüm */
+
+function ozetR2Yaz() {
+    for (const gun of ozetHali.keys()) {
+        const hal = oda.ozetHali(gun);
+        if (!hal || ozetR2Surum.get(gun) === hal.surum) continue;
+        ozetR2Surum.set(gun, hal.surum);
+        depo.yaz('ozet/' + gun + '.json', hal.metin, true);
+    }
 }
 
 async function durumYaz() {
@@ -509,6 +533,7 @@ function temizle(dun) {
     for (const [no, k] of maclar) if (k.gun < dun && !(k.gun2 && k.gun2 >= dun)) maclar.delete(no);
     depo.unutEski(dun);
     for (const gun of ozetHali.keys()) if (gun < dun) ozetHali.delete(gun);
+    for (const gun of ozetR2Surum.keys()) if (gun < dun) ozetR2Surum.delete(gun);
     oda.unut(yol => {
         const [tur, ad] = yol.split('/');
         return tur === 'gun' ? ad >= dun : maclar.has(Number(ad));
@@ -597,6 +622,7 @@ if (require.main === module) {
     bildirim.zilDinle();
     oda.bildirimDinle(is => bildirim.kisiyeGonder(is.kisi, is.baslik, is.metin, A.SITE_ADRES + is.link));
     yonetimDinle();
+    setInterval(ozetR2Yaz, A.OZET_R2_ARALIK);
     tur();
 }
 

@@ -26,12 +26,7 @@ service cloud.firestore {
         && ad.matches('^(yenile_[0-9]{1,10}|hizli_sil_[0-9]{1,10}|hizli_sil_hepsi)$');
     }
 
-    /* Oranlar: maçın bütün oranları, günün ve ligin menü oranları */
-    match /oran_mac/{mac} {
-      allow read: if true;
-      allow write: if false;
-    }
-
+    /* Oranlar: günün ve ligin menü oranları (maçın bütün oranları maç odasında) */
     match /oran_gun/{gun} {
       allow read: if true;
       allow write: if false;

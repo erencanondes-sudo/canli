@@ -1,14 +1,17 @@
 /*
  * ODALAR (Cloudflare Durable Objects). Ayrıntı: sunucu/VERITABANI.md → "Odalar".
  *
- *   Gün odası  gun/{gün}  : günün listesi (satırlar), Özet (olaylar), hızlı kaynağın skoru ve uyarısı, sürümler (takım adları, analiz)
- *   Maç odası  mac/{no}   : maçın içeriği (durum, istatistik, kadro, olaylar; maç kesinleşince R2'ye yazılır ve odadan silinir) ve yorumları
+ *   Gün odası  gun/{gün}  : günün listesi (satırlar), hızlı kaynağın skoru ve uyarısı, sürümler (takım adları, analiz);
+ *                           Özet değişikliklerini iletir (Özet'in tamamı R2'de)
+ *   Maç odası  mac/{no}   : maçın içeriği (durum, istatistik, kadro, olaylar; maç kesinleşince R2'ye yazılır ve odadan silinir),
+ *                           oranları ve yorumları
  *   Bildirim kuyruğu      : yorumlardaki @rumuz yanıt bildirimleri; sunucu bağlanıp alır ve FCM ile gönderir
  *   Kullanıcı bilgileri D1 veritabanında (d1.js); hesap işlemleri hesap.js
  *
  * Adresler:
  *   GET    /oda/gun/{gün}?k=&s=   telefon bağlanır (WebSocket); site bunu Cloudflare Pages'ten (functions/oda) geçirir
  *   GET    /oda/mac/{no}?k=&s=
+ *   GET    /yaz/mac/{no}          maçın oranları (sunucu, maç kesinleşince R2 dosyasına koymak için)
  *   POST   /yaz/gun/{gün}         sunucu yazar (Authorization: Bearer ODA_ANAHTAR)
  *   POST   /yaz/mac/{no}
  *   POST   /hizli/gun/{gün}       hızlı kaynak (bilgisayardaki program) yazar (Authorization: Bearer HIZLI_ANAHTAR; sunucu da ODA_ANAHTAR ile)
@@ -18,7 +21,7 @@
  *   GET, POST /hesap/...   hesap işlemleri (hesap.js; site Cloudflare Pages'ten, functions/hesap, geçirir)
  *
  * Sıra numarası (s): odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı (s) ve odanın
- * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odası son 1000 değişikliği saklar).
+ * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odası son 1000 değişikliği saklar, son 200'ü bellekte de).
  * Kimlik oda ilk kez oluşunca rastgele verilir; oda boşaltılıp yeniden oluşursa değişir (telefon her şeyi baştan alır).
  *
  * Yer: odalar Doğu Avrupa'da kurulur (Türkiye'ye en yakın bölge). Bir oda kurulduğu yerde kalır; adlarının başındaki
@@ -33,6 +36,7 @@ import { hesap } from './hesap.js';
 
 const BICIM = { gun: /^\d{4}-\d{2}-\d{2}$/, mac: /^\d{1,10}$/ };
 const GUNLUK_SAKLA = 1000;
+const BELLEK_SAKLA = 200;        /* gün odası son bu kadar değişikliği bellekte de tutar */
 const YORUM_SAYFA = 20;          /* bir istekte en fazla bu kadar eski yorum */
 const YORUM_GUNLUK = 20;         /* kişi başına günde en fazla yorum */
 const BILDIRIM_ESKI = 10 * 60000;   /* bildirim kuyruğunda bu kadar eski iş gönderilmez; aynı kişiden aynı kişiye 10 dakikada bir */
@@ -99,6 +103,9 @@ export default {
 
         if (bolum === 'bak' && istek.method === 'GET')
             return Response.json(await oda.bak());
+
+        if (bolum === 'yaz' && tur === 'mac' && istek.method === 'GET')
+            return Response.json(await oda.oran());
 
         if (bolum === 'yaz' && istek.method === 'POST')
             return Response.json(await oda.yaz(await istek.json()));
@@ -201,16 +208,20 @@ class Oda extends DurableObject {
 
 /*
  * GÜN ODASI
- * veri tablosu: tur r (satır metni), o (maçın olayları, JSON metni), h (hızlı skor "2-1"), u (hızlı uyarı "2-2" / "k"),
- *   v (sürümler: takim, analiz; sayı)
- * gunluk tablosu: değişiklikler (sıra → mesaj), son 1000
- * r, o, v'yi sunucu yazar (yaz: o günün tam hali); h, u'yu hızlı kaynak yazar (hizli: yalnızca değişenler).
+ * bilgi tablosunda "liste": günün satırları { maç no: satır } (tek satır, JSON metni)
+ * veri tablosu: tur h (hızlı skor "2-1"), u (hızlı uyarı "2-2" / "k"), v (sürümler: takim, analiz; sayı)
+ * gunluk tablosu: değişiklikler (sıra → mesaj), son 1000; son 200'ü bellekte de (oda uyanıkken eksikler oradan gider)
+ * r, v'yi sunucu o günün tam hali olarak yazar (oda karşılaştırır); o'yu (Özet) yalnızca değişen maçlar olarak yazar,
+ * oda Özet'i saklamaz, yalnızca telefonlara iletir ve günlüğe yazar (Özet'in tamamı R2 ozet/{gün}.json'da).
+ * h, u'yu hızlı kaynak yazar (hizli: yalnızca değişenler).
+ * Liste, hızlı kaynak ve sürümler bellekte tutulur; oda uyanınca bir kez okunur.
  *
  * Telefona giden mesajlar:
- *   { t: "l", k, s, z, r, h, u, v }  liste (satırlar, hızlı kaynak, sürümler), ilk bağlanışta önce bu
- *   { t: "o", o }                  Özet, listeden hemen sonra
+ *   { t: "l", k, s, z, r, h, u, v }  liste (satırlar, hızlı kaynak, sürümler), ilk bağlanışta
  *   { t: "h", k, s, z, n }         yeniden bağlanış: ardından kaçırılan n değişiklik ("d") gelir (0: telefon güncel)
  *   { t: "d", s, r?, o?, h?, u?, v? }  değişiklik: yalnızca değişenler; null = silindi
+ *   { t: "oz", s, o }              telefonun { a: "oz", s } isteğine: s'den sonraki Özet değişiklikleri birleşik
+ *                                  (o: null = günlükte yok, telefon R2 dosyasıyla yetinir)
  * z: sunucu saati (ms), telefon dakikayı doğru hesaplasın diye.
  */
 export class GunOdasi extends Oda {
@@ -219,65 +230,104 @@ export class GunOdasi extends Oda {
         super.tablolar();
         this.sql.exec('CREATE TABLE IF NOT EXISTS veri (tur TEXT, no TEXT, v TEXT, PRIMARY KEY (tur, no))');
         this.sql.exec('CREATE TABLE IF NOT EXISTS gunluk (s INTEGER PRIMARY KEY, v TEXT)');
+        this.bellek = null;
+        this.sonlar = [];
     }
 
-    /* Odanın tamamı ya da istenen alanları: { r: {no: satır}, o: {no: [olaylar]}, h: {...}, u: {...}, v: {takim, analiz} } */
-    hal(turler = ['r', 'o', 'h', 'u', 'v']) {
-        const hal = Object.fromEntries(turler.map(tur => [tur, {}]));
-        for (const { tur, no, v } of this.sql.exec('SELECT tur, no, v FROM veri WHERE tur IN (' + turler.map(() => '?').join(', ') + ')', ...turler))
-            hal[tur][no] = tur === 'o' ? JSON.parse(v) : tur === 'v' ? Number(v) : v;
-        return hal;
+    /* Bellekteki hal (yoksa okunur): { r, h, u, v, metin: listenin hazır JSON parçası } */
+    hal() {
+        if (!this.bellek) {
+            const hal = { r: JSON.parse(this.bilgi('liste') || '{}'), h: {}, u: {}, v: {}, metin: null };
+            for (const { tur, no, v } of this.sql.exec("SELECT tur, no, v FROM veri WHERE tur IN ('h', 'u', 'v')"))
+                hal[tur][no] = tur === 'v' ? Number(v) : v;
+            this.bellek = hal;
+        }
+        return this.bellek;
     }
 
     /* Değişiklik kaydedilir ve bağlı telefonlara gönderilir */
     degisiklik(degisen) {
         this.kimlik();
         const s = this.sira() + 1;
-        const mesaj = { t: 'd', s, ...degisen };
+        const metin = JSON.stringify({ t: 'd', s, ...degisen });
         this.bilgiYaz('s', s);
-        this.sql.exec('INSERT INTO gunluk (s, v) VALUES (?, ?)', s, JSON.stringify(mesaj));
+        this.sql.exec('INSERT INTO gunluk (s, v) VALUES (?, ?)', s, metin);
         this.sql.exec('DELETE FROM gunluk WHERE s <= ?', s - GUNLUK_SAKLA);
-        this.herkese(mesaj);
+        this.sonlar.push({ s, v: metin });
+        if (this.sonlar.length > BELLEK_SAKLA)
+            this.sonlar.shift();
+        if (degisen.r || degisen.h || degisen.u || degisen.v)
+            this.hal().metin = null;
+        this.ctx.getWebSockets().forEach(ws => {
+            try {
+                ws.send(metin);
+            } catch (e) {}
+        });
         return s;
     }
 
+    /* s'den sonraki değişiklikler (mesaj metinleri); günlükte hepsi yoksa null */
+    sonrakiler(s) {
+        const sira = this.sira();
+        if (s >= sira)
+            return [];
+        if (this.sonlar.length && this.sonlar[0].s <= s + 1)
+            return this.sonlar.filter(x => x.s > s).map(x => x.v);
+        const eksik = this.sql.exec('SELECT v FROM gunluk WHERE s > ? ORDER BY s', s).toArray().map(x => x.v);
+        return eksik.length === sira - s ? eksik : null;
+    }
+
     /*
-     * Sunucu yazar: { r?, o?, v? }, her alan o günün tam hali. Oda kendi haliyle karşılaştırır,
-     * yalnızca değişenleri saklar ve bağlı telefonlara tek mesajla gönderir.
+     * Sunucu yazar: { r?, o?, v? }. r, v o günün tam hali: oda kendi haliyle karşılaştırır, yalnızca değişenleri saklar.
+     * o yalnızca değişen maçların olayları (null = silindi): saklanmaz, olduğu gibi iletilir. Hepsi tek mesajla gider.
      */
     yaz(govde) {
+        const hal = this.hal();
         const degisen = {};
         let sayi = 0;
 
-        for (const tur of ['r', 'o', 'v']) {
-            const yeni = govde[tur];
-            if (!yeni || typeof yeni !== 'object')
-                continue;
-            const once = new Map(this.sql.exec('SELECT no, v FROM veri WHERE tur = ?', tur).toArray().map(x => [x.no, x.v]));
+        if (govde.r && typeof govde.r === 'object') {
             const fark = {};
-
-            for (const [no, deger] of Object.entries(yeni)) {
-                const metin = tur === 'o' ? JSON.stringify(deger) : String(deger);
-                if (once.get(no) === metin)
-                    continue;
-                this.sql.exec('INSERT OR REPLACE INTO veri (tur, no, v) VALUES (?, ?, ?)', tur, no, metin);
-                fark[no] = deger;
-            }
-            for (const no of once.keys()) {
-                if (no in yeni)
-                    continue;
-                this.sql.exec('DELETE FROM veri WHERE tur = ? AND no = ?', tur, no);
-                fark[no] = null;
-            }
+            for (const [no, satir] of Object.entries(govde.r))
+                if (hal.r[no] !== String(satir))
+                    fark[no] = String(satir);
+            for (const no of Object.keys(hal.r))
+                if (!(no in govde.r))
+                    fark[no] = null;
             if (Object.keys(fark).length) {
-                degisen[tur] = fark;
+                for (const [no, satir] of Object.entries(fark)) {
+                    if (satir === null) delete hal.r[no];
+                    else hal.r[no] = satir;
+                }
+                this.bilgiYaz('liste', JSON.stringify(hal.r));
+                degisen.r = fark;
                 sayi += Object.keys(fark).length;
             }
         }
 
+        if (govde.v && typeof govde.v === 'object') {
+            const fark = {};
+            for (const [ad, deger] of Object.entries(govde.v)) {
+                if (hal.v[ad] === Number(deger))
+                    continue;
+                this.sql.exec('INSERT OR REPLACE INTO veri (tur, no, v) VALUES (?, ?, ?)', 'v', ad, String(deger));
+                hal.v[ad] = Number(deger);
+                fark[ad] = Number(deger);
+            }
+            if (Object.keys(fark).length) {
+                degisen.v = fark;
+                sayi += Object.keys(fark).length;
+            }
+        }
+
+        if (govde.o && typeof govde.o === 'object' && Object.keys(govde.o).length) {
+            degisen.o = govde.o;
+            sayi += Object.keys(govde.o).length;
+        }
+
         if (!sayi)
-            return { s: this.sira(), degisen: 0 };
-        return { s: this.degisiklik(degisen), degisen: sayi };
+            return { s: this.sira(), k: this.kimlik(), degisen: 0 };
+        return { s: this.degisiklik(degisen), k: this.kimlik(), degisen: sayi };
     }
 
     /*
@@ -302,17 +352,20 @@ export class GunOdasi extends Oda {
         if (govde.t)
             this.bilgiYaz('hizli_t', Date.now());
 
+        const hal = this.hal();
         const degisen = {};
         for (const tur of ['h', 'u']) {
             const fark = {};
             for (const [no, deger] of Object.entries(govde[tur] || {})) {
-                const once = this.sql.exec('SELECT v FROM veri WHERE tur = ? AND no = ?', tur, no).toArray()[0];
-                if ((once ? once.v : null) === deger)
+                if ((hal[tur][no] ?? null) === deger)
                     continue;
-                if (deger === null)
+                if (deger === null) {
                     this.sql.exec('DELETE FROM veri WHERE tur = ? AND no = ?', tur, no);
-                else
+                    delete hal[tur][no];
+                } else {
                     this.sql.exec('INSERT OR REPLACE INTO veri (tur, no, v) VALUES (?, ?, ?)', tur, no, deger);
+                    hal[tur][no] = deger;
+                }
                 fark[no] = deger;
             }
             if (Object.keys(fark).length)
@@ -331,18 +384,39 @@ export class GunOdasi extends Oda {
 
         /* Telefon bu odayı tanıyor ve kaçırdıkları günlükte duruyorsa yalnızca onlar */
         if (k === kimlik && s !== null && s <= sira) {
-            const eksik = this.sql.exec('SELECT v FROM gunluk WHERE s > ? ORDER BY s', s).toArray();
-            if (eksik.length === sira - s) {
+            const eksik = this.sonrakiler(s);
+            if (eksik) {
                 ws.send(JSON.stringify({ t: 'h', k: kimlik, s, z, n: eksik.length }));
-                eksik.forEach(x => ws.send(x.v));
+                eksik.forEach(v => ws.send(v));
                 return;
             }
         }
 
-        /* Önce liste okunup gönderilir; Özet (büyük olabilir) ondan sonra okunur, liste onu beklemez */
-        const liste = this.hal(['r', 'h', 'u', 'v']);
-        ws.send(JSON.stringify({ t: 'l', k: kimlik, s: sira, z, ...liste }));
-        ws.send(JSON.stringify({ t: 'o', o: this.hal(['o']).o }));
+        /* Liste bellekteki hazır metinden (değişince bir kez yeniden hazırlanır) */
+        const hal = this.hal();
+        if (!hal.metin)
+            hal.metin = JSON.stringify({ r: hal.r, h: hal.h, u: hal.u, v: hal.v }).slice(1);
+        ws.send('{"t":"l","k":' + JSON.stringify(kimlik) + ',"s":' + sira + ',"z":' + z + ',' + hal.metin);
+    }
+
+    /* Telefon Özet'i R2'den okuyunca dosyanın sırasından sonraki Özet değişikliklerini ister: { a: "oz", s } */
+    webSocketMessage(ws, ham) {
+        let m;
+        try {
+            m = JSON.parse(ham);
+        } catch (e) {
+            return;
+        }
+        if (m.a !== 'oz')
+            return;
+        const sira = this.sira();
+        const eksik = this.sonrakiler(Math.max(0, Number(m.s) || 0));
+        let o = null;
+        if (eksik) {
+            o = {};
+            eksik.forEach(v => Object.assign(o, JSON.parse(v).o || {}));
+        }
+        ws.send(JSON.stringify({ t: 'oz', s: sira, o }));
     }
 
     async bak() {
@@ -354,7 +428,10 @@ export class GunOdasi extends Oda {
             bagli_telefon: this.ctx.getWebSockets().length,
             mac_sayisi: Object.keys(hal.r).length,
             hizli_son_isaret: this.bilgi('hizli_t') ? new Date(Number(this.bilgi('hizli_t'))).toISOString() : null,
-            ...hal,
+            r: hal.r,
+            h: hal.h,
+            u: hal.u,
+            v: hal.v,
             son_degisiklikler: this.sql.exec('SELECT v FROM gunluk ORDER BY s DESC LIMIT 20').toArray().map(x => JSON.parse(x.v))
         };
     }
@@ -362,20 +439,23 @@ export class GunOdasi extends Oda {
 
 /*
  * MAÇ ODASI
- * bilgi tablosunda: no (maç no), acik (sunucu yazar: bu maça yorum yazılabilir), d (maçın içeriği, JSON metni), g (son değişme anı, ms)
+ * bilgi tablosunda: no (maç no), acik (sunucu yazar: bu maça yorum yazılabilir), g (içeriğin son değişme anı, ms; içerik yoksa yok)
+ * sekme tablosu: maçın içeriği, her alan bir satır (durum, istatistik, kadro, olaylar, oran; JSON metni)
  * yorum tablosu: id, u (yazanın kimliği), r (rumuz), t (metin), z (zaman, ms), y (yanıtlanan yorum), b, d (beğeni, beğenmeme sayısı)
  * oy tablosu: id (yorum), u (kimlik), v (1 beğeni, -1 beğenmeme, 0 geri alındı), n (kaç kez değişti, en fazla 2)
- * Maç kesinleşince (sil) yalnızca içerik silinir; yorumlar kalır. Yorumlar şimdilik hiç silinmez.
+ * Maç kesinleşince (sil) içerik (oranlar dahil) silinir, yorumlar kalır. Yorumlar şimdilik hiç silinmez.
  *
  * Telefona giden mesajlar:
- *   { t: "m", k, s, g, d }  içerik (bağlanınca ve her değişince)
+ *   { t: "m", k, s, g, d }  içeriğin tamamı (bağlanınca)
+ *   { t: "p", k, s, g, d }  içerikte yalnızca değişen alanlar (null = silindi)
  *   { t: "h", k, s }        yeniden bağlanış: telefondaki içerik güncel
  *   { t: "y" }              odada içerik yok (maç kesinleştiyse içerik R2'de: mac/{no}.json)
- *   { t: "c0", c: [...] }   bağlanınca son 20 yorum (yeniden eskiye)
  *   { t: "c", c }           yeni yorum;  { t: "x", id } yorum silindi;  { t: "b", id, b, d } oy sayıları
+ *                           (yalnızca yorumları istemiş bağlantılara: Yorumlar sekmesi açılınca "daha" isteği)
  *   { t: "r", n, ... }      telefonun isteğine cevap (n: isteğin numarası): { ok: true, ... } ya da { hata: "kod" }
  * Telefondan gelen istekler (JSON, n: isteğin numarası):
- *   { a: "daha", once: yorum no, adet }          bu yorumdan eski en fazla 20 yorum (giriş gerekmez)
+ *   { a: "daha", once?: yorum no, adet }        en son (once verilirse bu yorumdan eski) en fazla 20 yorum (giriş gerekmez);
+ *                                                bu bağlantıya bundan sonra yeni yorumlar da gider
  *   { a: "yaz", token, t, y? }  { a: "sil", token, id }  { a: "oy", token, id, v: 1 | -1 }  { a: "sikayet", token, id }
  *   token: Firebase giriş kimliği (Google ile giriş). Hata kodları: giris, rumuz, kapali, bicim, uygunsuz, gunluk, yok, yetki, kendi, oy_sinir
  */
@@ -386,30 +466,66 @@ export class MacOdasi extends Oda {
         this.sql.exec('CREATE TABLE IF NOT EXISTS yorum (id INTEGER PRIMARY KEY AUTOINCREMENT, u TEXT NOT NULL, r TEXT NOT NULL, ' +
             't TEXT NOT NULL, z INTEGER NOT NULL, y INTEGER, b INTEGER NOT NULL DEFAULT 0, d INTEGER NOT NULL DEFAULT 0)');
         this.sql.exec('CREATE TABLE IF NOT EXISTS oy (id INTEGER NOT NULL, u TEXT NOT NULL, v INTEGER NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (id, u))');
+        this.sql.exec('CREATE TABLE IF NOT EXISTS sekme (ad TEXT PRIMARY KEY, v TEXT)');
     }
 
-    /* Sunucu yazar: { d?: içerik, acik?: 1 } */
+    /* İçeriğin tamamı { durum, istatistik, kadro, olaylar } */
+    icerik() {
+        return Object.fromEntries(this.sql.exec('SELECT ad, v FROM sekme').toArray().map(x => [x.ad, JSON.parse(x.v)]));
+    }
+
+    /*
+     * Sunucu yazar: { d?: içerik, acik?: 1, oran?: oranlar }. İçerik alan alan karşılaştırılır; yalnızca değişen alanlar
+     * yazılır ve telefonlara gider. Oranlar da bir alan ("oran"), ama ayrı yazılır: içerik yazılırken silinmez.
+     */
     yaz(govde) {
         if (govde.acik && !this.bilgi('acik'))
             this.bilgiYaz('acik', 1);
 
-        const metin = JSON.stringify(govde.d);
-        if (!govde.d || this.bilgi('d') === metin)
+        const yeni = Object.assign({}, govde.d && typeof govde.d === 'object' ? govde.d : null);
+        if (govde.oran && typeof govde.oran === 'object')
+            yeni.oran = govde.oran;
+        if (!Object.keys(yeni).length)
+            return { s: this.sira(), degisen: 0 };
+
+        const once = new Map(this.sql.exec('SELECT ad, v FROM sekme').toArray().map(x => [x.ad, x.v]));
+        const fark = {};
+        for (const [ad, deger] of Object.entries(yeni)) {
+            const metin = JSON.stringify(deger);
+            if (once.get(ad) === metin)
+                continue;
+            this.sql.exec('INSERT OR REPLACE INTO sekme (ad, v) VALUES (?, ?)', ad, metin);
+            fark[ad] = deger;
+        }
+        /* İçerik yazılınca içerikte olmayan alanlar silinir (oran hariç) */
+        for (const ad of govde.d && typeof govde.d === 'object' ? once.keys() : []) {
+            if (ad in yeni || ad === 'oran')
+                continue;
+            this.sql.exec('DELETE FROM sekme WHERE ad = ?', ad);
+            fark[ad] = null;
+        }
+        if (!Object.keys(fark).length)
             return { s: this.sira(), degisen: 0 };
 
         const k = this.kimlik();
         const s = this.sira() + 1;
         const g = Date.now();
-        this.bilgiYaz('d', metin);
         this.bilgiYaz('g', g);
         this.bilgiYaz('s', s);
-        this.herkese({ t: 'm', k, s, g, d: govde.d });
-        return { s, degisen: 1 };
+        this.herkese({ t: 'p', k, s, g, d: fark });
+        return { s, degisen: Object.keys(fark).length };
     }
 
-    /* Maç kesinleşti: içerik R2'de; odadan yalnızca içerik silinir, bağlı telefonlar R2'den okur */
+    /* Maçın oranları (yoksa boş) */
+    oran() {
+        const satir = this.sql.exec("SELECT v FROM sekme WHERE ad = 'oran'").toArray()[0];
+        return satir ? JSON.parse(satir.v) : {};
+    }
+
+    /* Maç kesinleşti: içerik (oranlar dahil) R2'de; odadan içerik silinir (yorumlar kalır), bağlı telefonlar R2'den okur */
     async sil() {
-        this.sql.exec("DELETE FROM bilgi WHERE ad IN ('d', 'g')");
+        this.sql.exec('DELETE FROM sekme');
+        this.sql.exec("DELETE FROM bilgi WHERE ad = 'g'");
         this.herkese({ t: 'y' });
     }
 
@@ -417,17 +533,26 @@ export class MacOdasi extends Oda {
         if (!this.bilgi('no'))
             this.bilgiYaz('no', url.pathname.split('/')[3]);
 
-        const d = this.bilgi('d');
+        const g = this.bilgi('g');
         const kimlik = this.kimlik();
         const sira = this.sira();
-        if (!d)
+        if (!g)
             ws.send(JSON.stringify({ t: 'y' }));
         else if (k === kimlik && s === sira)
             ws.send(JSON.stringify({ t: 'h', k: kimlik, s: sira }));
         else
-            ws.send(JSON.stringify({ t: 'm', k: kimlik, s: sira, g: Number(this.bilgi('g')), d: JSON.parse(d) }));
+            ws.send(JSON.stringify({ t: 'm', k: kimlik, s: sira, g: Number(g), d: this.icerik() }));
+    }
 
-        ws.send(JSON.stringify({ t: 'c0', c: this.yorumlar(null, 20) }));
+    /* Yorumları istemiş bağlantılara (Yorumlar sekmesi açık) */
+    yorumculara(mesaj) {
+        const metin = JSON.stringify(mesaj);
+        this.ctx.getWebSockets().forEach(ws => {
+            try {
+                if ((ws.deserializeAttachment() || {}).yorum)
+                    ws.send(metin);
+            } catch (e) {}
+        });
     }
 
     /* Yorumlar, yeniden eskiye (once verilirse ondan eskiler) */
@@ -449,8 +574,10 @@ export class MacOdasi extends Oda {
         }
         const cevap = veri => ws.send(JSON.stringify({ t: 'r', n: m.n, ...veri }));
         try {
-            if (m.a === 'daha')
+            if (m.a === 'daha') {
+                ws.serializeAttachment({ yorum: 1 });
                 return cevap({ ok: true, c: this.yorumlar(Number(m.once) || null, Math.min(Math.max(Number(m.adet) || 10, 1), YORUM_SAYFA)) });
+            }
             const kim = await dogrula(m.token, this.env);
             if (!kim || !kim.google)
                 return cevap({ hata: 'giris' });
@@ -496,7 +623,7 @@ export class MacOdasi extends Oda {
                 db.prepare('INSERT OR REPLACE INTO sayac (uid, g, n) VALUES (?, ?, ?)').bind(uid, gun, n),
                 db.prepare('INSERT OR IGNORE INTO mesajlarim (uid, mac, mesaj) VALUES (?, ?, ?)').bind(uid, mac, String(yeni.id))
             ]);
-            this.herkese({ t: 'c', c: yeni });
+            this.yorumculara({ t: 'c', c: yeni });
             this.ctx.waitUntil(this.yanitBildir(yeni, mac, db).catch(() => {}));
             return { ok: true, id: yeni.id };
         }
@@ -525,7 +652,7 @@ export class MacOdasi extends Oda {
             this.sql.exec('INSERT OR REPLACE INTO oy (id, u, v, n) VALUES (?, ?, ?, ?)', id, uid, yeni, n);
             const sayi = this.sql.exec('SELECT SUM(v = 1) AS b, SUM(v = -1) AS d FROM oy WHERE id = ?', id).one();
             this.sql.exec('UPDATE yorum SET b = ?, d = ? WHERE id = ?', sayi.b || 0, sayi.d || 0, id);
-            this.herkese({ t: 'b', id, b: sayi.b || 0, d: sayi.d || 0 });
+            this.yorumculara({ t: 'b', id, b: sayi.b || 0, d: sayi.d || 0 });
             return { ok: true, v: yeni };
         }
 
@@ -546,7 +673,7 @@ export class MacOdasi extends Oda {
                 continue;
             this.sql.exec('DELETE FROM oy WHERE id = ?', id);
             await db.prepare('DELETE FROM mesajlarim WHERE uid = ? AND mac = ? AND mesaj = ?').bind(uid, mac, String(id)).run();
-            this.herkese({ t: 'x', id });
+            this.yorumculara({ t: 'x', id });
         }
     }
 
@@ -579,7 +706,7 @@ export class MacOdasi extends Oda {
     }
 
     async bak() {
-        const d = this.bilgi('d');
+        const g = this.bilgi('g');
         return {
             konum: await this.konum(),
             kimlik: this.bilgi('k'),
@@ -587,8 +714,8 @@ export class MacOdasi extends Oda {
             bagli_telefon: this.ctx.getWebSockets().length,
             yorum_acik: !!this.bilgi('acik'),
             yorum_sayisi: this.sql.exec('SELECT COUNT(*) AS n FROM yorum').one().n,
-            guncellendi: this.bilgi('g') ? new Date(Number(this.bilgi('g'))).toISOString() : null,
-            icerik: d ? JSON.parse(d) : null,
+            guncellendi: g ? new Date(Number(g)).toISOString() : null,
+            icerik: g ? this.icerik() : null,
             son_yorumlar: this.yorumlar(null, 20)
         };
     }
