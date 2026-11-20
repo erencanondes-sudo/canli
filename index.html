@@ -5721,11 +5721,12 @@ const FIREBASE_SURUM = '12.19.0';
 
 /* R2 dosyaları (gün listesi, Özet): Cloudflare Pages'teki okuyucu (functions/veri).
    Android uygulamasında (adres https://localhost) sitenin tam adresinden okunur. */
-const VERI_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/veri/' : '/veri/';
+const VERI_ADRES = location.hostname === 'localhost' ? 'https://deneme.co.uk/veri/' : '/veri/';
 
-/* Odalar (WebSocket) ve hesap işlemleri: Cloudflare Pages'teki geçitler (functions/oda, functions/hesap) canli-oda Worker'ına iletir */
-const ODA_ADRES = location.hostname === 'localhost' ? 'wss://canli-ejw.pages.dev/oda/' : 'wss://' + location.host + '/oda/';
-const HESAP_ADRES = location.hostname === 'localhost' ? 'https://canli-ejw.pages.dev/hesap' : '/hesap';
+/* Odalar (WebSocket) ve hesap işlemleri: deneme.co.uk'te /oda/*, /hesap/* doğrudan canli-oda Worker'ına gider (Worker yönlendirmesi);
+   pages.dev adresinde Cloudflare Pages'teki geçitler (functions/oda, functions/hesap) iletir */
+const ODA_ADRES = location.hostname === 'localhost' ? 'wss://deneme.co.uk/oda/' : 'wss://' + location.host + '/oda/';
+const HESAP_ADRES = location.hostname === 'localhost' ? 'https://deneme.co.uk/hesap' : '/hesap';
 
 /* Web Push genel anahtarı (Firebase → Cloud Messaging → Web Push sertifikaları). Boşsa bildirim kapalı. */
 const BILDIRIM_ANAHTARI = 'BPAK0bgsjWwF414s1mO1wWJFEE8DoLcLkU5yPoH-SPlViNiH_NRAtzSCcpssn1_PZTmXePG4Df4k-P0KAsfFFG0';

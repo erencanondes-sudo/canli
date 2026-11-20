@@ -4,7 +4,7 @@ module.exports = {
 
     PROJE: 'canli-b4406',
     R2_KOVA: 'canli',               /* Cloudflare R2: gün listesi ve Özet dosyaları (anahtarlar /etc/canli/anahtar.env) */
-    SITE_ADRES: 'https://canli-ejw.pages.dev/',   /* bildirime basınca açılan adres */
+    SITE_ADRES: 'https://deneme.co.uk/',   /* bildirime basınca açılan adres */
     SAAT_DILIMI: 'Europe/Istanbul',
 
     /* Ligler (sitedeki sırayla aynı) */

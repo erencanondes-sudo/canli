@@ -2,7 +2,7 @@
 # Her satır: lig no, sezon, açıklama. İki yıllık sezon "2026-2027", tek yıllık (Brezilya, MLS...) "2026".
 # Lig numaraları: sunucu/ayarlar.js → LIGLER.
 # Satır ekleyince sunucuda:  cd /opt/canli && sudo git pull && sudo systemctl restart canli
-# İlerleme: https://canli-ejw.pages.dev/veri/sezon/durum.json
+# İlerleme: https://deneme.co.uk/veri/sezon/durum.json
 # Satır silinince kaydedilmiş dosyalar silinmez.
 # Sezonlar sırayla işlenir: yeni satırları sona ekle (güncel sezonların günlük güncellemesi beklemesin).
 
