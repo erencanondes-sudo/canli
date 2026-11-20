@@ -6,7 +6,7 @@
  * yaz(): dosya son yazılandan farklıysa yazılır. Aynı dosya yazılırken yenisi gelirse beklenir,
  * sonra yalnızca en son hali yazılır (sıra karışmaz). Yazılamazsa bir sonraki yaz() çağrısında yeniden denenir.
  * Aynı dosyaya en fazla saniyede 1 yazılır (R2'nin sınırı); araya gelenlerden yalnızca en sonuncusu yazılır.
- * sikistir: dosya gzip ile sıkıştırılıp yazılır (Content-Encoding: gzip; tarayıcı kendisi açar).
+ * sikistir: dosya gzip ile sıkıştırılıp yazılır (Content-Encoding: gzip). Okuyucu (functions/veri) ve oku() açar.
  */
 
 const crypto = require('crypto');
@@ -53,12 +53,13 @@ async function yukle(anahtar, metin, sikistir = false) {
     if (!cevap.ok) throw new Error('R2 yazılamadı (' + anahtar + '): ' + cevap.status + ' ' + (await cevap.text()).slice(0, 200));
 }
 
-/* Dosyayı okur; yoksa null */
+/* Dosyayı okur (sıkıştırılmışsa açar: ilk iki bayt 1f 8b); yoksa null */
 async function oku(anahtar) {
     const cevap = await istek('GET', anahtar);
     if (cevap.status === 404) return null;
     if (!cevap.ok) throw new Error('R2 okunamadı (' + anahtar + '): ' + cevap.status);
-    return cevap.json();
+    const veri = Buffer.from(await cevap.arrayBuffer());
+    return JSON.parse(veri[0] === 0x1f && veri[1] === 0x8b ? zlib.gunzipSync(veri) : veri);
 }
 
 const sonYazilan = new Map();   /* dosya → son yazılan metin */

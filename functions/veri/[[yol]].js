@@ -4,7 +4,7 @@
  * R2 kovası projeye DEPO adıyla bağlı (Pages → Settings → Bindings). Yapı: sunucu/VERITABANI.md → "R2".
  * Önbellek: bugün, dün ve ilerideki günlerin listesi tutulmaz (her açılışta en son hali); bugün ve dünün Özet'i 30 sn
  * (eksikleri telefon gün odasından ister); daha eski günler 1 saat (değişmezler).
- * Sıkıştırılmış (gzip) yazılmış dosyalar (Özet) olduğu gibi gönderilir; tarayıcı kendisi açar.
+ * Özet dosyası R2'de gzip ile sıkıştırılmış durur: okuyucu açıp gönderir (Cloudflare tarayıcıya giderken kendisi sıkıştırır).
  * Maç dosyası maç kesinleşince yazılır: 1 saat (yönetim sayfasından düzeltilirse yeniden yazılır).
  * Takım adları ve sezon durumu tutulmaz (en son hali gerekir); lig bilgisi 1 saat; sezon maçları 5 dakika.
  * Bilgisayardan dosya olarak açılan yönetim sayfası (adresi "null") ve Android uygulaması (https://localhost) da okuyabilir;
@@ -32,14 +32,14 @@ export async function onRequestGet({ request, params, env }) {
     if (!nesne)
         return new Response('', { status: 404, headers: { ...IZIN, 'Cache-Control': 'public, max-age=0' } });
 
-    const sikistirilmis = nesne.httpMetadata && nesne.httpMetadata.contentEncoding === 'gzip';
-    return new Response(nesne.body, {
-        headers: {
-            ...IZIN,
-            'Content-Type': 'application/json; charset=utf-8',
-            'Cache-Control': 'public, max-age=' + sure,
-            ...(sikistirilmis ? { 'Content-Encoding': 'gzip' } : {})
-        },
-        encodeBody: sikistirilmis ? 'manual' : 'automatic'
+    /* Özet: dosyanın ilk iki baytı gzip işaretiyse (1f 8b) açılır */
+    let govde = nesne.body;
+    if (gunDosyasi && gunDosyasi[1] === 'ozet') {
+        const veri = new Uint8Array(await nesne.arrayBuffer());
+        govde = veri[0] === 0x1f && veri[1] === 0x8b ? new Response(veri).body.pipeThrough(new DecompressionStream('gzip')) : veri;
+    }
+
+    return new Response(govde, {
+        headers: { ...IZIN, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=' + sure }
     });
 }
