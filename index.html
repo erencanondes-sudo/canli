@@ -4567,14 +4567,17 @@ body.has-layer .ac-kapa svg {
     color: #6b7080;
 }
 
+/* Oran kutusu: yalnızca sayı, ortada; kalan yer çubuğun */
+.kp-odd-box { flex: none; padding: .25em .2em; }
+
 #kpOdd {
-    width: 3.6em;
+    width: 3.2em;
     border: none;
     font: inherit;
     font-size: 1.15em;
     font-weight: 800;
     color: #1d2340;
-    text-align: right;
+    text-align: center;
 }
 
 .kp-presets { margin-top: .56em; }
@@ -5313,7 +5316,7 @@ body:has(#oddsSheet.open) .ad-strip::before {
                     <div class="kp-block" id="kpOddBlock">
                         <div class="kp-label"><span>Oran</span><b id="kpOddLbl"></b></div>
                         <div class="kp-odd-row">
-                            <label class="kp-odd-num"><span>ORAN</span><input type="number" id="kpOdd" min="1" max="1000" step="0.5" inputmode="decimal"></label>
+                            <label class="kp-odd-num kp-odd-box"><input type="number" id="kpOdd" min="1" max="1000" step="0.5" inputmode="decimal" aria-label="Oran"></label>
                             <input type="range" id="kpSlider" min="0" max="1000" step="1">
                         </div>
                         <div class="kp-row kp-presets" id="kpPresets">
