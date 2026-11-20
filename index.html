@@ -6282,7 +6282,7 @@ async function startData() {
 let fbApp = null;
 
 /*
- * Firestore kütüphanesi açılışta beklenmez: bugünün listesi (gün odası) gelince
+ * Firestore kütüphanesi açılışta beklenmez: bugünün listesi (gün odası) ve Özet'i gelince
  * arka planda iner (indirmek okuma sayılmaz). Daha önce gerekirse (maç, oran, analiz, zil) o an iner.
  * İnince true, inemezse false döner (yalnızca Firestore'dan gelen bölümler gelmez).
  */
@@ -6301,10 +6301,10 @@ function loadFs() {
     return fsLoading;
 }
 
-/* Bugünün listesi ve canlı satırları geldiyse Firestore kütüphanesi arka planda iner */
+/* Bugünün listesi, canlı satırları ve Özet'i geldiyse Firestore kütüphanesi arka planda iner (açılışta onlarla yarışmasın) */
 function preloadFs() {
     const today = days.get(TODAY);
-    if (!fsLoading && fbApp && today && today.loaded && (today.fresh || !today.live))
+    if (!fsLoading && fbApp && today && today.loaded && (today.fresh || !today.live) && !today.summary && dayEvents.has(TODAY))
         loadFs();
 }
 let bildirimHazir = null;
@@ -7034,6 +7034,7 @@ function openDay(day) {
         state.summary = null;
         dayEvents.set(day, events);
         refreshViews();
+        preloadFs();
     };
 
     const loadSummary = () => {
@@ -8839,8 +8840,14 @@ function oddsMenuMatch(id, day, [league, home, away, time], odds) {
     return match;
 }
 
-/* Menüdeki maçlar (başlamamış); doküman okunuyorsa null */
+/* Oranlar menüsü bir kez açıldı mı (açılmadan oran dokümanı okunmaz) */
+let oddsShown = false;
+
+/* Menüdeki maçlar (başlamamış); doküman okunuyorsa ya da menü hiç açılmadıysa null */
 function oddsMenuMatches() {
+
+    if (!oddsShown)
+        return null;
 
     const now = Date.now();
     const list = [];
@@ -12229,6 +12236,12 @@ function setHomeModeView(mode) {
     if (mode === 'analysis' && !anShown) {
         anShown = true;
         anRedraw();
+    }
+
+    /* Oranlar menüsünün oranları sekme ilk açılınca okunur */
+    if (mode === 'odds' && !oddsShown) {
+        oddsShown = true;
+        renderOdds();
     }
 
     /* AI Kuponu havuzu sekme ilk açılınca okunur */
