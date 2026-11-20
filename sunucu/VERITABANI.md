@@ -75,6 +75,26 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 
 ---
 
+## ESPN (ikinci kaynak)
+
+`ayarlar.js` → `ESPN_LIGLER`: Süper Lig (`tur.1`), Belçika Pro League (`bel.1`), İskoçya Championship (`sco.2`). Kod: `sunucu/espn.js`. Anahtar gerekmez (ESPN'in herkese açık ama belgelenmemiş adresi).
+
+- **Çekme (canlı saatlerde):** ESPN'i gereken maçı (canlı, 1 dk içinde başlayacak, `BITIS_SONRASI` içinde bitmiş) olan ligin listesi her turda (lig başına 1 istek); eşleşen maçın ayrıntısı (istatistik, olaylar) `DETAY_ARALIK`'ta bir (maç başına 1 istek).
+- **Eşleştirme:** aynı lig, başlama saati en fazla 15 dk farklı, iki takım adı da benzer. Eşleşmeyen ESPN maçı sunucu günlüğüne bir kez yazılır (`ESPN: eşleşmeyen maç`).
+- **Birleştirme** (gösterilen hal; gün listesi, Özet, maç içeriği, bildirimler bunu kullanır):
+
+| Ne | Kural |
+|---|---|
+| Skor, kırmızı kart | İki kaynaktan büyük olan (geç gelen kaynak geri götürmez). Bir kaynak kendi değerini düşürürse (VAR) düşüş kabul edilir; öbür kaynağın o eski değere kadar olan değerleri yok sayılır, düşüren kaynak yeniden o değere ulaşınca (yeni gol) kalkar |
+| Durum, dakika | ESPN (ESPN 5 dk gelmezse API) |
+| Olaylar | Gol, kart, kaçan penaltı ESPN'den; API aynı olayı (aynı taraf, tür, en fazla 3 dk fark) verince oyuncu adı, asist, ikinci sarıdan kırmızı API'den. API'nin karşılığı olmayan golü / kartı 2 dk beklenir, skor / kırmızı sayısı izin veriyorsa eklenir. Değişiklik ve VAR API'den |
+| İstatistik | Sayılar (isabetli / toplam / engellenen şut, faul, korner, ofsayt, kartlar, kurtarış, pas, isabetli pas) büyük olan; topla oynama ESPN (tazeyse); isabetsiz şut ve pas isabeti bunlardan hesaplanır; ceza sahası içi / dışı şut, xG, önlenen gol, serbest vuruş API |
+| Kadro | API |
+
+- Elle düzeltme kilidi olan maçta ESPN kullanılmaz.
+
+---
+
 ## Sezonlar
 
 Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanmış maçların içeriği R2'ye kaydedilir (`sunucu/sezon.js`). Satır biçimi: `203 2026-2027 Süper Lig` (lig no, sezon, açıklama; tek yıllık sezon `2026`). Sunucu dosyayı yalnızca açılırken okur: satır ekleyince `cd /opt/canli && sudo git pull && sudo systemctl restart canli`. Satır silinince kaydedilmiş dosyalar silinmez.

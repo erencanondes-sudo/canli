@@ -9,6 +9,7 @@
  *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
  *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
+ *   ESPN_LIGLER'deki liglerde ESPN ikinci kaynak (espn.js): skor, durum, olaylar ve istatistik API'ninkiyle birleştirilir.
  *   6. Sırası gelen sezon işi (sezon.js: sezonlar.txt'deki liglerin sezon maçları ve içerikleri R2'ye, turda birkaç istek)
  * Yönetim sayfasından (Firestore): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; istek/{...} maçı yeniden çektirir
  *   ya da hızlı kaydı sildirir; analiz_dizin/futbol'daki surum gün odasına aktarılır.
@@ -24,6 +25,7 @@ const oda = require('./oda');
 const sezon = require('./sezon');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
+const espn = require('./espn');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -33,7 +35,11 @@ const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
 
-/* Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, bitis, sonHal, duzeltildi, kadro, kadroDeneme, kontrol } */
+/*
+ * Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, apiOlaylar, bitis, sonHal,
+ *   duzeltildi, kadro, kadroDeneme, kontrol, detayF (son ayrıntı cevabı), ESPN liglerinde sayac, kirmizi, apiGorulme (espn.js) }
+ * f ve olaylar gösterilen haldir: ESPN liglerinde API'ninkiyle ESPN'inki birleşmiş (apiOlaylar: API'nin olayları).
+ */
 const maclar = new Map();
 
 const zaman = { fikstur: {}, kapsam: 0, detay: 0, durum: 0 };
@@ -166,7 +172,7 @@ function kaydet(f, canliIstek) {
     const no = f.fixture.id;
     let k = maclar.get(no);
     if (!k) {
-        k = { olaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false };
+        k = { olaylar: null, apiOlaylar: null, bitis: null, sonHal: false, duzeltildi: false, kadro: false, kadroDeneme: 0, kontrol: false };
         maclar.set(no, k);
     }
     if (!canliIstek && k.f && CANLI.has(durumu(k)) && CANLI.has(f.fixture.status.short) && !k.kontrol)
@@ -177,11 +183,26 @@ function kaydet(f, canliIstek) {
     const sa = saatTR(ts);
     k.gun = macGunu(ts);
     k.gun2 = sa >= A.SABAH[0] && sa < A.SABAH[1] ? takvimGunu(ts) : null;
-    if (f.events) k.olaylar = B.olaylar(f);
-    k.olaylar = elleOlaylar(no) || k.olaylar;
-    if (BITTI.has(f.fixture.status.short) && !k.bitis) k.bitis = simdi();
-    bildirim.kontrol(f, k.olaylar, canliSaatte() && !elle.has(no));
+    if (f.events) k.apiOlaylar = B.olaylar(f);
+    k.olaylar = elleOlaylar(no) || k.apiOlaylar;
+    espn.apiAl(k);
+    espnUygula(no, k);
     return k;
+}
+
+/* Gösterilen hal (ESPN liglerinde iki kaynak birleşir), maç sonu ve bildirim */
+function espnUygula(no, k) {
+    espn.uygula(k, elle.has(no));
+    if (BITTI.has(durumu(k)) && !k.bitis) k.bitis = simdi();
+    bildirim.kontrol(k.f, k.olaylar, canliSaatte() && !elle.has(no));
+}
+
+/* Maç içeriği: son ayrıntı cevabından (kadro, API istatistiği), istatistik ESPN'inkiyle birleşir; durum gösterilen hal */
+function icerik(k, f, bitti) {
+    const dokuman = B.macDokumani(f, bitti ? (k.olaylar || []) : null);
+    dokuman.durum = durumu(k);
+    dokuman.istatistik = espn.istatistik(k, dokuman.istatistik);
+    return dokuman;
 }
 
 /* ---------- API'den çekme ---------- */
@@ -289,17 +310,18 @@ async function detayCek(nolar) {
                oda boşaltılır.
                Bir maçın verisindeki sorun turu durdurmaz: o maç atlanır, günlüğe yazılır. */
             const bitti = BITTI.has(d);
+            k.detayF = f;
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
                 try {
-                    const icerik = B.macDokumani(f, bitti ? (k.olaylar || []) : null);
+                    const dokuman = icerik(k, f, bitti);
                     if (bitti && k.duzeltildi) {
                         const oran = await oda.oranOku(f.fixture.id);
-                        if (oran && Object.keys(oran).length) icerik.oran = oran;
-                        await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...icerik, g: Date.now() }));
+                        if (oran && Object.keys(oran).length) dokuman.oran = oran;
+                        await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...dokuman, g: Date.now() }));
                         oda.sil('mac/' + f.fixture.id);
                         sezon.icerikYazildi(f.fixture.id);
                     } else {
-                        oda.mac(f.fixture.id, icerik);
+                        oda.mac(f.fixture.id, dokuman);
                     }
                 } catch (e) {
                     console.error('Maç ' + f.fixture.id + ' yazılamadı: ' + e.message);
@@ -307,6 +329,30 @@ async function detayCek(nolar) {
             }
         }
     }
+}
+
+/*
+ * ESPN (ESPN_LIGLER'deki liglerde): canlı saatlerde canlı, birazdan başlayacak (1 dk) ve yeni bitmiş (BITIS_SONRASI) maçlar.
+ * Maçın ESPN verisi değişince gösterilen hal yeniden kurulur; ayrıntı geldiyse maç içeriği de (son API ayrıntısıyla) yazılır.
+ */
+async function espnCek() {
+    if (!canliSaatte()) return;
+    const t = simdi();
+    const gerekenler = [...maclar].filter(([, k]) => {
+        if (!espn.ligde(k)) return false;
+        const d = durumu(k);
+        const s = k.f.fixture.timestamp;
+        return CANLI.has(d) || ((d === 'NS' || d === 'TBD') && s <= t + 60 && s >= t - 4 * 3600) ||
+            (BITTI.has(d) && k.bitis && t - k.bitis < A.BITIS_SONRASI);
+    });
+    if (!gerekenler.length) return;
+    await espn.tur(gerekenler, maclar, no => {
+        const k = maclar.get(no);
+        espnUygula(no, k);
+        const bitti = BITTI.has(durumu(k));
+        if (k.detayF && (bitti || detayli.get(k.f.league.id)) && !(bitti && k.duzeltildi))
+            oda.mac(no, icerik(k, k.detayF, bitti));
+    });
 }
 
 /* ---------- Yazma ---------- */
@@ -399,7 +445,7 @@ function gunYaz(gun) {
         /* Kendi gününün listesinde, ertesi takvim gününde başlıyorsa saatin sonunda "+" */
         const ertesi = k.gun === gun && takvimGunu(k.f.fixture.timestamp) !== gun;
         const devre = devreMetni(k);
-        const kirmizi = kirmizilar(k);
+        const kirmizi = k.kirmizi || kirmizilar(k);
         const satir = B.satir(k.f, ertesi, devre, kirmizi);
         satirlar[no] = satir;
 
@@ -534,6 +580,7 @@ function temizle(dun) {
     depo.unutEski(dun);
     for (const gun of ozetHali.keys()) if (gun < dun) ozetHali.delete(gun);
     for (const gun of ozetR2Surum.keys()) if (gun < dun) ozetR2Surum.delete(gun);
+    espn.unut(no => maclar.has(no));
     oda.unut(yol => {
         const [tur, ad] = yol.split('/');
         return tur === 'gun' ? ad >= dun : maclar.has(Number(ad));
@@ -574,6 +621,8 @@ async function tur() {
             const kontrol = [...maclar].filter(([, k]) => k.kontrol).map(([no]) => no);
             if (kontrol.length) await detayCek(kontrol);
         }
+
+        await espnCek();
 
         if (yenilenecek.size) await yenile();
 
