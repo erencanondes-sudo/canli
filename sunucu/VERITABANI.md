@@ -96,7 +96,7 @@ Cloudflare Durable Objects; kodu `oda/src/index.js`, Cloudflare'de `canli-oda` W
 - **Telefon bağlanır:** `wss://{site}/oda/gun/{gün}`, `wss://{site}/oda/mac/{no}`. Site bunu Cloudflare Pages'teki geçitten (`functions/oda`, Worker'a `ODA` adıyla bağlı) geçirir.
 - **Sunucu yazar:** `POST {ODA_ADRES}/yaz/gun/{gün}`, `POST {ODA_ADRES}/yaz/mac/{no}`; boşaltma `DELETE` ile. Hızlı kaynak: `POST {ODA_ADRES}/hizli/gun/{gün}` (yukarıda "Hızlı kaynak"). Anahtarlar `/etc/canli/anahtar.env`: `ODA_ADRES` (Worker'ın adresi), `ODA_ANAHTAR` (Cloudflare'de aynı anahtar: canli-oda → Settings → Variables and Secrets).
 - **Sen bakarsın:** tarayıcıda `{ODA_ADRES}/bak/gun/2026-11-09?anahtar={ODA_ANAHTAR}` ya da `/bak/mac/{no}?anahtar=...`. Odanın şu anki hali, sıra numarası, bağlı telefon sayısı ve (gün odasında) son 20 değişiklik görünür.
-- **Sıra numarası:** odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı ve odanın kimliğini gönderir; oda yalnızca kaçırılanları yollar (gün odası son 1000 değişikliği saklar, son 200'ü bellekte de; daha eskiyse listeyi baştan gönderir).
+- **Sıra numarası:** odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı ve odanın kimliğini gönderir; oda yalnızca kaçırılanları yollar. Gün odasında kaçırılan 100'den fazlaysa (ya da günlükte yoksa) listeyi baştan gönderir, telefon Özet'i R2'den yeniden okur. Gün odası son 300 değişikliği saklar, bellekte de.
 - **Yoklama:** telefon 45 sn'de bir `p` gönderir, oda uyanmadan `o` cevabı gider (mobil ağlar boştaki bağlantıyı kesmesin).
 
 ### Gün odası `gun/{gün}`

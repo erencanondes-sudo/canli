@@ -21,7 +21,8 @@
  *   GET, POST /hesap/...   hesap işlemleri (hesap.js; site Cloudflare Pages'ten, functions/hesap, geçirir)
  *
  * Sıra numarası (s): odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı (s) ve odanın
- * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odası son 1000 değişikliği saklar, son 200'ü bellekte de).
+ * kimliğini (k) gönderir; oda yalnızca kaçırılan değişiklikleri gönderir (gün odasında en fazla 100; daha fazlası kaçırıldıysa
+ * liste baştan gider). Gün odası son 300 değişikliği saklar, bellekte de.
  * Kimlik oda ilk kez oluşunca rastgele verilir; oda boşaltılıp yeniden oluşursa değişir (telefon her şeyi baştan alır).
  *
  * Yer: odalar Doğu Avrupa'da kurulur (Türkiye'ye en yakın bölge). Bir oda kurulduğu yerde kalır; adlarının başındaki
@@ -35,8 +36,9 @@ import { uygunsuz } from './filtre.js';
 import { hesap } from './hesap.js';
 
 const BICIM = { gun: /^\d{4}-\d{2}-\d{2}$/, mac: /^\d{1,10}$/ };
-const GUNLUK_SAKLA = 1000;
-const BELLEK_SAKLA = 200;        /* gün odası son bu kadar değişikliği bellekte de tutar */
+const GUNLUK_SAKLA = 300;        /* gün odası son bu kadar değişikliği saklar (yeniden bağlanış ve Özet'in eksikleri için) */
+const BELLEK_SAKLA = 300;        /* ... ve bellekte de tutar (oda uyanıkken satır okunmaz) */
+const KACIRILAN_SINIR = 100;     /* telefon bundan fazla değişiklik kaçırdıysa liste baştan gider (Özet'i R2'den yeniden okur) */
 const YORUM_SAYFA = 20;          /* bir istekte en fazla bu kadar eski yorum */
 const YORUM_GUNLUK = 20;         /* kişi başına günde en fazla yorum */
 const BILDIRIM_ESKI = 10 * 60000;   /* bildirim kuyruğunda bu kadar eski iş gönderilmez; aynı kişiden aynı kişiye 10 dakikada bir */
@@ -210,14 +212,14 @@ class Oda extends DurableObject {
  * GÜN ODASI
  * bilgi tablosunda "liste": günün satırları { maç no: satır } (tek satır, JSON metni)
  * veri tablosu: tur h (hızlı skor "2-1"), u (hızlı uyarı "2-2" / "k"), v (sürümler: takim, analiz; sayı)
- * gunluk tablosu: değişiklikler (sıra → mesaj), son 1000; son 200'ü bellekte de (oda uyanıkken eksikler oradan gider)
+ * gunluk tablosu: değişiklikler (sıra → mesaj), son 300; bellekte de (oda uyanıkken eksikler oradan gider)
  * r, v'yi sunucu o günün tam hali olarak yazar (oda karşılaştırır); o'yu (Özet) yalnızca değişen maçlar olarak yazar,
  * oda Özet'i saklamaz, yalnızca telefonlara iletir ve günlüğe yazar (Özet'in tamamı R2 ozet/{gün}.json'da).
  * h, u'yu hızlı kaynak yazar (hizli: yalnızca değişenler).
  * Liste, hızlı kaynak ve sürümler bellekte tutulur; oda uyanınca bir kez okunur.
  *
  * Telefona giden mesajlar:
- *   { t: "l", k, s, z, r, h, u, v }  liste (satırlar, hızlı kaynak, sürümler), ilk bağlanışta
+ *   { t: "l", k, s, z, r, h, u, v }  liste (satırlar, hızlı kaynak, sürümler), ilk bağlanışta ya da 100'den fazla değişiklik kaçırıldıysa
  *   { t: "h", k, s, z, n }         yeniden bağlanış: ardından kaçırılan n değişiklik ("d") gelir (0: telefon güncel)
  *   { t: "d", s, r?, o?, h?, u?, v? }  değişiklik: yalnızca değişenler; null = silindi
  *   { t: "oz", s, o }              telefonun { a: "oz", s } isteğine: s'den sonraki Özet değişiklikleri birleşik
@@ -382,8 +384,8 @@ export class GunOdasi extends Oda {
         const sira = this.sira();
         const z = Date.now();
 
-        /* Telefon bu odayı tanıyor ve kaçırdıkları günlükte duruyorsa yalnızca onlar */
-        if (k === kimlik && s !== null && s <= sira) {
+        /* Telefon bu odayı tanıyor ve az şey kaçırdıysa (günlükte duruyorsa) yalnızca onlar */
+        if (k === kimlik && s !== null && s <= sira && sira - s <= KACIRILAN_SINIR) {
             const eksik = this.sonrakiler(s);
             if (eksik) {
                 ws.send(JSON.stringify({ t: 'h', k: kimlik, s, z, n: eksik.length }));
