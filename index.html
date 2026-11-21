@@ -866,7 +866,7 @@ button {
 /* Maç satırına basınca: kapanırken yanan çok açık mavi (lig ve takım sayfasının maç satırları da) */
 .score-row:active,
 .tm-row:active {
-    background: #e3edff;
+    background: #ebf2ff;
 }
 
 /* Basınca hafif gri: puan tablosunda takım adına basınca o satır */
@@ -875,14 +875,14 @@ button {
     background: #f4f6fa;
 }
 
-/* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar, 0,2 sn kalır, 0,4 sn'nin sonunda söner */
+/* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar ve hemen sönmeye başlar, 0,3 sn'de biter */
 .score-row.closed-flash,
 .tm-row.closed-flash {
-    animation: closedFlash .4s ease-out;
+    animation: closedFlash .3s ease-out;
 }
 
 @keyframes closedFlash {
-    0%, 50% { background: #e3edff; }
+    from { background: #ebf2ff; }
 }
 
 .score-row:focus {
