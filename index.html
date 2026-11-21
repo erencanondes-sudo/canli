@@ -6450,7 +6450,7 @@ function rebuildMatches() {
             if (match.status === 'live')
                 applyFast(match);
             /* Uzatma dakikası (45+, 90+, 120+) eski olabilir: gün odası güncellenene kadar dakika yerine çember */
-            match.minuteWait = match.status === 'live' && !!match.extra &&
+            match.minuteWait = longAway && match.status === 'live' && !!match.extra &&
                 days.has(day) && !days.get(day).fresh;
             MATCHES.push(match);
             if (!MATCH_BY_ID.has(match.id) || day === TODAY)
@@ -7348,6 +7348,7 @@ function openDay(day) {
 
     const ready = () => {
         state.fresh = true;
+        longAway = false;
         refreshViews();
         preloadFs();
     };
@@ -7595,10 +7596,15 @@ function unwatchDetail() {
     resetComments(null);
 }
 
+/* Arka planda 2 dakikadan uzun kalındıysa uzatma dakikalarında, gün odası güncellenene kadar çember (minuteWait) */
+let hiddenAt = 0;
+let longAway = false;
+
 /* Uygulama arka plana geçince bağlantılar kapanır, öne gelince yeniden açılır */
 document.addEventListener('visibilitychange', () => {
 
     if (document.hidden) {
+        hiddenAt = Date.now();
         lastScores.clear();
         Array.from(days.keys()).forEach(day => closeDay(day));
         unwatchDetail();
@@ -7606,6 +7612,7 @@ document.addEventListener('visibilitychange', () => {
         return;
     }
 
+    longAway = hiddenAt > 0 && Date.now() - hiddenAt > 120000;
     resetScoreTimes();
     openDay(TODAY);
     openDay(watchedDay);
