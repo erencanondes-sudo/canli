@@ -3247,6 +3247,36 @@ body.has-layer .ac-kapa svg {
     color: #6b7190;
 }
 
+.st-row.st-f { grid-template-columns: 2em 1fr auto 2.2em; }
+
+.st-badges { display: flex; gap: .18em; }
+
+.st-badges .fb {
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: .2em;
+    color: white;
+    font-style: normal;
+    font-size: .625rem;
+    font-weight: 800;
+    line-height: 1.35em;
+    text-align: center;
+}
+
+.fb-W { background: #16a34a; }
+.fb-D { background: #8a90a6; }
+.fb-L { background: #dc2626; }
+
+.st-move {
+    margin-left: .15em;
+    font-style: normal;
+    font-size: .55em;
+    vertical-align: .15em;
+}
+
+.st-move.up { color: #16a34a; }
+.st-move.down { color: #dc2626; }
+
 .st-modes {
     display: flex;
     gap: .3rem;
@@ -12772,11 +12802,24 @@ function standingsZone(text) {
  * (başlamasından 2 saat sonra dosya yazılmışsa sonuç dosyadadır).
  */
 function standingsRows(rows, league, written, mode) {
+
+    /* Form: son 5 maç (API'nin form dizisi, W/D/L; en yeni sağda), puanı ona göre; canlı hesap yok */
+    if (mode === 'form') {
+        const list = rows.map(r => {
+            const form = String(r.form || '').slice(-5).split('').filter(c => 'WDL'.includes(c));
+            return { id: r.team.id, rank: r.rank, form, pts: form.reduce((n, c) => n + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) };
+        });
+        list.sort((a, b) => b.pts - a.pts || a.rank - b.rank);
+        list.forEach((t, i) => { t.pos = i + 1; });
+        return list;
+    }
+
     const list = rows.map(r => {
         const v = r[mode] || {};
         const g = v.goals || {};
         return {
             id: r.team.id, rank: r.rank, zone: mode === 'all' ? standingsZone(r.description) : '', live: false,
+            move: mode === 'all' ? r.status : null,
             p: v.played || 0, w: v.win || 0, d: v.draw || 0, l: v.lose || 0, gf: g.for || 0, ga: g.against || 0,
             /* İç saha / deplasmanda puan API'de yok: hesaplanır */
             pts: mode === 'all' ? r.points : 3 * (v.win || 0) + (v.draw || 0)
@@ -12837,7 +12880,7 @@ function renderStandings(match) {
     if (groups.length) {
         const modes = document.createElement('div');
         modes.className = 'st-modes';
-        [['all', 'Genel'], ['home', 'İç Saha'], ['away', 'Deplasman']].forEach(([mode, label]) => {
+        [['all', 'Genel'], ['home', 'İç Saha'], ['away', 'Deplasman'], ['form', 'Form']].forEach(([mode, label]) => {
             const button = document.createElement('button');
             button.textContent = label;
             button.classList.toggle('active', standingsMode === mode);
@@ -12872,6 +12915,25 @@ function renderStandings(match) {
             return row;
         };
 
+        if (standingsMode === 'form') {
+            line(['#', 'Takım', 'Son 5 maç', 'P'], 'st-cols st-f');
+            standingsRows(rows, match.league.id, data.g || 0, 'form').forEach(t => {
+                const team = teamInfo(t.id);
+                const badges = document.createElement('span');
+                badges.className = 'st-badges';
+                t.form.forEach(c => {
+                    const b = document.createElement('i');
+                    b.className = 'fb fb-' + c;
+                    b.textContent = c === 'W' ? 'G' : c === 'D' ? 'B' : 'M';
+                    badges.appendChild(b);
+                });
+                const row = line([String(t.pos), team.mid || team.name, badges, t.pts], 'st-f' + (ids.includes(t.id) ? ' st-mine' : ''));
+                row.firstChild.classList.add('st-pos');
+            });
+            box.appendChild(card);
+            return;
+        }
+
         line(['#', 'Takım', 'O', 'G', 'B', 'M', 'A:Y', 'AV', 'P'], 'st-cols');
         standingsRows(rows, match.league.id, data.g || 0, standingsMode).forEach(t => {
             const team = teamInfo(t.id);
@@ -12886,6 +12948,13 @@ function renderStandings(match) {
             const row = line([String(t.pos), name, t.p, t.w, t.d, t.l, t.gf + ':' + t.ga, (diff > 0 ? '+' : '') + diff, t.pts],
                 (ids.includes(t.id) ? 'st-mine ' : '') + t.zone);
             row.firstChild.classList.add('st-pos');
+            /* Sıra değişimi (API'nin önceki güncellemesine göre) */
+            if (t.move === 'up' || t.move === 'down') {
+                const arrow = document.createElement('i');
+                arrow.className = 'st-move ' + t.move;
+                arrow.textContent = t.move === 'up' ? '▲' : '▼';
+                row.firstChild.appendChild(arrow);
+            }
         });
 
         box.appendChild(card);
