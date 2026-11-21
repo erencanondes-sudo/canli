@@ -4978,7 +4978,7 @@ body.has-layer .ac-kapa svg {
 .kp-leg-actions .kp-deep { border-color: #cfe0ff; background: #eef4ff; color: #1a56db; }
 /* =====================================================
    GOL BİLDİRİMİ (uygulama içi): yalnızca Canlı Skor sayfasında, en altta tam genişlik mavi-gri şerit;
-   tek gol 2 sn, arkasında bekleyen varsa 1 sn; dokununca maç açılır
+   her gol 2 sn (birden çoksa sırayla); dokununca maç açılır
 ===================================================== */
 #goalToast {
     position: fixed;
@@ -6963,7 +6963,7 @@ function showGoal({ match, side }) {
     if (isSaved(match.id))
         goalSound();
 
-    /* Tek gol 2 sn; arkasında bekleyen varsa 1 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
+    /* Her gol 2 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
     clearTimeout(goalTimer);
     goalTimer = setTimeout(() => {
         if (goalQueue.length && liveScreen()) {
@@ -6973,7 +6973,7 @@ function showGoal({ match, side }) {
         goalQueue.length = 0;
         toast.classList.remove('show');
         toastBusy = false;
-    }, goalQueue.length ? 1000 : 2000);
+    }, 2000);
 }
 
 /* Şeride dokununca o maç açılır */
