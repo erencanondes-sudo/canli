@@ -3182,7 +3182,7 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     padding: .42em .5em;
     border-top: 1px solid #e6e8ef;
-    font-size: .8125rem;
+    font-size: .75rem;
     color: #1d2340;
 }
 
@@ -3192,7 +3192,7 @@ body.has-layer .ac-kapa svg {
 
 .st-row.st-cols {
     border-top: 0;
-    font-size: .6875rem;
+    font-size: .625rem;
     font-weight: 700;
     color: #6b7190;
 }
@@ -3231,7 +3231,7 @@ body.has-layer .ac-kapa svg {
     gap: .2em .6em;
     padding: .5em .7em;
     border-top: 1px solid #e6e8ef;
-    font-size: .8125rem;
+    font-size: .75rem;
     color: #1d2340;
 }
 
@@ -3243,13 +3243,36 @@ body.has-layer .ac-kapa svg {
 .st-tie small {
     grid-column: 1 / -1;
     text-align: center;
-    font-size: .6875rem;
+    font-size: .625rem;
     color: #6b7190;
+}
+
+.st-modes {
+    display: flex;
+    gap: .3rem;
+    margin-bottom: .5rem;
+}
+
+.st-modes button {
+    flex: 1;
+    padding: .4rem 0;
+    border: 1px solid #1f3c6e;
+    background: #fafafb;
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+    color: #1d2340;
+    cursor: pointer;
+}
+
+.st-modes button.active {
+    background: #1f3c6e;
+    color: white;
 }
 
 .st-note {
     padding: .5em .7em .7em;
-    font-size: .6875rem;
+    font-size: .625rem;
     color: #6b7190;
 }
 
@@ -12748,11 +12771,17 @@ function standingsZone(text) {
  * Grubun satırları (canlı hesaplı). Eklenen maçlar: oynananlar ve dosya yazıldığında henüz bitmemiş olanlar
  * (başlamasından 2 saat sonra dosya yazılmışsa sonuç dosyadadır).
  */
-function standingsRows(rows, league, written) {
-    const list = rows.map(r => ({
-        id: r.team.id, rank: r.rank, zone: standingsZone(r.description), live: false,
-        p: r.all.played, w: r.all.win, d: r.all.draw, l: r.all.lose, gf: r.all.goals.for, ga: r.all.goals.against, pts: r.points
-    }));
+function standingsRows(rows, league, written, mode) {
+    const list = rows.map(r => {
+        const v = r[mode] || {};
+        const g = v.goals || {};
+        return {
+            id: r.team.id, rank: r.rank, zone: mode === 'all' ? standingsZone(r.description) : '', live: false,
+            p: v.played || 0, w: v.win || 0, d: v.draw || 0, l: v.lose || 0, gf: g.for || 0, ga: g.against || 0,
+            /* İç saha / deplasmanda puan API'de yok: hesaplanır */
+            pts: mode === 'all' ? r.points : 3 * (v.win || 0) + (v.draw || 0)
+        };
+    });
     const byId = new Map(list.map(t => [t.id, t]));
     let changed = false;
     MATCHES.forEach(m => {
@@ -12762,7 +12791,8 @@ function standingsRows(rows, league, written) {
         const a = byId.get(m.away.id);
         if (!h || !a)
             return;
-        [[h, m.score[0], m.score[1]], [a, m.score[1], m.score[0]]].forEach(([t, f, g]) => {
+        /* İç saha tablosunda yalnızca ev sahibine, deplasman tablosunda yalnızca deplasmana eklenir */
+        [[h, m.score[0], m.score[1], 'home'], [a, m.score[1], m.score[0], 'away']].filter(x => mode === 'all' || x[3] === mode).forEach(([t, f, g]) => {
             t.p++;
             t.gf += f;
             t.ga += g;
@@ -12771,11 +12801,15 @@ function standingsRows(rows, league, written) {
         });
         changed = true;
     });
-    if (changed)
+    const sorted = changed || mode !== 'all';
+    if (sorted)
         list.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf || a.rank - b.rank);
-    list.forEach((t, i) => { t.pos = changed ? i + 1 : t.rank; });
+    list.forEach((t, i) => { t.pos = sorted ? i + 1 : t.rank; });
     return list;
 }
+
+/* Puan tablosu: Genel (all), İç Saha (home), Deplasman (away); seçim oturum boyunca kalır */
+let standingsMode = 'all';
 
 function renderStandings(match) {
 
@@ -12800,6 +12834,22 @@ function renderStandings(match) {
     const ids = [match.home.id, match.away.id];
     const mine = rows => rows.some(r => ids.includes(r.team.id)) ? 1 : 0;
 
+    if (groups.length) {
+        const modes = document.createElement('div');
+        modes.className = 'st-modes';
+        [['all', 'Genel'], ['home', 'İç Saha'], ['away', 'Deplasman']].forEach(([mode, label]) => {
+            const button = document.createElement('button');
+            button.textContent = label;
+            button.classList.toggle('active', standingsMode === mode);
+            button.addEventListener('click', () => {
+                standingsMode = mode;
+                renderStandings(match);
+            });
+            modes.appendChild(button);
+        });
+        box.appendChild(modes);
+    }
+
     groups.slice().sort((a, b) => mine(b) - mine(a)).forEach(rows => {
         const card = document.createElement('div');
         card.className = 'st-card';
@@ -12823,7 +12873,7 @@ function renderStandings(match) {
         };
 
         line(['#', 'Takım', 'O', 'G', 'B', 'M', 'A:Y', 'AV', 'P'], 'st-cols');
-        standingsRows(rows, match.league.id, data.g || 0).forEach(t => {
+        standingsRows(rows, match.league.id, data.g || 0, standingsMode).forEach(t => {
             const team = teamInfo(t.id);
             const name = document.createElement('span');
             name.textContent = team.mid || team.name;
