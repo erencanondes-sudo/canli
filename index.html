@@ -1411,6 +1411,22 @@ button {
     line-height: 1.3;
 }
 
+/* Uzatma dakikası (45+, 90+, 120+), gün odasından güncel veri gelene kadar (arka plandan dönünce): dönen çember */
+.minute-wait {
+    display: inline-block;
+    width: .85em;
+    height: .85em;
+    border: .16em solid #d93025;
+    border-top-color: transparent;
+    border-radius: 50%;
+    vertical-align: -.12em;
+    animation: minuteSpin .8s linear infinite;
+}
+
+@keyframes minuteSpin {
+    to { transform: rotate(360deg); }
+}
+
 .score-status.live {
     background: #fde4e2;
     color: #d93025;
@@ -6346,6 +6362,13 @@ function matchWhen(match) {
     return [match.league.name, roundText(match), formatDate(match.date)].filter(Boolean).join(' · ');
 }
 
+/* Dakika yerine dönen çember (match.minuteWait) */
+function minuteWait() {
+    const ring = document.createElement('span');
+    ring.className = 'minute-wait';
+    return ring;
+}
+
 /* Canlı maçın dakikası: "63'", "45+2'", devre arasında "İY" */
 function minuteText(match) {
     if (match.code === 'HT') return 'İY';
@@ -6426,6 +6449,9 @@ function rebuildMatches() {
             match.alsoToday = morning && day === yesterday && match.status === 'live';
             if (match.status === 'live')
                 applyFast(match);
+            /* Uzatma dakikası (45+, 90+, 120+) eski olabilir: gün odası güncellenene kadar dakika yerine çember */
+            match.minuteWait = match.status === 'live' && !!match.extra &&
+                days.has(day) && !days.get(day).fresh;
             MATCHES.push(match);
             if (!MATCH_BY_ID.has(match.id) || day === TODAY)
                 MATCH_BY_ID.set(match.id, match);
@@ -7800,6 +7826,10 @@ function oddsCard(match) {
     status.textContent = match.status === 'upcoming'
         ? formatDate(match.date) + ' ' + formatTime(match.date)
         : statusText(match);
+    if (match.minuteWait) {
+        status.textContent = 'CANLI ';
+        status.appendChild(minuteWait());
+    }
 
     head.appendChild(when);
     head.appendChild(status);
@@ -8032,6 +8062,10 @@ function scoreRow(match, showDate, showLeague) {
     status.textContent =
         match.status === 'live' ? minuteText(match) || 'CANLI' :
         match.status === 'done' ? 'MS' : OTHER_LABELS[match.code] || formatTime(match.date);
+    if (match.minuteWait) {
+        status.textContent = '';
+        status.appendChild(minuteWait());
+    }
 
     const team = (side, index) => {
 
@@ -14283,6 +14317,10 @@ function fillDetail(match) {
         match.status === 'live' ? ('CANLI · ' + minuteText(match)).replace(/ · $/, '') :
         match.status === 'done' ? 'MAÇ SONU' :
         OTHER_LABELS[match.code] ? 'OYNANMAYACAK' : 'OYNANACAK';
+    if (match.minuteWait) {
+        status.textContent = 'CANLI · ';
+        status.appendChild(minuteWait());
+    }
     status.className =
         match.status === 'live' ? 'live' :
         match.status === 'done' ? 'done' :
