@@ -687,7 +687,8 @@ button {
 .score-bell {
     /*
      * Dokunma alanı 2,75rem genişlikte; satırın sağ iç boşluğunu da kaplar (sağ pay = satırın sağ iç boşluğu, min(.7em, 2.4vw) × .875rem).
-     * Simge kutunun ortasında: ortası, lig zilinin ortasıyla aynı dikey çizgide (bloğun sağ kenarından 1,375rem içeride).
+     * Simge kutunun ortasından .25rem sağda (sol iç boşluk .5rem): ortası, lig zilinin ortasıyla aynı dikey çizgide
+     * (bloğun sağ kenarından 1,125rem içeride).
      * Yükseklik ve dikey paylar eskisiyle aynı: satır yüksekliği değişmez.
      */
     position: relative;
@@ -696,7 +697,7 @@ button {
     width: 2.75rem;
     height: 2.0625rem;
     margin: -.328125rem calc(-1 * min(.6125rem, 2.4vw)) -.328125rem 0;
-    padding: 0;
+    padding: 0 0 0 .5rem;
     border-radius: 0;
     background: none;
     color: #9aa0ab;
@@ -855,6 +856,15 @@ button {
 
 .score-row:active {
     background: #f4f6fa;
+}
+
+/* Maç sayfası kapanırken o maçın satırı: basınca olan gri ile başlar, 0,4 sn'de söner */
+.score-row.closed-flash {
+    animation: closedFlash .4s ease-out;
+}
+
+@keyframes closedFlash {
+    from { background: #f4f6fa; }
 }
 
 .score-row:focus {
@@ -1356,14 +1366,14 @@ button {
 /* Lig satırındaki zil: o listedeki bütün maçları kaydeder / çıkarır */
 .league-bell {
     /*
-     * Maç zilleriyle aynı: 2,75rem genişlik, simge ortada → ortaları aynı dikey çizgide.
+     * Maç zilleriyle aynı: 2,75rem genişlik, simge ortadan .25rem sağda → ortaları aynı dikey çizgide.
      * Sağ pay başlığın sağ iç boşluğu (.9em × .8125rem); yükseklik ve dikey paylar eskisiyle aynı.
      */
     flex: none;
     margin: -.46875rem -.73125rem -.46875rem auto;
     width: 2.75rem;
     height: 2.0625rem;
-    padding: 0;
+    padding: 0 0 0 .5rem;
     border-radius: 0;
     background: none;
     color: #c3c8d6;
@@ -1461,6 +1471,8 @@ button {
     color: #333;
     font-size: 1.35rem;
     text-align: right;
+    /* Üç çizgi dikeyde ~1px kısa (genişlik aynı) */
+    transform: scaleY(.945);
 }
 
 /* Canlı Skor araç satırı: menü düğmesine yer açılsın diye öğeler biraz dar */
@@ -1475,6 +1487,15 @@ button {
 
 #toolRow .tb-time {
     padding: 0 .6em;
+}
+
+/* Canlı Skor araç satırı 1px (.0625rem) kısa: düğmeler ve arama */
+#toolRow .tb-live,
+#toolRow .tb-league,
+#toolRow .tb-time,
+#toolRow .tb-popular,
+#toolRow .search-box {
+    height: calc(2.5em - .0625rem);
 }
 
 /* SAĞ ÜST MENÜ */
@@ -5040,14 +5061,14 @@ body:has(#oddsSheet.open) .ad-strip::before {
     opacity: 1;
 }
 
-/* Köşeler yuvarlak */
+/* Üst köşeler düz, alt köşeler yuvarlak */
 .ad-box {
     position: relative;
     flex: none;
     width: 320px;
     height: 100px;
     overflow: hidden;
-    border-radius: .625rem;
+    border-radius: 0 0 .625rem .625rem;
     font-size: 16px;
     color: white;
 }
@@ -9608,6 +9629,8 @@ function popPage() {
     if (!pageStack.length)
         pageBase = null;
     const oldEl = pageEl(old);
+    if (old.kind === 'match')
+        flashClosedRow(old.id);
     oldEl.classList.remove('open');
 
     pagePending = () => {
@@ -14146,8 +14169,29 @@ function refreshDetail() {
     fillDetail(match);
 }
 
+/* Kapanan maçın listedeki satırı kısa bir an gri yanar (hangi maçın kapandığı görünsün) */
+function flashClosedRow(id) {
+    document.querySelectorAll('.score-bell[data-id="' + id + '"]').forEach(bell => {
+        const row = bell.closest('.score-row');
+        if (!row)
+            return;
+        row.classList.remove('closed-flash');
+        row.getBoundingClientRect();
+        row.classList.add('closed-flash');
+        const done = event => {
+            if (event.animationName !== 'closedFlash')
+                return;
+            row.classList.remove('closed-flash');
+            row.removeEventListener('animationend', done);
+        };
+        row.addEventListener('animationend', done);
+    });
+}
+
 function hideDetail() {
     flushPage();
+    if (detailId && detailSheet.classList.contains('open'))
+        flashClosedRow(detailId);
     detailSheet.classList.remove('open');
     detailId = null;
     detailWaiting = false;
