@@ -37,3 +37,14 @@
 203 2023-2024 Süper Lig
 203 2024-2025 Süper Lig
 203 2025-2026 Süper Lig
+39 2026-2027 Premier Lig
+40 2026-2027 Championship
+61 2026-2027 Ligue 1
+62 2026-2027 Ligue 2
+135 2026-2027 Serie A
+136 2026-2027 Serie B
+78 2026-2027 Bundesliga
+79 2026-2027 2. Bundesliga
+140 2026-2027 La Liga
+141 2026-2027 Segunda División
+204 2026-2027 1. Lig
