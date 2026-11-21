@@ -863,12 +863,13 @@ button {
     background: #f9dcdc;
 }
 
-.score-row:active {
-    background: #f4f6fa;
+/* Maç satırına basınca: kapanırken yanan çok açık mavi (lig ve takım sayfasının maç satırları da) */
+.score-row:active,
+.tm-row:active {
+    background: #e3edff;
 }
 
-/* Basınca hafif gri: lig ve takım sayfasının maç satırları; puan tablosunda takım adına basınca o satır */
-.tm-row:active,
+/* Basınca hafif gri: puan tablosunda takım adına basınca o satır */
 .st-row:has(.st-team:active),
 .st-tie:has(.st-team:active) {
     background: #f4f6fa;
