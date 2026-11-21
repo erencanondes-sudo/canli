@@ -88,7 +88,8 @@ async function adim(gorulen) {
             l.okundu = true;
             try {
                 const eski = await depo.oku('puan/' + lig + '.json');
-                if (eski && eski.sezon === l.sezon) l.son = eski.g || 0;
+                /* Son 5 maçı olmayan (eski biçimdeki) dosya hemen yeniden çekilir */
+                if (eski && eski.sezon === l.sezon && eski.son5) l.son = eski.g || 0;
             } catch (e) {}
         }
 
