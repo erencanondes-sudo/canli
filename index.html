@@ -4977,26 +4977,26 @@ body.has-layer .ac-kapa svg {
 .kp-leg.locked .kp-lock { border-color: #0c7a58; background: #e3f5ed; color: #08583e; }
 .kp-leg-actions .kp-deep { border-color: #cfe0ff; background: #eef4ff; color: #1a56db; }
 /* =====================================================
-   GOL BİLDİRİMİ (uygulama içi): en üstte, tam genişlik, 100px
+   GOL BİLDİRİMİ (uygulama içi): altta mavi-gri şerit, 2 sn; dokununca maç açılır
 ===================================================== */
 #goalToast {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    left: .6rem;
+    right: .6rem;
+    bottom: .8rem;
     z-index: 1000;
-    height: 100px;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: .2em;
-    padding: 0 4%;
-    background: #1a73e8;
+    align-items: center;
+    gap: .5em;
+    padding: .65rem .9rem;
+    border-radius: .6rem;
+    background: #3b5273;
     color: white;
+    font-size: .875rem;
     box-shadow: 0 .2em .8em rgba(0, 0, 0, .25);
-    transform: translateY(-110%);
+    transform: translateY(calc(100% + 1.2rem));
     transition: transform .3s ease;
-    pointer-events: none;
+    cursor: pointer;
 }
 
 #goalToast.show {
@@ -5004,13 +5004,13 @@ body.has-layer .ac-kapa svg {
 }
 
 .gt-title {
-    font-size: 1.15em;
+    flex: none;
     font-weight: 800;
     letter-spacing: .02em;
 }
 
 .gt-match {
-    font-size: 1em;
+    min-width: 0;
     font-weight: 600;
     overflow: hidden;
     white-space: nowrap;
@@ -5846,7 +5846,7 @@ body:has(#oddsSheet.open) .ad-strip::before {
 
 <!-- REKLAM ŞABLONU: üst resimlerin üzerine konur -->
 <div id="goalToast" aria-live="polite">
-    <div class="gt-title">⚽ GOL!</div>
+    <div class="gt-title">⚽ GOL</div>
     <div class="gt-match"></div>
 </div>
 
@@ -6892,9 +6892,8 @@ function findGoals() {
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
                     scored = true;
-                    /* Şerit ve ses yalnızca kayıtlı (zili açık) maçlarda */
-                    if (isSaved(id))
-                        goalQueue.push({ match: match, side: side });
+                    /* Şerit bütün canlı maçlarda; ses yalnızca kayıtlı (zili açık) maçlarda */
+                    goalQueue.push({ match: match, side: side });
                 }
             });
         }
@@ -6952,28 +6951,35 @@ function showGoal({ match, side }) {
         box.appendChild(el);
     });
 
+    toast.dataset.id = match.id;
     toast.classList.add('show');
-    goalSound();
+    if (isSaved(match.id))
+        goalSound();
 
-    /* 2 sn sonra sırada gol varsa ona geç; yoksa 2 sn daha (toplam 4 sn) kal */
-    setTimeout(() => {
-
+    /* 2 sn görünür; sırada gol varsa ona geçer */
+    clearTimeout(goalTimer);
+    goalTimer = setTimeout(() => {
         if (goalQueue.length) {
             showGoal(goalQueue.shift());
             return;
         }
-
-        setTimeout(() => {
-            if (goalQueue.length) {
-                showGoal(goalQueue.shift());
-                return;
-            }
-            toast.classList.remove('show');
-            toastBusy = false;
-        }, 2000);
-
+        toast.classList.remove('show');
+        toastBusy = false;
     }, 2000);
 }
+
+/* Şeride dokununca o maç açılır */
+let goalTimer = null;
+document.getElementById('goalToast').addEventListener('click', event => {
+    const toast = event.currentTarget;
+    if (!toast.classList.contains('show') || !toast.dataset.id)
+        return;
+    clearTimeout(goalTimer);
+    goalQueue.length = 0;
+    toast.classList.remove('show');
+    toastBusy = false;
+    openDetail(toast.dataset.id);
+});
 
 /*
  * GOL SESİ: kodla üretilen kısa üç notalık ses (dosya indirilmez).
