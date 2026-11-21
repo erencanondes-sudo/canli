@@ -5019,6 +5019,38 @@ body.has-layer .ac-kapa svg {
     transform: translateY(0);
 }
 
+/* Bağlantı şeridi: oda 2 denemede bağlanamazsa üstte; bağlanınca yazısı değişir, kapatılana kadar kalır */
+#netBanner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    gap: .5em;
+    padding: calc(.6rem + env(safe-area-inset-top)) 1rem .6rem;
+    background: #d93025;
+    color: white;
+    font-size: .875rem;
+    font-weight: 700;
+}
+
+#netBanner.show { display: flex; }
+#netBanner.ok { background: #1e8e3e; }
+
+#netBanner span { flex: 1; }
+
+#netBanner button {
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0 .25em;
+    cursor: pointer;
+}
+
 .gt-title {
     flex: none;
     font-weight: 800;
@@ -5861,6 +5893,11 @@ body:has(#oddsSheet.open) .ad-strip::before {
 </div>
 
 <!-- REKLAM ŞABLONU: üst resimlerin üzerine konur -->
+<div id="netBanner" aria-live="polite">
+    <span></span>
+    <button type="button" aria-label="Kapat">×</button>
+</div>
+
 <div id="goalToast" aria-live="polite">
     <div class="gt-title">⚽ GOL</div>
     <div class="gt-match"></div>
@@ -7157,6 +7194,21 @@ function checkDay() {
  */
 const liveRooms = new Set();
 
+/* Bağlanamayan odalar (art arda 2 deneme): üstte şerit; hepsi bağlanınca "Bağlantı kuruldu" */
+const downRooms = new Set();
+
+function netBanner() {
+    const banner = document.getElementById('netBanner');
+    if (!downRooms.size && !banner.classList.contains('show'))
+        return;
+    banner.querySelector('span').textContent = downRooms.size ? 'Bağlantı kurulamadı' : 'Bağlantı kuruldu';
+    banner.className = downRooms.size ? 'show' : 'show ok';
+}
+
+document.querySelector('#netBanner button').addEventListener('click', () => {
+    document.getElementById('netBanner').className = '';
+});
+
 function wakeRooms() {
     liveRooms.forEach(wake => wake());
 }
@@ -7173,6 +7225,9 @@ function openRoom(path, position, onMessage, failed) {
     let ping = null;
     let retry = null;
     let pong = null;
+    let fails = 0;   /* art arda açılamayan bağlantı */
+    let opened = false;
+    const self = {};
 
     /* İlk bağlantı hiçbir mesaj gelmeden koparsa */
     const lost = () => {
@@ -7185,6 +7240,7 @@ function openRoom(path, position, onMessage, failed) {
     /* Yoklamaya cevap gelmedi: eski bağlantı bırakılır, hemen yenisi kurulur */
     const restart = () => {
         pong = null;
+        fails = 0;
         clearInterval(ping);
         ws.onclose = null;
         ws.onmessage = null;
@@ -7205,6 +7261,7 @@ function openRoom(path, position, onMessage, failed) {
 
     const connect = () => {
         retry = null;
+        opened = false;
         try {
             ws = new WebSocket(ODA_ADRES + path + (position.k ? '?k=' + position.k + '&s=' + position.s : ''));
         } catch (error) {
@@ -7213,6 +7270,11 @@ function openRoom(path, position, onMessage, failed) {
         }
         ws.onopen = () => {
             wait = 1000;
+            opened = true;
+            fails = 0;
+            downRooms.delete(self);
+            if (!downRooms.size)
+                netBanner();
             ping = setInterval(probe, 45000);
         };
         ws.onmessage = event => {
@@ -7240,6 +7302,11 @@ function openRoom(path, position, onMessage, failed) {
             lost();
             if (closed || event.reason === 'bosaltildi')
                 return;
+            fails = opened ? 0 : fails + 1;
+            if (fails >= 2 && !downRooms.has(self)) {
+                downRooms.add(self);
+                netBanner();
+            }
             retry = setTimeout(connect, wait);
             wait = Math.min(wait * 2, 30000);
         };
@@ -7262,6 +7329,7 @@ function openRoom(path, position, onMessage, failed) {
     const close = () => {
         closed = true;
         liveRooms.delete(wake);
+        downRooms.delete(self);
         clearTimeout(retry);
         clearTimeout(pong);
         clearInterval(ping);
