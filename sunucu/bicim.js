@@ -157,4 +157,4 @@ function macDokumani(f, olay) {
     return dokuman;
 }
 
-module.exports = { olaylar, kisaOlay, satir, macDokumani, ad };
+module.exports = { olaylar, kisaOlay, satir, macDokumani, ad, hafta };

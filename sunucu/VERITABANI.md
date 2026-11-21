@@ -3,7 +3,7 @@
 Odalar, bir dosya deposu ve veritabanları var:
 
 - **Odalar (Cloudflare Durable Objects, `oda/` klasörü, Worker adı `canli-oda`):** canlı veri. Gün odası (günün listesi, hızlı kaynak; Özet değişikliklerini iletir) ve maç odası (maçın içeriği, oranları, yorumları). Telefon odaya açık bir hatla (WebSocket) bağlanır; oda değişenleri kendisi gönderir. Ayrıntı: aşağıda "Odalar".
-- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet (gzip ile sıkıştırılmış) ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json`, `/veri/sezon/…` olarak okur. Okuyucu bugün, dün ve ilerideki günlerin listesini ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), bugün ve dünün Özet'ini 30 sn, daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur. Sıkıştırılmış Özet dosyasını açıp gönderir (Cloudflare tarayıcıya giderken kendisi sıkıştırır).
+- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet (gzip ile sıkıştırılmış) ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json`, `/veri/sezon/…` olarak okur. Okuyucu bugün, dün ve ilerideki günlerin listesini ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), bugün ve dünün Özet'ini 30 sn, daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur. Süresi olan dosyalar Cloudflare önbelleğinde de tutulur (domainde; her merkezde süresi boyunca R2'den bir kez okunur). Sıkıştırılmış Özet dosyasını açıp gönderir (Cloudflare tarayıcıya giderken kendisi sıkıştırır).
 - **Cloudflare D1 (veritabanı `canli`):** kullanıcı bilgileri (rumuz, engellenenler, sayaç, şikayetler; aşağıda "Mesajlar").
 - **Realtime Database:** artık kullanılmıyor (kuralları her şeyi kapatır).
 - **Firestore:** menü oranları, analizler, bildirim kayıtları, sunucu durumu; yönetim sayfasının elle düzeltme kilitleri ve istekleri.
@@ -19,6 +19,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | R2 `sezon/takimlar.json` | Takım dizini `{ takım no: ["lig-yıl", ...] }`: takım hangi sezon dosyalarında (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Sezon listesinde yeni takım görülünce | ~birkaç KB |
 | R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |
 | R2 `takim.json` | Bütün takımların adları `{ s: sürüm (zaman, saniye), t: { "takım no": ad } }`. Silinmez | Sunucu | Site (yalnızca sürüm telefondakinden farklıysa; sürüm gün odasından `v.takim`), hızlı kaynak, yönetim sayfası | Yeni takım görülünce | takım başına ~20 bayt |
+| R2 `puan/{lig}.json` | Ligin puan durumu `{ g: yazma anı (ms), sezon, cevap: API-Football /standings cevabı olduğu gibi }` (kullanılmayan alanlar da durur: form, ev / deplasman ayrımı, açıklama...); kupalarda ayrıca `eslesme` (eleme turlarının maçları) ve `t` (takım adları). Aşağıda "Puan durumu" | Sunucu | Maç sayfası açılınca arka planda (Puan sekmesi; telefonda 10 dk, okuyucuda 5 dk önbellek) | Ligde maç bitince 5 dk sonra, ayrıca günde bir | 20 takım ~10–15 KB |
 | R2 `lig.json` | Liglerin kadro / istatistik verip vermediği `{ "lig no": 1 / 0 }` | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 1 KB |
 | Firestore `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez. Gün listesini, Özet'i ve maç içeriğini sunucu kilitten yazar; kilit konunca, değişince ve kalkınca maç API'den yeniden çekilir, konunca maçın hızlı kaydı silinir (yönetim sayfası yalnızca kilidi yazar; dün ve sonrası) | Yönetim sayfası | Sunucu (dinler), yönetim sayfası | Düzeltmede | ~40 bayt |
 | Firestore `istek/{ad}` | Yönetim sayfasının sunucudan istediği iş `{ tur, mac?, t }`: `yenile_{maç}` maçı API'den yeniden çek, `hizli_sil_{maç}` maçın hızlı kaydını sil, `hizli_sil_hepsi` bütün hızlı kayıtları sil. Sunucu işi yapınca siler (yönetim sayfası bunu bekler) | Yönetim sayfası | Sunucu (dinler) | İstendiğinde | ~50 bayt |
@@ -72,6 +73,16 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - **Program yazar:** `POST {ODA_ADRES}/hizli/gun/{maçın günü}`, başlıkta `Authorization: Bearer HIZLI_ANAHTAR` (Cloudflare'de canli-oda → Variables and Secrets). Gövde yalnızca değişenler: `{ "h": { "maç no": "2-1" | null }, "u": { "maç no": "2-2" | "k" | null }, "t": 1 }` (`null` = sil, `t` = programın dakikalık çalışıyorum işareti, telefonlara gitmez; `/bak` sayfasında `hizli_son_isaret`). Biçime uymayan istek hiç yazılmaz (400). Bu anahtar yalnızca bunu yazabilir.
 - **Program okur:** maç listesi R2 `gun/{gün}.json`, takım adları R2 `takim.json` (okuyucudan, yetki gerekmez).
 - Sunucu dün ve bugünün gün odasını dinleyerek hızlı skoru öğrenir (bildirim, R2 gün dosyası, 2 dk kontrolü); sildiğinde aynı adrese `ODA_ANAHTAR` ile yazar.
+
+---
+
+## Puan durumu
+
+Kod: `sunucu/puan.js`. `ayarlar.js` → `LIGLER`'deki bütün ligler. Kupalarda (API'nin lig türü `Cup`) ayrıca sezonun maç listesi çekilir (1 istek daha) ve eleme turları `eslesme` olarak yazılır: `[maç no, tur kodu, başlama (sn), ev, dep, ev gol, dep gol, durum, ev penaltı, dep penaltı]`; lig / grup aşaması ve ön elemeler yazılmaz. Puan durumu da eşleşmesi de yoksa dosya yazılmaz, günde bir yeniden denenir.
+
+- Ligde bir maç bitince `PUAN_BEKLE` (5 dk) sonra çekilir (art arda bitenler tek istek); ayrıca her lig günde bir. Turda en fazla `PUAN_TUR_ISTEK` istek; API hakkı azaldıysa hiç. Sunucu açılınca dosyanın yazma anına bakılır.
+- Site (maç sayfası → Puan; maç sayfası açılınca arka planda okunur): `cevap[0].league.standings` (grup başına bir tablo; maçın grubu üstte). Maçın takımları vurgulu; API'nin açıklamasından bölge şeridi. Altında kupa eşleşmeleri tur tur (çift maçta toplam skor, tur atlayan kalın, açılan maçın eşleşmesi vurgulu; oynanan maçın skoru canlı listeden).
+- **Canlı:** ligde oynanan maç varsa (ve dosya yazıldığında henüz bitmemiş maç) telefon o anki skoru tabloya ekleyip yeniden sıralar (puan, averaj, atılan gol; ikili averaj bilinmez). Maç bitince sunucunun çektiği gerçek tablo gelir.
 
 ---
 

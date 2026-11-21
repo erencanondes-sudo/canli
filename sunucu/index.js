@@ -10,6 +10,7 @@
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
  *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
  *   ESPN_LIGLER'deki liglerde ESPN ikinci kaynak (espn.js): skor, durum, olaylar ve istatistik API'ninkiyle birleştirilir.
+ *   Puan durumu (puan.js): ligde maç bitince ve günde bir, R2 puan/{lig}.json.
  *   6. Sırası gelen sezon işi (sezon.js: sezonlar.txt'deki liglerin sezon maçları ve içerikleri R2'ye, turda birkaç istek)
  * Yönetim sayfasından (Firestore): elle/{maç} kilidi API'nin skorunun / durumunun yerine geçer; istek/{...} maçı yeniden çektirir
  *   ya da hızlı kaydı sildirir; analiz_dizin/futbol'daki surum gün odasına aktarılır.
@@ -26,6 +27,7 @@ const sezon = require('./sezon');
 const bildirim = require('./bildirim');
 const oran = require('./oran');
 const espn = require('./espn');
+const puan = require('./puan');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
@@ -34,6 +36,7 @@ const OYNANMAYACAK = new Set(['PST', 'CANC', 'ABD', 'AWD', 'WO']);
 const LIG_NO = A.LIGLER.map(l => l.no);
 const LIG_SIRA = new Map(LIG_NO.map((no, i) => [no, i]));
 const detayli = new Map(LIG_NO.map(no => [no, true]));   /* lig → kadro / istatistik veriyor mu */
+const kupa = new Set();      /* türü kupa olan ligler (API'nin lig bilgisinden; puan sekmesinde eşleşmeler) */
 
 /*
  * Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, apiOlaylar, bitis, sonHal,
@@ -89,7 +92,7 @@ function yonetimDinle() {
             if (k) {
                 elleUygula(k.f);
                 k.olaylar = elleOlaylar(no) || k.olaylar;
-                if (BITTI.has(durumu(k)) && !k.bitis) k.bitis = simdi();
+                if (BITTI.has(durumu(k)) && !k.bitis) macBitti(k);
             }
             hizliSilMac(no);
         } else {
@@ -190,10 +193,16 @@ function kaydet(f, canliIstek) {
     return k;
 }
 
+/* Maç bitti: bitiş anı; yeni bittiyse (sunucu açılırken görülen eski maçlar değil) ligin puan durumu birazdan yeniden çekilir */
+function macBitti(k) {
+    k.bitis = simdi();
+    if (k.bitis - k.f.fixture.timestamp < 4 * 3600) puan.macBitti(k.f.league.id, k.f.league.season);
+}
+
 /* Gösterilen hal (ESPN liglerinde iki kaynak birleşir), maç sonu ve bildirim */
 function espnUygula(no, k) {
     espn.uygula(k, elle.has(no));
-    if (BITTI.has(durumu(k)) && !k.bitis) k.bitis = simdi();
+    if (BITTI.has(durumu(k)) && !k.bitis) macBitti(k);
     bildirim.kontrol(k.f, k.olaylar, canliSaatte() && !elle.has(no));
 }
 
@@ -212,6 +221,7 @@ async function kapsamCek() {
         const r = await api.istek('/leagues?id=' + no + '&current=true');
         const kapsam = r[0] && r[0].seasons[0] && r[0].seasons[0].coverage.fixtures;
         if (kapsam) detayli.set(no, !!(kapsam.lineups || kapsam.statistics_fixtures));
+        if (r[0] && r[0].league.type === 'Cup') kupa.add(no);
         /* Lig numarasının doğruluğunu kontrol için API'deki adı */
         console.log('Lig ' + no + ': ' + (r[0] ? r[0].league.name + ' (' + r[0].country.name + ')' : 'BULUNAMADI') +
             (detayli.get(no) ? ', detaylı' : ', detaysız'));
@@ -646,6 +656,7 @@ async function tur() {
             oran.kontrol(maclar, ileri, bugun);
 
         await sezon.adim();
+        await puan.adim(new Map([...maclar.values()].map(k => [k.f.league.id, { sezon: k.f.league.season, kupa: kupa.has(k.f.league.id) }])));
 
         temizle(dun);
         sonHata = null;

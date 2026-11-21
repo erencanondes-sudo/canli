@@ -129,7 +129,9 @@ module.exports = {
         { no: 144, kod: 'bel.1' },  /* Belçika Pro League */
         { no: 180, kod: 'sco.2' }   /* İskoçya Championship */
     ],
-    OZET_R2_ARALIK: 30000,          /* Özet R2'ye (ozet/{gün}.json) en fazla bu aralıkla yazılır (değiştiyse); sitede önbellek de 30 sn */
+    OZET_R2_ARALIK: 30000,
+    PUAN_BEKLE: 5 * 60000,          /* ligde maç bitince puan durumu bu kadar sonra çekilir (puan.js) */
+    PUAN_TUR_ISTEK: 3,              /* puan durumu için turda en fazla bu kadar API isteği */          /* Özet R2'ye (ozet/{gün}.json) en fazla bu aralıkla yazılır (değiştiyse); sitede önbellek de 30 sn */
     FIKSTUR_BUGUN: 30 * 60000,      /* bugünün ve yarının fikstürü: 30 dk */
     FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
     ILERI_GUN: 7,                   /* bugünden sonra kaç günün fikstürü çekilir */
