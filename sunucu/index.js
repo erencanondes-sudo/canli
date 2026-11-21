@@ -30,6 +30,8 @@ const espn = require('./espn');
 const puan = require('./puan');
 
 const CANLI = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
+/* Duraklatılan maç (askıya alındı / kesintiye uğradı): saatlerce böyle kalabilir; ayrıntısı DURAK_ARALIK'ta bir çekilir */
+const DURAK = new Set(['SUSP', 'INT']);
 const BITTI = new Set(['FT', 'AET', 'PEN']);
 const OYNANMAYACAK = new Set(['PST', 'CANC', 'ABD', 'AWD', 'WO']);
 
@@ -40,7 +42,7 @@ const kupa = new Set();      /* türü kupa olan ligler (API'nin lig bilgisinden
 
 /*
  * Takip edilen maçlar: no → { f, gun, gun2 (sabah maçının kendi takvim günü), devre { kod, bas }, olaylar, apiOlaylar, bitis, sonHal,
- *   duzeltildi, kadro, kadroDeneme, kontrol, detayF (son ayrıntı cevabı), ESPN liglerinde sayac, kirmizi, apiGorulme (espn.js) }
+ *   duzeltildi, kadro, kadroDeneme, kontrol, durakDeneme (duraklatılan maçta son ayrıntı isteği), detayF (son ayrıntı cevabı), ESPN liglerinde sayac, kirmizi, apiGorulme (espn.js) }
  * f ve olaylar gösterilen haldir: ESPN liglerinde API'ninkiyle ESPN'inki birleşmiş (apiOlaylar: API'nin olayları).
  */
 const maclar = new Map();
@@ -268,7 +270,7 @@ async function canliCek() {
 
     /* Canlı listeden düşen maç: bitmiş olabilir, hemen detayına bakılır */
     for (const [no, k] of maclar) {
-        if (CANLI.has(durumu(k)) && !gelen.has(no)) k.kontrol = true;
+        if (CANLI.has(durumu(k)) && !DURAK.has(durumu(k)) && !gelen.has(no)) k.kontrol = true;
     }
     sonCanli = new Date().toISOString();
 }
@@ -284,7 +286,10 @@ function detaySec() {
         const d = durumu(k);
         const lig = k.f.league.id;
 
-        if (k.kontrol || (BITTI.has(d) && !k.sonHal)) secim.push(no);
+        if (DURAK.has(d)) {
+            if (t - (k.durakDeneme || 0) >= A.DURAK_ARALIK) { k.durakDeneme = t; secim.push(no); }
+        }
+        else if (k.kontrol || (BITTI.has(d) && !k.sonHal)) secim.push(no);
         else if (yedek) continue;
         else if (CANLI.has(d)) { if (canliSaat && detayli.get(lig)) secim.push(no); }
         else if (BITTI.has(d) && k.bitis && t - k.bitis < A.BITIS_SONRASI) { if (canliSaat && detayli.get(lig)) secim.push(no); }

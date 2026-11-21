@@ -856,7 +856,7 @@ button {
 
 /* Gol (10 sn): satır hafif yeşil; geri alınan gol (10 sn): uyarıdan biraz koyu kırmızı */
 .score-row.goal-hit {
-    background: #e6f4ea;
+    background: #cdebd6;
 }
 
 .score-row.goal-off {
@@ -6423,9 +6423,13 @@ function minuteWait() {
     return ring;
 }
 
-/* Canlı maçın dakikası: "63'", "45+2'", devre arasında "İY" */
+/* Duraklatılan maç (API: SUSP askıya alındı, INT kesintiye uğradı) */
+const PAUSED_CODES = new Set(['SUSP', 'INT']);
+
+/* Canlı maçın dakikası: "63'", "45+2'", devre arasında "İY", duraklatılınca "DUR" */
 function minuteText(match) {
     if (match.code === 'HT') return 'İY';
+    if (PAUSED_CODES.has(match.code)) return 'DUR';
     if (match.code === 'BT') return 'UA';
     if (match.code === 'P') return 'PEN';
     if (!match.minute) return '';
@@ -7854,6 +7858,7 @@ function formatTime(date) {
 
 /* "CANLI 63'" / "MS" / "17:00" / "ERT" */
 function statusText(match) {
+    if (PAUSED_CODES.has(match.code)) return 'DUR';
     if (match.status === 'live') return ('CANLI ' + minuteText(match)).trim();
     if (match.status === 'done') return 'MS';
     return OTHER_LABELS[match.code] || formatTime(match.date);
@@ -14427,6 +14432,7 @@ function fillDetail(match) {
 
     const status = document.getElementById('sbStatus');
     status.textContent =
+        PAUSED_CODES.has(match.code) ? 'DURAKLATILDI' :
         match.status === 'live' ? ('CANLI · ' + minuteText(match)).replace(/ · $/, '') :
         match.status === 'done' ? 'MAÇ SONU' :
         OTHER_LABELS[match.code] ? 'OYNANMAYACAK' : 'OYNANACAK';
