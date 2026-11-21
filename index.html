@@ -6861,6 +6861,8 @@ function readLeagues() {
  * ilk çizimde de gol sayılmaz (listedeki eski skor ile yenisi arasındaki fark gol değildir).
  */
 const lastScores = new Map();   /* maç no → [ev, dep] */
+/* Sayfa açıkken görülen gollerin dakikası: maç no → [[ev dakikaları], [dep dakikaları]] (Özet'te olayı gelmeyen gol için) */
+const goalMinutes = new Map();
 const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
 const goalQueue = [];
 let goalsReady = false;         /* bir önceki çizimde canlı veri tazeydi */
@@ -6889,6 +6891,13 @@ function findGoals() {
 
         if (before && counting) {
             ['home', 'away'].forEach((side, i) => {
+                if (score[i] !== before[i]) {
+                    if (!goalMinutes.has(id)) goalMinutes.set(id, [[], []]);
+                    const seenMinutes = goalMinutes.get(id)[i];
+                    /* Gol: dakikası eklenir; skor düşerse (VAR) son kayıt silinir */
+                    for (let n = before[i]; n < score[i]; n++) seenMinutes.push([match.minute, match.extra]);
+                    seenMinutes.length = Math.min(seenMinutes.length, Math.max(0, seenMinutes.length - (before[i] - score[i])));
+                }
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
                     scored = true;
@@ -13270,15 +13279,30 @@ function renderSummary(match) {
 
     let halfShown = false;
 
-    /* Goller ve kartlar + oyuncu değişiklikleri, dakika sırasıyla */
-    const events = match.events.concat(substitutions(match).map(sub => ({
+    /*
+     * Skorda olup olay listesinde olmayan gol: oyuncusuz "Gol" olarak eklenir; gerçek olay gelince kalkar.
+     * Dakika, sayfa açıkken görüldüyse o anki maç dakikası; görülmediyse dakikasız, listenin sonunda.
+     */
+    const guessed = [];
+    ['home', 'away'].forEach((side, i) => {
+        const missing = ((match.score || [])[i] || 0) -
+            match.events.filter(e => e.type === 'goal' && !e.cancelled && e.side === side).length;
+        const seenMinutes = (goalMinutes.get(match.id) || [[], []])[i];
+        for (let n = 0; n < missing; n++) {
+            const [minute, extra] = seenMinutes[seenMinutes.length - missing + n] || [];
+            guessed.push({ side: side, type: 'goal', minute: minute ?? null, extra: extra });
+        }
+    });
+
+    /* Goller ve kartlar + oyuncu değişiklikleri, dakika sırasıyla (dakikası bilinmeyen en sonda) */
+    const events = match.events.concat(guessed, substitutions(match).map(sub => ({
         side: sub.side === 1 ? 'away' : 'home',
         type: 'sub',
         minute: sub.minute,
         extra: sub.extra,
         player: sub.inn,
         out: sub.out
-    }))).sort((a, b) => (a.minute || 0) - (b.minute || 0) || (a.extra || 0) - (b.extra || 0));
+    }))).sort((a, b) => (a.minute ?? 999) - (b.minute ?? 999) || (a.extra || 0) - (b.extra || 0));
 
     /* Olay varsa ya da maç canlıysa beyaz panel ve zaman çizgisi; yoksa eski boş ekran */
     const list = document.createElement('div');
@@ -13306,7 +13330,9 @@ function renderSummary(match) {
 
     events.forEach(event => {
 
-        if (!halfShown && event.minute > 45) {
+        /* Dakikası bilinmeyen gol, ilk yarı bitmişse ikinci yarıya yazılır */
+        const afterHalf = event.minute === null ? !['1H', 'HT'].includes(match.code) : event.minute > 45;
+        if (!halfShown && afterHalf) {
             halfShown = true;
             const line = document.createElement('div');
             line.className = 'half-line';
@@ -13321,7 +13347,7 @@ function renderSummary(match) {
         home.className = 'home';
         const minute = document.createElement('div');
         minute.className = 'minute';
-        minute.textContent = event.minute + (event.extra ? '+' + event.extra : '') + "'";
+        minute.textContent = event.minute === null ? '–' : event.minute + (event.extra ? '+' + event.extra : '') + "'";
         const away = document.createElement('div');
 
         const label = document.createElement('span');
