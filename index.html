@@ -867,13 +867,13 @@ button {
     background: #f4f6fa;
 }
 
-/* Maç sayfası kapanırken o maçın satırı: basınca olan gri ile başlar, 0,4 sn'de söner */
+/* Maç sayfası kapanırken o maçın satırı: açık mavi yanar, yarım saniye kalır, 1 sn'nin sonunda söner */
 .score-row.closed-flash {
-    animation: closedFlash .4s ease-out;
+    animation: closedFlash 1s ease-out;
 }
 
 @keyframes closedFlash {
-    from { background: #f4f6fa; }
+    0%, 50% { background: #cfe0ff; }
 }
 
 .score-row:focus {
