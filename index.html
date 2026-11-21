@@ -686,21 +686,23 @@ button {
 /* Satırın sağındaki zil */
 .score-bell {
     /*
-     * Dokunma alanı sola doğru geniştir (takım adının ucuna biner);
-     * zil simgesi yine sağdaki yerinde ve aynı boyda durur.
+     * Dokunma alanı 2,75rem genişlikte; satırın sağ iç boşluğunu da kaplar (sağ pay = satırın sağ iç boşluğu, min(.7em, 2.4vw) × .875rem).
+     * Simge kutunun ortasında: ortası, lig zilinin ortasıyla aynı dikey çizgide (bloğun sağ kenarından 1,375rem içeride).
+     * Yükseklik ve dikey paylar eskisiyle aynı: satır yüksekliği değişmez.
      */
     position: relative;
     z-index: 1;
-    width: 2.65em;
-    height: 2.2em;
-    margin: -.35em 0 -.35em -.25em;
-    padding: 0 .32em 0 0;
+    justify-self: end;
+    width: 2.75rem;
+    height: 2.0625rem;
+    margin: -.328125rem calc(-1 * min(.6125rem, 2.4vw)) -.328125rem 0;
+    padding: 0;
     border-radius: 0;
     background: none;
     color: #9aa0ab;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 .score-bell svg {
@@ -1353,10 +1355,14 @@ button {
 
 /* Lig satırındaki zil: o listedeki bütün maçları kaydeder / çıkarır */
 .league-bell {
+    /*
+     * Maç zilleriyle aynı: 2,75rem genişlik, simge ortada → ortaları aynı dikey çizgide.
+     * Sağ pay başlığın sağ iç boşluğu (.9em × .8125rem); yükseklik ve dikey paylar eskisiyle aynı.
+     */
     flex: none;
-    margin: -.5em -.55em -.5em auto;
-    width: 2.4em;
-    height: 2.2em;
+    margin: -.46875rem -.73125rem -.46875rem auto;
+    width: 2.75rem;
+    height: 2.0625rem;
     padding: 0;
     border-radius: 0;
     background: none;
