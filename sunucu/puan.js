@@ -4,8 +4,9 @@
  *
  *   Dosya: { g: yazma anı (ms), sezon, cevap: API'nin puan durumu cevabı olduğu gibi (kullanılmayan alanlar da durur; kupada boş olabilir),
  *            eslesme?: [[maç no, tur kodu, başlama (sn), ev, dep, ev gol, dep gol, durum, ev penaltı, dep penaltı], ...],
- *            t?: { takım no: ad } (eşleşmelerdeki takımlar) }
- *   Eşleşmeler: sezonun maç listesinden (1 istek) lig / grup aşaması dışındaki turlar.
+ *            t?: { takım no: ad } (eşleşmelerdeki takımlar),
+ *            son5: { takım no: [[rakip, iç saha 1 / deplasman 0, attığı, yediği, başlama (sn)], ...] } (bitmiş son 5 maç, en yeni sonda) }
+ *   Sezonun maç listesi (1 istek) her çekişte: son 5 maç; kupada ayrıca lig / grup aşaması dışındaki turlar (eşleşmeler).
  *   Ne zaman çekilir: ligde bir maç bitince PUAN_BEKLE sonra (art arda bitenler tek istek), ayrıca günde bir.
  *     Sunucu açılınca dosyanın yazma anına bakılır (günlük çekiş yeniden başlamasın diye).
  *   Puan durumu ve eşleşmesi olmayan turnuvada dosya yazılmaz, günde bir yeniden denenir.
@@ -33,10 +34,26 @@ function macBitti(lig, sezon) {
 /* Kupanın eleme turları (lig / grup aşaması ve ön elemeler dışında) */
 const ELEME_DISI = /Regular Season|League Stage|Group|Qualifying|Preliminary/i;
 
-async function eslesmeler(lig, sezon) {
-    const maclar = await api.istek('/fixtures?league=' + lig + '&season=' + sezon + '&timezone=' + A.SAAT_DILIMI);
+const BITTI = new Set(['FT', 'AET', 'PEN']);
+
+/* Takımların bitmiş son 5 maçı (en yeni sonda) */
+function sonBes(maclar) {
+    const son5 = {};
+    maclar.filter(f => BITTI.has(f.fixture.status.short) && f.goals.home !== null)
+        .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
+        .forEach(f => {
+            const ev = f.teams.home.id;
+            const dep = f.teams.away.id;
+            (son5[ev] = son5[ev] || []).push([dep, 1, f.goals.home, f.goals.away, f.fixture.timestamp]);
+            (son5[dep] = son5[dep] || []).push([ev, 0, f.goals.away, f.goals.home, f.fixture.timestamp]);
+        });
+    for (const no of Object.keys(son5)) son5[no] = son5[no].slice(-5);
+    return son5;
+}
+
+function eslesmeler(maclar) {
     const t = {};
-    const eslesme = (maclar || []).filter(f => !ELEME_DISI.test(f.league.round || '')).map(f => {
+    const eslesme = maclar.filter(f => !ELEME_DISI.test(f.league.round || '')).map(f => {
         t[f.teams.home.id] = B.ad(f.teams.home.name);
         t[f.teams.away.id] = B.ad(f.teams.away.name);
         const pen = (f.score && f.score.penalty) || {};
@@ -48,7 +65,7 @@ async function eslesmeler(lig, sezon) {
 
 /*
  * Her turda (index.js): gorulen = Map(lig no → { sezon, kupa }), takip edilen maçlardan. Sırası gelen ligler çekilir
- * (kupada 2 istek: puan durumu ve maç listesi).
+ * (lig başına 2 istek: puan durumu ve sezonun maç listesi).
  */
 async function adim(gorulen) {
     if (api.yedekte()) return;
@@ -79,11 +96,13 @@ async function adim(gorulen) {
         const bekleyen = l.zaman && l.zaman <= simdi && l.zaman > l.son;
         if (!gunluk && !bekleyen) continue;
 
-        yapilan += l.kupa ? 2 : 1;
+        yapilan += 2;
         l.son = simdi;
         try {
             const dosya = { g: simdi, sezon: l.sezon, cevap: await api.istek('/standings?league=' + lig + '&season=' + l.sezon) || [] };
-            if (l.kupa) Object.assign(dosya, await eslesmeler(lig, l.sezon));
+            const maclar = await api.istek('/fixtures?league=' + lig + '&season=' + l.sezon + '&timezone=' + A.SAAT_DILIMI) || [];
+            dosya.son5 = sonBes(maclar);
+            if (l.kupa) Object.assign(dosya, eslesmeler(maclar));
             if (dosya.cevap.length || (dosya.eslesme && dosya.eslesme.length))
                 depo.yaz('puan/' + lig + '.json', JSON.stringify(dosya));
         } catch (e) {
