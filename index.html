@@ -6987,7 +6987,7 @@ function findGoals() {
                     if (liveScreen())
                         goalQueue.push({ match: match, side: side });
                 }
-                /* Gol geri alındı (skor düştü): 10 sn kırmızı top ve kırmızı satır, şeritte "GOL İPTAL" (sessiz) */
+                /* Gol geri alındı (skor düştü): 10 sn kırmızı top ve kırmızı satır, şeritte "GOL İPTAL" */
                 if (score[i] < before[i]) {
                     cancelUntil.set(id + '-' + side, Date.now() + 10000);
                     goalUntil.delete(id + '-' + side);
@@ -7025,7 +7025,7 @@ function hasBall(id, side) {
 
 /*
  * Bildirim: her gol / geri alınan gol sırayla 3 saniye görünür.
- * Ses yalnızca kayıtlı maçın golünde çalar (geri alınanda çalmaz).
+ * Ses yalnızca kayıtlı maçta çalar (geri alınan golde farklı ses).
  */
 let toastBusy = false;
 
@@ -7065,8 +7065,8 @@ function showGoal({ match, side, cancel }) {
 
     toast.dataset.id = match.id;
     toast.classList.add('show');
-    if (isSaved(match.id) && !cancel)
-        goalSound();
+    if (isSaved(match.id))
+        goalSound(cancel);
 
     /* Her gol 3 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
     clearTimeout(goalTimer);
@@ -7109,14 +7109,15 @@ document.addEventListener('pointerdown', () => {
     } catch (error) {}
 }, { passive: true });
 
-function goalSound() {
+/* Gol: yükselen üç nota; geri alınan gol: alçalan üç nota */
+function goalSound(cancel) {
 
     if (!audioCtx || audioCtx.state !== 'running')
         return;
 
     const start = audioCtx.currentTime;
 
-    [660, 880, 1320].forEach((freq, i) => {
+    (cancel ? [880, 660, 440] : [660, 880, 1320]).forEach((freq, i) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         const t = start + i * 0.13;
