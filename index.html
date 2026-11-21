@@ -854,6 +854,15 @@ button {
     background: #fdecec;
 }
 
+/* Gol (10 sn): satır hafif yeşil; geri alınan gol (10 sn): uyarıdan biraz koyu kırmızı */
+.score-row.goal-hit {
+    background: #e6f4ea;
+}
+
+.score-row.goal-off {
+    background: #f9dcdc;
+}
+
 .score-row:active {
     background: #f4f6fa;
 }
@@ -5019,6 +5028,11 @@ body.has-layer .ac-kapa svg {
     transform: translateY(0);
 }
 
+/* Geri alınan gol: kırmızı gri */
+#goalToast.cancel {
+    background: #74474c;
+}
+
 /* Bağlantı şeridi: oda 2 denemede bağlanamazsa Canlı, Ligler satırının altında; bağlanınca yazısı değişir, kapatılana kadar kalır */
 #netBanner {
     display: none;
@@ -5086,6 +5100,11 @@ body.has-layer .ac-kapa svg {
     flex: none;
     font-style: normal;
     font-size: .9em;
+}
+
+/* Geri alınan gol: top kırmızı */
+.score-team .goal-ball.cancel {
+    filter: sepia(1) saturate(12) hue-rotate(-50deg);
 }
 
 .score-team .score-red {
@@ -6925,6 +6944,7 @@ const lastScores = new Map();   /* maç no → [ev, dep] */
 /* Sayfa açıkken görülen gollerin dakikası: maç no → [[ev dakikaları], [dep dakikaları]] (Özet'te olayı gelmeyen gol için) */
 const goalMinutes = new Map();
 const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
+const cancelUntil = new Map();  /* "maç no-home/away" → geri alınan golün kırmızı topunun kalkacağı an */
 const goalQueue = [];
 let goalsReady = false;         /* bir önceki çizimde canlı veri tazeydi */
 
@@ -6961,10 +6981,19 @@ function findGoals() {
                 }
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
+                    cancelUntil.delete(id + '-' + side);
                     scored = true;
                     /* Şerit bütün canlı maçlarda, yalnızca Canlı Skor sayfası açıkken; ses yalnızca kayıtlı (zili açık) maçlarda */
                     if (liveScreen())
                         goalQueue.push({ match: match, side: side });
+                }
+                /* Gol geri alındı (skor düştü): 10 sn kırmızı top ve kırmızı satır, şeritte "GOL İPTAL" (sessiz) */
+                if (score[i] < before[i]) {
+                    cancelUntil.set(id + '-' + side, Date.now() + 10000);
+                    goalUntil.delete(id + '-' + side);
+                    scored = true;
+                    if (liveScreen())
+                        goalQueue.push({ match: match, side: side, cancel: true });
                 }
             });
         }
@@ -6986,13 +7015,17 @@ function findGoals() {
         setTimeout(refreshViews, 10100);
 }
 
+/* Takımın yanındaki top: 'goal' (gol), 'cancel' (geri alınan gol) ya da null */
 function hasBall(id, side) {
-    return (goalUntil.get(id + '-' + side) || 0) > Date.now();
+    const now = Date.now();
+    if ((goalUntil.get(id + '-' + side) || 0) > now) return 'goal';
+    if ((cancelUntil.get(id + '-' + side) || 0) > now) return 'cancel';
+    return null;
 }
 
 /*
- * Bildirim: birden fazla gol varsa her biri 2 saniye görünür, sonra
- * hemen diğeri gelir; son bildirim 4 saniye kalır. Her golde ses çalar.
+ * Bildirim: her gol / geri alınan gol sırayla 3 saniye görünür.
+ * Ses yalnızca kayıtlı maçın golünde çalar (geri alınanda çalmaz).
  */
 let toastBusy = false;
 
@@ -7011,10 +7044,12 @@ function showNextGoal() {
     showGoal(goalQueue.shift());
 }
 
-function showGoal({ match, side }) {
+function showGoal({ match, side, cancel }) {
 
     const toast = document.getElementById('goalToast');
     const box = toast.querySelector('.gt-match');
+    toast.querySelector('.gt-title').textContent = cancel ? '⚽ GOL İPTAL' : '⚽ GOL';
+    toast.classList.toggle('cancel', !!cancel);
 
     box.textContent = '';
     if (minuteText(match))
@@ -7030,7 +7065,7 @@ function showGoal({ match, side }) {
 
     toast.dataset.id = match.id;
     toast.classList.add('show');
-    if (isSaved(match.id))
+    if (isSaved(match.id) && !cancel)
         goalSound();
 
     /* Her gol 3 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
@@ -8106,7 +8141,10 @@ function scoreRow(match, showDate, showLeague) {
 
     /* Satırın içinde zil düğmesi olduğu için satır <button> değil */
     const row = document.createElement('div');
-    row.className = 'score-row' + (match.warn ? ' warn' : '');
+    /* Gol / geri alınan gol: 10 sn yeşil / kırmızı satır (top süresince) */
+    const balls = match.status === 'live' ? [hasBall(match.id, 'home'), hasBall(match.id, 'away')] : [];
+    row.className = 'score-row' + (match.warn ? ' warn' : '') +
+        (balls.includes('cancel') ? ' goal-off' : balls.includes('goal') ? ' goal-hit' : '');
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
 
@@ -8182,9 +8220,10 @@ function scoreRow(match, showDate, showLeague) {
         }
 
         /* Gol atan takımın yanında top (10 saniye): soldaki takımda solda, sağdakinde sağda */
-        if (match.status === 'live' && hasBall(match.id, side)) {
+        const ballKind = match.status === 'live' && hasBall(match.id, side);
+        if (ballKind) {
             const ball = document.createElement('i');
-            ball.className = 'goal-ball';
+            ball.className = 'goal-ball' + (ballKind === 'cancel' ? ' cancel' : '');
             ball.textContent = '⚽';
             if (side === 'home')
                 el.insertBefore(ball, name);
