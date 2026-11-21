@@ -867,9 +867,10 @@ button {
     background: #f4f6fa;
 }
 
-/* Maç sayfası kapanırken o maçın satırı: açık mavi yanar, yarım saniye kalır, 1 sn'nin sonunda söner */
-.score-row.closed-flash {
-    animation: closedFlash 1s ease-out;
+/* Maç sayfası kapanırken o maçın satırı (canlı liste ve takım sayfası): açık mavi yanar, 0,3 sn kalır, 0,6 sn'nin sonunda söner */
+.score-row.closed-flash,
+.tm-row.closed-flash {
+    animation: closedFlash .6s ease-out;
 }
 
 @keyframes closedFlash {
@@ -9705,6 +9706,7 @@ function drawTeamSeason(team, sections, content) {
             const row = document.createElement('button');
             row.type = 'button';
             row.className = 'tm-row' + (m === next ? ' next' : '');
+            row.dataset.mid = m.id;
             const add = (cls, text) => {
                 const el = document.createElement('span');
                 el.className = cls;
@@ -14491,8 +14493,8 @@ function refreshDetail() {
 
 /* Kapanan maçın listedeki satırı kısa bir an gri yanar (hangi maçın kapandığı görünsün) */
 function flashClosedRow(id) {
-    document.querySelectorAll('.score-bell[data-id="' + id + '"]').forEach(bell => {
-        const row = bell.closest('.score-row');
+    document.querySelectorAll('.score-bell[data-id="' + id + '"], .tm-row[data-mid="' + id + '"]').forEach(el => {
+        const row = el.closest('.score-row, .tm-row');
         if (!row)
             return;
         row.classList.remove('closed-flash');
