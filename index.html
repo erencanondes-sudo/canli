@@ -867,14 +867,21 @@ button {
     background: #f4f6fa;
 }
 
-/* Maç sayfası kapanırken o maçın satırı (canlı liste ve takım sayfası): açık mavi yanar, 0,3 sn kalır, 0,6 sn'nin sonunda söner */
+/* Basınca hafif gri: lig ve takım sayfasının maç satırları; puan tablosunda takım adına basınca o satır */
+.tm-row:active,
+.st-row:has(.st-team:active),
+.st-tie:has(.st-team:active) {
+    background: #f4f6fa;
+}
+
+/* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar, 0,2 sn kalır, 0,4 sn'nin sonunda söner */
 .score-row.closed-flash,
 .tm-row.closed-flash {
-    animation: closedFlash .6s ease-out;
+    animation: closedFlash .4s ease-out;
 }
 
 @keyframes closedFlash {
-    0%, 50% { background: #cfe0ff; }
+    0%, 50% { background: #e3edff; }
 }
 
 .score-row:focus {
@@ -9788,6 +9795,7 @@ function drawLeagueSeason(matches, content) {
             const row = document.createElement('button');
             row.type = 'button';
             row.className = 'tm-row' + (m === next ? ' next' : '');
+            row.dataset.mid = m.id;
             const add = (cls, text) => {
                 const el = document.createElement('span');
                 el.className = cls;
