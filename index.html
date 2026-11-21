@@ -4977,24 +4977,24 @@ body.has-layer .ac-kapa svg {
 .kp-leg.locked .kp-lock { border-color: #0c7a58; background: #e3f5ed; color: #08583e; }
 .kp-leg-actions .kp-deep { border-color: #cfe0ff; background: #eef4ff; color: #1a56db; }
 /* =====================================================
-   GOL BİLDİRİMİ (uygulama içi): altta mavi-gri şerit, 2 sn; dokununca maç açılır
+   GOL BİLDİRİMİ (uygulama içi): yalnızca Canlı Skor sayfasında, en altta tam genişlik mavi-gri şerit;
+   tek gol 2 sn, arkasında bekleyen varsa 1 sn; dokununca maç açılır
 ===================================================== */
 #goalToast {
     position: fixed;
-    left: .6rem;
-    right: .6rem;
-    bottom: .8rem;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1000;
     display: flex;
     align-items: center;
     gap: .5em;
-    padding: .65rem .9rem;
-    border-radius: .6rem;
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
     background: #3b5273;
     color: white;
     font-size: .875rem;
-    box-shadow: 0 .2em .8em rgba(0, 0, 0, .25);
-    transform: translateY(calc(100% + 1.2rem));
+    box-shadow: 0 -.2em .8em rgba(0, 0, 0, .2);
+    transform: translateY(100%);
     transition: transform .3s ease;
     cursor: pointer;
 }
@@ -6892,8 +6892,9 @@ function findGoals() {
                 if (score[i] > before[i]) {
                     goalUntil.set(id + '-' + side, Date.now() + 10000);
                     scored = true;
-                    /* Şerit bütün canlı maçlarda; ses yalnızca kayıtlı (zili açık) maçlarda */
-                    goalQueue.push({ match: match, side: side });
+                    /* Şerit bütün canlı maçlarda, yalnızca Canlı Skor sayfası açıkken; ses yalnızca kayıtlı (zili açık) maçlarda */
+                    if (liveScreen())
+                        goalQueue.push({ match: match, side: side });
                 }
             });
         }
@@ -6924,6 +6925,12 @@ function hasBall(id, side) {
  * hemen diğeri gelir; son bildirim 4 saniye kalır. Her golde ses çalar.
  */
 let toastBusy = false;
+
+/* Canlı Skor sayfası mı açık (ana sekme, Canlı Skor görünümü, üstte maç / takım / lig sayfası ya da başka bir pencere yok) */
+function liveScreen() {
+    return document.body.dataset.tab === 'home' && homeMode === 'live' && !pageStack.length &&
+        !openLayers.some(name => name !== 'homeMode');
+}
 
 function showNextGoal() {
 
@@ -6956,16 +6963,17 @@ function showGoal({ match, side }) {
     if (isSaved(match.id))
         goalSound();
 
-    /* 2 sn görünür; sırada gol varsa ona geçer */
+    /* Tek gol 2 sn; arkasında bekleyen varsa 1 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
     clearTimeout(goalTimer);
     goalTimer = setTimeout(() => {
-        if (goalQueue.length) {
+        if (goalQueue.length && liveScreen()) {
             showGoal(goalQueue.shift());
             return;
         }
+        goalQueue.length = 0;
         toast.classList.remove('show');
         toastBusy = false;
-    }, 2000);
+    }, goalQueue.length ? 1000 : 2000);
 }
 
 /* Şeride dokununca o maç açılır */
