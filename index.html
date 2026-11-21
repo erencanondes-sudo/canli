@@ -1411,7 +1411,7 @@ button {
     line-height: 1.3;
 }
 
-/* Uzatma dakikası (45+, 90+, 120+), gün odasından güncel veri gelene kadar (arka plandan dönünce): dönen çember */
+/* Canlı maçın dakikası, arka plandan dönünce gün odasından güncel veri gelene kadar: dönen çember */
 .minute-wait {
     display: inline-block;
     width: .85em;
@@ -5019,17 +5019,14 @@ body.has-layer .ac-kapa svg {
     transform: translateY(0);
 }
 
-/* Bağlantı şeridi: oda 2 denemede bağlanamazsa üstte; bağlanınca yazısı değişir, kapatılana kadar kalır */
+/* Bağlantı şeridi: oda 2 denemede bağlanamazsa Canlı, Ligler satırının altında; bağlanınca yazısı değişir, kapatılana kadar kalır */
 #netBanner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 60;
     display: none;
     align-items: center;
     gap: .5em;
-    padding: calc(.6rem + env(safe-area-inset-top)) 1rem .6rem;
+    margin: 0 0 .625rem;
+    padding: .6rem 1rem;
+    border-radius: .5rem;
     background: #d93025;
     color: white;
     font-size: .875rem;
@@ -5548,6 +5545,12 @@ body:has(#oddsSheet.open) .ad-strip::before {
                 <div id="toolRow" class="tool-row"></div>
             </div>
 
+                <!-- Bağlantı şeridi (Canlı, Ligler satırı ile liste arasında) -->
+                <div id="netBanner" aria-live="polite">
+                    <span></span>
+                    <button type="button" aria-label="Kapat">×</button>
+                </div>
+
                 <div id="liveList"></div>
             </div>
             <!-- Maçlarım: Kayıtlı Maçlarım (Kayıtlı Oranlarım alttan açılan pencerede) -->
@@ -5893,11 +5896,6 @@ body:has(#oddsSheet.open) .ad-strip::before {
 </div>
 
 <!-- REKLAM ŞABLONU: üst resimlerin üzerine konur -->
-<div id="netBanner" aria-live="polite">
-    <span></span>
-    <button type="button" aria-label="Kapat">×</button>
-</div>
-
 <div id="goalToast" aria-live="polite">
     <div class="gt-title">⚽ GOL</div>
     <div class="gt-match"></div>
@@ -6486,8 +6484,8 @@ function rebuildMatches() {
             match.alsoToday = morning && day === yesterday && match.status === 'live';
             if (match.status === 'live')
                 applyFast(match);
-            /* Uzatma dakikası (45+, 90+, 120+) eski olabilir: gün odası güncellenene kadar dakika yerine çember */
-            match.minuteWait = longAway && match.status === 'live' && !!match.extra &&
+            /* Uzun aradan sonra canlı maçın durumu eski olabilir: gün odası güncellenene kadar dakika yerine çember */
+            match.minuteWait = longAway && match.status === 'live' &&
                 days.has(day) && !days.get(day).fresh;
             MATCHES.push(match);
             if (!MATCH_BY_ID.has(match.id) || day === TODAY)
@@ -7664,7 +7662,7 @@ function unwatchDetail() {
     resetComments(null);
 }
 
-/* Arka planda 2 dakikadan uzun kalındıysa uzatma dakikalarında, gün odası güncellenene kadar çember (minuteWait) */
+/* Arka planda 30 sn'den uzun kalındıysa canlı maçlarda, gün odası güncellenene kadar çember (minuteWait) */
 let hiddenAt = 0;
 let longAway = false;
 
@@ -7680,7 +7678,7 @@ document.addEventListener('visibilitychange', () => {
         return;
     }
 
-    longAway = hiddenAt > 0 && Date.now() - hiddenAt > 120000;
+    longAway = hiddenAt > 0 && Date.now() - hiddenAt > 30000;
     resetScoreTimes();
     openDay(TODAY);
     openDay(watchedDay);
