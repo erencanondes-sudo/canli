@@ -3250,6 +3250,7 @@ body.has-layer .ac-kapa svg {
 .st-row.st-f { grid-template-columns: 2em 1fr auto 3em 2.2em; }
 
 .st-badges .fb { cursor: pointer; }
+.st-team { cursor: pointer; }
 
 .st-pick {
     min-height: 1.4em;
@@ -12814,6 +12815,18 @@ function standingsZone(text) {
         /conference/i.test(text) ? 'z-ecl' : /relegation/i.test(text) ? 'z-down' : /promotion|play.?off/i.test(text) ? 'z-up' : '';
 }
 
+/* Puan sekmesinde takım adı: basınca takım sayfası açılır */
+function standingsTeam(id, text) {
+    const el = document.createElement('span');
+    el.className = 'st-team';
+    el.textContent = text;
+    el.addEventListener('click', event => {
+        event.stopPropagation();
+        pushPage({ kind: 'team', team: teamInfo(id) });
+    });
+    return el;
+}
+
 /*
  * Grubun satırları (canlı hesaplı). Eklenen maçlar: oynananlar ve dosya yazıldığında henüz bitmemiş olanlar
  * (başlamasından 2 saat sonra dosya yazılmışsa sonuç dosyadadır).
@@ -12960,7 +12973,7 @@ function renderStandings(match) {
                     });
                     badges.appendChild(b);
                 });
-                const row = line([String(t.pos), team.mid || team.name, badges, t.gf + ':' + t.ga, t.pts], 'st-f' + (ids.includes(t.id) ? ' st-mine' : ''));
+                const row = line([String(t.pos), standingsTeam(t.id, team.mid || team.name), badges, t.gf + ':' + t.ga, t.pts], 'st-f' + (ids.includes(t.id) ? ' st-mine' : ''));
                 row.firstChild.classList.add('st-pos');
             });
             card.appendChild(pick);
@@ -12971,8 +12984,7 @@ function renderStandings(match) {
         line(['#', 'Takım', 'O', 'G', 'B', 'M', 'A:Y', 'AV', 'P'], 'st-cols');
         standingsRows(rows, match.league.id, data.g || 0, standingsMode).forEach(t => {
             const team = teamInfo(t.id);
-            const name = document.createElement('span');
-            name.textContent = team.mid || team.name;
+            const name = standingsTeam(t.id, team.mid || team.name);
             if (t.live) {
                 const dot = document.createElement('i');
                 dot.className = 'st-live';
@@ -13059,9 +13071,8 @@ function renderTies(box, data, match) {
             const row = document.createElement('div');
             row.className = 'st-tie' + (legs.some(l => l.id === String(match.id)) ? ' st-mine' : '');
             const side = (id, cls) => {
-                const span = document.createElement('span');
-                span.className = cls + (winner === id ? ' st-win' : '');
-                span.textContent = teamName(id);
+                const span = standingsTeam(id, teamName(id));
+                span.className += ' ' + cls + (winner === id ? ' st-win' : '');
                 return span;
             };
             const mid = document.createElement('span');
