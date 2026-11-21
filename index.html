@@ -854,9 +854,14 @@ button {
     background: #fdecec;
 }
 
-/* Gol (10 sn): satır hafif yeşil; geri alınan gol (10 sn): uyarıdan biraz koyu kırmızı */
+/* Gol (10 sn): satır hafif yeşil, dakika hapı da yeşil; geri alınan gol (10 sn): uyarıdan biraz koyu kırmızı */
 .score-row.goal-hit {
-    background: #cdebd6;
+    background: #c0f0cf;
+}
+
+.score-row.goal-hit .score-status.live {
+    background: #effcf3;
+    color: #0e8a3a;
 }
 
 .score-row.goal-off {
@@ -1446,9 +1451,16 @@ button {
 }
 
 .score-status.live {
+    position: relative;
     background: #fde4e2;
     color: #d93025;
     font-size: .71875rem;
+}
+
+/* Dakikanın ' işareti hapın genişliğine katılmaz: hap yalnızca sayıyı ortalar, işaret sağ iç boşluğa biner */
+.minute-tick {
+    position: absolute;
+    left: calc(100% - .45em);
 }
 
 .score-status.done {
@@ -8185,9 +8197,18 @@ function scoreRow(match, showDate, showLeague) {
 
     const status = document.createElement('span');
     status.className = 'score-status' + (match.status === 'live' ? ' live' : match.status === 'done' ? ' done' : '');
-    status.textContent =
+    const statusText =
         match.status === 'live' ? minuteText(match) || 'CANLI' :
         match.status === 'done' ? 'MS' : OTHER_LABELS[match.code] || formatTime(match.date);
+    if (match.status === 'live' && statusText.endsWith("'")) {
+        status.textContent = statusText.slice(0, -1);
+        const tick = document.createElement('span');
+        tick.className = 'minute-tick';
+        tick.textContent = "'";
+        status.appendChild(tick);
+    } else {
+        status.textContent = statusText;
+    }
     if (match.minuteWait) {
         status.textContent = '';
         status.appendChild(minuteWait());
