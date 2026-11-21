@@ -13300,13 +13300,12 @@ function renderStandings(match) {
                     const b = document.createElement('i');
                     b.className = 'fb fb-' + c;
                     b.textContent = c === 'W' ? 'G' : c === 'D' ? 'B' : 'M';
-                    const [rival, home, gf, ga, ts] = t.games[i];
-                    const when = new Date(ts * 1000);
+                    const [rival, home, gf, ga] = t.games[i];
                     b.addEventListener('click', () => {
-                        const other = teamInfo(rival);
-                        showFormTip(card, b, (team.mid || team.name) + ' ' + gf + '-' + ga + ' ' + (other.mid || other.name) + ' · ' +
-                            (home ? 'iç saha' : 'deplasman') + ' · ' + String(when.getDate()).padStart(2, '0') + '.' +
-                            String(when.getMonth() + 1).padStart(2, '0'));
+                        /* Maçın kendi sırası: ev sahibi solda ("Milan 2-1 Parma") */
+                        const me = team.mid || team.name;
+                        const other = teamInfo(rival).mid || teamInfo(rival).name;
+                        showFormTip(card, b, home ? me + ' ' + gf + '-' + ga + ' ' + other : other + ' ' + ga + '-' + gf + ' ' + me);
                     });
                     badges.appendChild(b);
                 });
