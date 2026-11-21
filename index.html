@@ -880,14 +880,14 @@ button {
     background: #f4f6fa;
 }
 
-/* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar ve hemen sönmeye başlar, 0,3 sn'de biter */
+/* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar, 0,15 sn kalır, sonraki 0,15 sn'de söner (toplam 0,3 sn) */
 .score-row.closed-flash,
 .tm-row.closed-flash {
     animation: closedFlash .3s ease-out;
 }
 
 @keyframes closedFlash {
-    from { background: #ebf2ff; }
+    0%, 50% { background: #ebf2ff; }
 }
 
 .score-row:focus {
