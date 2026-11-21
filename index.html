@@ -6972,7 +6972,7 @@ function showGoal({ match, side }) {
     if (isSaved(match.id))
         goalSound();
 
-    /* Her gol 2 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
+    /* Her gol 3 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
     clearTimeout(goalTimer);
     goalTimer = setTimeout(() => {
         if (goalQueue.length && liveScreen()) {
@@ -6982,7 +6982,7 @@ function showGoal({ match, side }) {
         goalQueue.length = 0;
         toast.classList.remove('show');
         toastBusy = false;
-    }, 2000);
+    }, 3000);
 }
 
 /* Şeride dokununca o maç açılır */
@@ -7124,9 +7124,21 @@ function checkDay() {
  * ODA BAĞLANTISI (WebSocket). Kopunca 1, 2, 4… en fazla 30 sn sonra yeniden bağlanır; bağlanırken son alınan
  * sıra numarasını (s) ve odanın kimliğini (k) gönderir, oda yalnızca kaçırılanları yollar.
  * 45 sn'de bir "p" yoklaması (oda uyandırılmadan "o" cevabı gelir): mobil ağlar boştaki bağlantıyı kesmesin.
+ * Yoklamaya 10 sn'de cevap gelmezse bağlantı kopmuş sayılır, hemen yenisi kurulur (uyku, ağ değişimi).
+ * Sayfaya dönülünce / internet gelince (wakeRooms) beklemeden yoklanır; kopuksa beklemeden bağlanılır.
  * failed: ilk bağlantı hiçbir mesaj gelmeden koparsa bir kez çağrılır. Kapatma fonksiyonu döner;
  * fonksiyonun send(nesne) özelliği odaya mesaj gönderir (bağlı değilse false).
  */
+const liveRooms = new Set();
+
+function wakeRooms() {
+    liveRooms.forEach(wake => wake());
+}
+
+window.addEventListener('online', wakeRooms);
+window.addEventListener('focus', wakeRooms);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeRooms(); });
+
 function openRoom(path, position, onMessage, failed) {
     let ws = null;
     let closed = false;
@@ -7134,8 +7146,39 @@ function openRoom(path, position, onMessage, failed) {
     let wait = 1000;
     let ping = null;
     let retry = null;
+    let pong = null;
+
+    /* İlk bağlantı hiçbir mesaj gelmeden koparsa */
+    const lost = () => {
+        if (!heard && failed) {
+            failed();
+            failed = null;
+        }
+    };
+
+    /* Yoklamaya cevap gelmedi: eski bağlantı bırakılır, hemen yenisi kurulur */
+    const restart = () => {
+        pong = null;
+        clearInterval(ping);
+        ws.onclose = null;
+        ws.onmessage = null;
+        try { ws.close(); } catch (error) {}
+        lost();
+        if (closed)
+            return;
+        wait = 1000;
+        connect();
+    };
+
+    const probe = () => {
+        if (!ws || ws.readyState !== 1 || pong)
+            return;
+        ws.send('p');
+        pong = setTimeout(restart, 10000);
+    };
 
     const connect = () => {
+        retry = null;
         try {
             ws = new WebSocket(ODA_ADRES + path + (position.k ? '?k=' + position.k + '&s=' + position.s : ''));
         } catch (error) {
@@ -7144,12 +7187,11 @@ function openRoom(path, position, onMessage, failed) {
         }
         ws.onopen = () => {
             wait = 1000;
-            ping = setInterval(() => {
-                if (ws.readyState === 1)
-                    ws.send('p');
-            }, 45000);
+            ping = setInterval(probe, 45000);
         };
         ws.onmessage = event => {
+            clearTimeout(pong);
+            pong = null;
             if (event.data === 'o')
                 return;
             let message;
@@ -7167,10 +7209,9 @@ function openRoom(path, position, onMessage, failed) {
         };
         ws.onclose = event => {
             clearInterval(ping);
-            if (!heard && failed) {
-                failed();
-                failed = null;
-            }
+            clearTimeout(pong);
+            pong = null;
+            lost();
             if (closed || event.reason === 'bosaltildi')
                 return;
             retry = setTimeout(connect, wait);
@@ -7178,10 +7219,25 @@ function openRoom(path, position, onMessage, failed) {
         };
     };
 
+    /* Sayfaya dönüldü / internet geldi: bağlıysa yoklanır, yeniden bağlanmayı bekliyorsa hemen bağlanılır */
+    const wake = () => {
+        if (closed)
+            return;
+        if (retry) {
+            clearTimeout(retry);
+            wait = 1000;
+            connect();
+        } else
+            probe();
+    };
+
     connect();
+    liveRooms.add(wake);
     const close = () => {
         closed = true;
+        liveRooms.delete(wake);
         clearTimeout(retry);
+        clearTimeout(pong);
         clearInterval(ping);
         if (ws)
             ws.close();
