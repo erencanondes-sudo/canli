@@ -162,18 +162,39 @@ button {
 }
 
 /*
- * Reklamın altındaki 16px boş şerit (tıklanamaz). Kayan içerik bunun
- * altında kesilir; hiçbir düğme reklama 16px'ten fazla yaklaşamaz.
+ * Reklamın altındaki şerit (2,75rem, tıklanamaz): ortasında "VUU.live" yazısı. Kayan içerik bunun
+ * altında kesilir; hiçbir düğme reklama bu şeritten fazla yaklaşamaz.
  */
 #homeAdGap {
     flex: none;
-    height: 1rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     pointer-events: none;
+}
+
+/* "VUU" lacivert, hafif parlak; ".live" kırmızı; ikisi aynı boyda, kalın eğik */
+#homeAdGap .vuu {
+    font: italic 900 1.35rem/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    letter-spacing: -.02em;
+}
+
+#homeAdGap .vuu b {
+    background: linear-gradient(180deg, #5d6680, #1d2340 55%, #3a4363);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+#homeAdGap .vuu span {
+    color: #e3242b;
+    font-weight: 800;
 }
 
 /*
  * Sekme satırı sayfayla birlikte kayar: sayfaların üstünde durur, açık sayfa yukarı kaydırıldıkça
- * o kadar yukarı çıkar (placeTitleRow). Reklamla arasındaki 16px (#homeAdGap) yerinde kalır, satır onun altında kesilir.
+ * o kadar yukarı çıkar (placeTitleRow). Reklamın altındaki VUU.live şeridi (#homeAdGap) yerinde kalır, satır onun altında kesilir.
  * Sayfaların üst boşluğu satırın yüksekliği + .5rem (--title-h).
  */
 #homeTitleRow {
@@ -198,7 +219,7 @@ button {
     gap: .35em;
     min-width: 0;
 
-    /* Reklamla arası her ekranda sabit 16px */
+    /* Reklamla arası her ekranda sabit (VUU.live şeridi) */
     align-self: flex-start;
 
     /* Beş sekme dar ekranda da tek satıra sığsın */
@@ -5585,7 +5606,7 @@ body:has(#oddsSheet.open) .ad-strip::before {
     </div>
 
     <!-- Reklamla kayan içerik arasında tıklanamayan boş şerit -->
-    <div id="homeAdGap"></div>
+    <div id="homeAdGap"><div class="vuu"><b>VUU</b><span>.live</span></div></div>
 
     <main id="homeMain">
 
