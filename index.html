@@ -5023,8 +5023,8 @@ body.has-layer .ac-kapa svg {
 .kp-leg.locked .kp-lock { border-color: #0c7a58; background: #e3f5ed; color: #08583e; }
 .kp-leg-actions .kp-deep { border-color: #cfe0ff; background: #eef4ff; color: #1a56db; }
 /* =====================================================
-   GOL BİLDİRİMİ (uygulama içi): yalnızca Canlı Skor sayfasında, en altta tam genişlik mavi-gri şerit;
-   her gol 2 sn (birden çoksa sırayla); dokununca maç açılır
+   GOL BİLDİRİMİ (uygulama içi): yalnızca Canlı Skor sayfasında, en altta tam genişlik şerit;
+   gol yeşil, iptal kırmızı; her bildirim 4 sn (üstteki ince çizgi 4 sn'de azalır; birden çoksa sırayla); dokununca maç açılır
 ===================================================== */
 #goalToast {
     position: fixed;
@@ -5034,9 +5034,9 @@ body.has-layer .ac-kapa svg {
     z-index: 29;   /* maç/takım sayfası (30) ve menüler bunun üstünde açılır */
     display: flex;
     align-items: center;
-    gap: .5em;
-    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
-    background: #3b5273;
+    gap: .65em;
+    padding: .8rem 1rem calc(.8rem + env(safe-area-inset-bottom));
+    background: #16a34a;
     color: white;
     font-size: .875rem;
     box-shadow: 0 -.2em .8em rgba(0, 0, 0, .2);
@@ -5049,9 +5049,53 @@ body.has-layer .ac-kapa svg {
     transform: translateY(0);
 }
 
-/* Geri alınan gol: kırmızı gri */
+/* Geri alınan gol: kırmızı */
 #goalToast.cancel {
-    background: #74474c;
+    background: #d93025;
+}
+
+/* Başlık: yarı saydam beyaz hap içinde ("⚽ GOL" / "⚽ GOL İPTAL") */
+#goalToast .gt-title {
+    flex: none;
+    padding: .2em .65em;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .22);
+    font-size: .8125rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+}
+
+/* Maç: dakika · ev skor dep; golü atan (iptalde golü iptal edilen) takım kalın */
+#goalToast .gt-match {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+#goalToast .gt-match b {
+    font-weight: 800;
+}
+
+/* Süre çizgisi: üst kenarda, 4 sn'de soldan sağa azalır (her bildirimde baştan) */
+#goalToast::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: .1875rem;
+    background: rgba(255, 255, 255, .6);
+    transform-origin: right;
+    transform: scaleX(0);
+}
+
+#goalToast.run::before {
+    animation: goalBar 4s linear;
+}
+
+@keyframes goalBar {
+    from { transform: scaleX(1); }
 }
 
 /* Bağlantı şeridi: oda 2 denemede bağlanamazsa Canlı, Ligler satırının altında; bağlanınca yazısı değişir, kapatılana kadar kalır */
@@ -5123,9 +5167,24 @@ body.has-layer .ac-kapa svg {
     font-size: .9em;
 }
 
-/* Geri alınan gol: top kırmızı */
+/* Geri alınan gol: top kırmızı ve üstünde çapraz çizgi (siyah: topun kırmızı süzgecinden etkilenmeyen tek renk; ince açık kenarlı) */
 .score-team .goal-ball.cancel {
+    position: relative;
     filter: sepia(1) saturate(12) hue-rotate(-50deg);
+}
+
+.score-team .goal-ball.cancel::after {
+    content: '';
+    position: absolute;
+    left: -.1em;
+    right: -.1em;
+    top: 50%;
+    height: .16em;
+    margin-top: -.08em;
+    border-radius: .08em;
+    background: #000;
+    box-shadow: 0 0 0 .04em white;
+    transform: rotate(-40deg);
 }
 
 .score-team .score-red {
@@ -7090,10 +7149,13 @@ function showGoal({ match, side, cancel }) {
 
     toast.dataset.id = match.id;
     toast.classList.add('show');
+    toast.classList.remove('run');
+    toast.getBoundingClientRect();
+    toast.classList.add('run');
     if (isSaved(match.id))
         goalSound(cancel);
 
-    /* Her gol 3 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
+    /* Her gol 4 sn, sonra sıradakine geçer. Sayfadan çıkılırsa kalanlar gösterilmez */
     clearTimeout(goalTimer);
     goalTimer = setTimeout(() => {
         if (goalQueue.length && liveScreen()) {
@@ -7103,7 +7165,7 @@ function showGoal({ match, side, cancel }) {
         goalQueue.length = 0;
         toast.classList.remove('show');
         toastBusy = false;
-    }, 3000);
+    }, 4000);
 }
 
 /* Şeride dokununca o maç açılır */
