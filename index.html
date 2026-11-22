@@ -175,8 +175,11 @@ button {
     pointer-events: none;
 }
 
-/* "VUU" beyaz, ".live" kırmızı; ikisi aynı boyda, kalın eğik */
+/* "vuu" beyaz, ".live" kırmızı; ikisi aynı boyda, kalın eğik. Küçük harflerin altı boş kalır:
+   yazı .1em aşağı, üstte ve altta lacivert boşluk eşit olsun */
 #homeAdGap .vuu {
+    position: relative;
+    top: .1em;
     font: italic 900 1.35rem/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
     letter-spacing: -.02em;
 }
@@ -5604,7 +5607,7 @@ body:has(#oddsSheet.open) .ad-strip::before {
     </div>
 
     <!-- Reklamla kayan içerik arasında tıklanamayan boş şerit -->
-    <div id="homeAdGap"><div class="vuu"><b>VUU</b><span>.live</span></div></div>
+    <div id="homeAdGap"><div class="vuu"><b>vuu</b><span>.live</span></div></div>
 
     <main id="homeMain">
 
