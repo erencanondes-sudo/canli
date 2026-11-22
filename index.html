@@ -880,6 +880,23 @@ button {
     background: #f4f6fa;
 }
 
+/* Gün değişince liste kayarak gelir (0,25 sn): önceki güne soldan, sonraki güne sağdan; taşan kısım sayfanın kenarında kesilir */
+#liveList.day-from-left {
+    animation: dayFromLeft .25s ease-out;
+}
+
+#liveList.day-from-right {
+    animation: dayFromRight .25s ease-out;
+}
+
+@keyframes dayFromLeft {
+    from { transform: translateX(-35%); opacity: 0; }
+}
+
+@keyframes dayFromRight {
+    from { transform: translateX(35%); opacity: 0; }
+}
+
 /* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar, 0,15 sn kalır, sonraki 0,15 sn'de söner (toplam 0,3 sn) */
 .score-row.closed-flash,
 .tm-row.closed-flash {
@@ -8338,6 +8355,7 @@ function renderDays(keepScroll) {
  */
 function selectDay(key, keepScroll) {
 
+    const old = selectedDay;
     selectedDay = key;
     searchInput.value = '';
 
@@ -8348,6 +8366,14 @@ function selectDay(key, keepScroll) {
     watchDay(key);
     renderDays(keepScroll);
     renderLive();
+
+    /* Liste kayarak gelir: geriye (önceki gün) soldan, ileriye sağdan (günler "YYYY-AA-GG", yazı sırası = tarih sırası) */
+    if (key !== old) {
+        const list = document.getElementById('liveList');
+        list.classList.remove('day-from-left', 'day-from-right');
+        list.getBoundingClientRect();
+        list.classList.add(key < old ? 'day-from-left' : 'day-from-right');
+    }
 }
 
 /* Oklar: listede bir önceki / sonraki güne geçer */
