@@ -162,12 +162,12 @@ button {
 }
 
 /*
- * Reklamın altındaki lacivert şerit (2rem - 1px, tıklanamaz; reklamın yanlarıyla aynı lacivert, lig başlığının rengi):
+ * Reklamın altındaki lacivert şerit (2rem - 2px, tıklanamaz; reklamın yanlarıyla aynı lacivert, lig başlığının rengi):
  * ortasında "VUU.live" yazısı. Kayan içerik bunun altında kesilir; hiçbir düğme reklama bu şeritten fazla yaklaşamaz.
  */
 #homeAdGap {
     flex: none;
-    height: calc(2rem - .0625rem);
+    height: calc(2rem - .125rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -176,11 +176,11 @@ button {
 }
 
 /* "vuu" beyaz, ".live" kırmızı; ikisi aynı boyda, kalın eğik. Küçük harflerin altı boş kalır:
-   yazı .1em aşağı (üstte ve altta lacivert boşluk eşit), sonra 2px yukarı
-   (şerit 1px kısa olduğu için ortası zaten .5px yukarıda: kalan 1,5px = .09375rem) */
+   yazı .1em aşağı (üstte ve altta lacivert boşluk eşit), sonra 3px yukarı
+   (şerit 2px kısa olduğu için ortası zaten 1px yukarıda: kalan 2px = .125rem) */
 #homeAdGap .vuu {
     position: relative;
-    top: calc(.1em - .09375rem);
+    top: calc(.1em - .125rem);
     font: italic 900 1.35rem/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
     letter-spacing: -.02em;
 }
