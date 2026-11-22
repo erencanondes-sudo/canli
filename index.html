@@ -162,44 +162,42 @@ button {
 }
 
 /*
- * Reklamın altındaki şerit (2,75rem, tıklanamaz): ortasında "VUU.live" yazısı. Kayan içerik bunun
- * altında kesilir; hiçbir düğme reklama bu şeritten fazla yaklaşamaz.
+ * Reklamın altındaki lacivert şerit (2rem, tıklanamaz; reklamın yanlarıyla aynı lacivert, lig başlığının rengi):
+ * ortasında "VUU.live" yazısı. Kayan içerik bunun altında kesilir; hiçbir düğme reklama bu şeritten fazla yaklaşamaz.
  */
 #homeAdGap {
     flex: none;
-    height: 2.75rem;
+    height: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #1d2340;
     pointer-events: none;
 }
 
-/* "VUU" lacivert, hafif parlak; ".live" kırmızı; ikisi aynı boyda, kalın eğik */
+/* "VUU" beyaz, ".live" kırmızı; ikisi aynı boyda, kalın eğik */
 #homeAdGap .vuu {
     font: italic 900 1.35rem/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
     letter-spacing: -.02em;
 }
 
 #homeAdGap .vuu b {
-    background: linear-gradient(180deg, #5d6680, #1d2340 55%, #3a4363);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: white;
 }
 
 #homeAdGap .vuu span {
-    color: #e3242b;
+    color: #ff2a2a;
     font-weight: 800;
 }
 
 /*
  * Sekme satırı sayfayla birlikte kayar: sayfaların üstünde durur, açık sayfa yukarı kaydırıldıkça
  * o kadar yukarı çıkar (placeTitleRow). Reklamın altındaki VUU.live şeridi (#homeAdGap) yerinde kalır, satır onun altında kesilir.
- * Sayfaların üst boşluğu satırın yüksekliği + .5rem (--title-h).
+ * Satır lacivert şeridin .5rem altında; sayfaların üst boşluğu satırın yüksekliği + üstte ve altta .5rem (--title-h).
  */
 #homeTitleRow {
     position: absolute;
-    top: 0;
+    top: .5rem;
     left: 0;
     right: 0;
     z-index: 2;
@@ -5247,8 +5245,8 @@ body.has-layer .ac-kapa svg {
     display: flex;
     justify-content: center;
     overflow: hidden;
-    /* Reklamın yanları: sayfa zemini */
-    background: #f4f5f7;
+    /* Reklamın yanları: lacivert (lig başlığının rengi; altındaki VUU.live şeridiyle bir bütün) */
+    background: #1d2340;
 }
 
 /* Maç sayfası ve Oranlar'dan açılan sayfa açıkken reklamın arkasında stadyum görseli (sayfa kayarken belirir) */
@@ -13043,7 +13041,7 @@ const homeTitleRow = document.getElementById('homeTitleRow');
 
 function placeTitleRow(animate) {
     const page = homeTrack.querySelector('.home-page.current');
-    const height = homeTitleRow.offsetHeight + parseFloat(getComputedStyle(document.documentElement).fontSize) * .5;
+    const height = homeTitleRow.offsetHeight + parseFloat(getComputedStyle(document.documentElement).fontSize);
     homeMain.style.setProperty('--title-h', height + 'px');
     homeTitleRow.style.transition = animate ? 'transform .28s ease' : 'none';
     homeTitleRow.style.transform = 'translateY(' + -Math.min(page ? page.scrollTop : 0, height) + 'px)';
