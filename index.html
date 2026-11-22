@@ -93,6 +93,7 @@ button {
  * Maç sayfasındaki sekmeler gibi her sayfa kendi içinde yukarı aşağı kayar.
  */
 #homeMain {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: flex;
@@ -170,13 +171,21 @@ button {
     pointer-events: none;
 }
 
+/*
+ * Sekme satırı sayfayla birlikte kayar: sayfaların üstünde durur, açık sayfa yukarı kaydırıldıkça
+ * o kadar yukarı çıkar (placeTitleRow). Reklamla arasındaki 16px (#homeAdGap) yerinde kalır, satır onun altında kesilir.
+ * Sayfaların üst boşluğu satırın yüksekliği + .5rem (--title-h).
+ */
 #homeTitleRow {
-    flex: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
     padding: 0 var(--side-gap);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: .5rem;
 }
 
 /*
@@ -1637,7 +1646,7 @@ button {
      * Yan boşluk --side-gap ile aynı, ama ekran genişliğine göre (100vw): sayfanın içinde
      * % şeridin genişliğine göre hesaplanırdı. Alttaki boşluk: son kart düğmenin arkasında kalmasın.
      */
-    padding: 0 max(16px, calc((100vw - var(--content-width)) / 2)) 11.25rem;
+    padding: var(--title-h, 0) max(16px, calc((100vw - var(--content-width)) / 2)) 11.25rem;
 }
 
 .home-empty {
@@ -13005,7 +13014,26 @@ function setHomeModeView(mode) {
     });
 
     placeHomeTrack(0);
+    placeTitleRow(true);
 }
+
+/* Sekme satırı: açık sayfa ne kadar yukarı kaydırıldıysa o kadar yukarı (en çok kendi yüksekliği kadar) */
+const homeTitleRow = document.getElementById('homeTitleRow');
+
+function placeTitleRow(animate) {
+    const page = homeTrack.querySelector('.home-page.current');
+    const height = homeTitleRow.offsetHeight + parseFloat(getComputedStyle(document.documentElement).fontSize) * .5;
+    homeMain.style.setProperty('--title-h', height + 'px');
+    homeTitleRow.style.transition = animate ? 'transform .28s ease' : 'none';
+    homeTitleRow.style.transform = 'translateY(' + -Math.min(page ? page.scrollTop : 0, height) + 'px)';
+}
+
+homeTrack.addEventListener('scroll', event => {
+    if (event.target.classList && event.target.classList.contains('current'))
+        placeTitleRow(false);
+}, true);
+window.addEventListener('resize', () => placeTitleRow(false));
+placeTitleRow(false);
 
 /* Şeridin yeri: seçili sayfa + parmağın kaydırdığı kadar (maç sayfasındaki sekmeler gibi) */
 function placeHomeTrack(px) {
