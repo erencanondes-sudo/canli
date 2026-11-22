@@ -6,7 +6,9 @@
  *   Her seçeneğin olasılığı şirket payı çıkarılarak bulunur, 2 şirketin ortalaması alınır.
  *   Türkiye oranlarına benzetmek için ORAN_PAY eklenip oran yeniden hesaplanır (tahmini).
  * Yazılanlar (değişmediyse yazılmaz):
- *   maç odası mac/{maç no} → oran : maçın bütün oranları (maç sayfası, Oranlar sekmesi)
+ *   R2 oran/{gün}.json  : günün maçlarının bütün oranları { maç no: oranlar } (gzip; maç sayfası Oranlar sekmesi, gelecek günler)
+ *   gün odası (bugün)   : bugünün maçlarının oranları, maç içeriğinin "oran" alanı (maç sayfası, canlı)
+ *   Gün değişince yeni günün oranları R2 dosyasından gün odasına yazılır (odayaYukle).
  * Firestore (gzip ile sıkıştırılmış):
  *   oran_gun/{gün}    : günün maçları, menüdeki 3 oran (Oranlar menüsü)
  *   oran_lig/{lig}    : ligin 8 günü, menüdeki 3 oran (Oranlar menüsü, lig seçilince)
@@ -17,6 +19,7 @@ const A = require('./ayarlar');
 const api = require('./api');
 const db = require('./veritabani');
 const oda = require('./oda');
+const depo = require('./depo');
 
 /* API'deki bahis adı → kod */
 const BAHIS = {
@@ -216,8 +219,8 @@ const saatMetni = ts => new Date(ts * 1000).toLocaleTimeString('en-GB', { timeZo
 let calisiyor = false;
 let sonZaman = null;      /* son başarılı güncelleme (ms); açılışta Firestore'dan okunur */
 let sonDeneme = 0;        /* son deneme (hata olursa 30 dk beklenir) */
-const yazilanMac = new Set();   /* bu açılışta oranı maç odasına yazılan maçlar */
 const yazilanLig = new Set();   /* bu açılışta yazılan lig dokümanları */
+let odadakiGun = null;          /* oranları gün odasına yazılmış gün (bugün) */
 
 /* En son geçilen oran saati (ms). Türkiye saati UTC+3 (yaz saati yok) */
 function sonOranSaati() {
@@ -299,10 +302,9 @@ async function guncelle(maclar, gunler, bugun) {
 
     /* Hesap ve yazma */
     const gunSatir = new Map(gunler.map(g => [g, {}]));
+    const gunOran = new Map(gunler.map(g => [g, {}]));
     const ligSatir = new Map();
-    const buTur = new Set();
     let yazilan = 0;
-    let yazilamayan = 0;
     let menude = 0;
 
     for (const [no, liste] of bahisler) {
@@ -310,13 +312,8 @@ async function guncelle(maclar, gunler, bugun) {
         const { o, P } = hesapla(liste);
         if (!o) continue;
 
-        buTur.add(no);
-        yazilanMac.add(no);
-        try {
-            if (await oda.oran(no, o)) yazilan++;
-        } catch (e) {
-            yazilamayan++;
-        }
+        gunOran.get(k.gun)[no] = o;
+        yazilan++;
 
         const oranlar = menuSatiri(o, P);
         if (oranlar.every(x => x === '')) continue;
@@ -334,19 +331,17 @@ async function guncelle(maclar, gunler, bugun) {
 
     for (const [gun, satirlar] of gunSatir) await db.yazSikistir('oran_gun/' + gun, JSON.stringify(satirlar));
 
+    /* Günlerin bütün oranları R2'ye; bugününkiler gün odasına da */
+    for (const [gun, liste] of gunOran) depo.yaz('oran/' + gun + '.json', JSON.stringify(liste), true);
+    oda.oranlar(bugun, gunOran.get(bugun) || {});
+    odadakiGun = bugun;
+
     /* Bu turda maçı kalmayan lig boşaltılır */
     for (const lig of yazilanLig) if (!ligSatir.has(lig)) ligSatir.set(lig, {});
     for (const [lig, satirlar] of ligSatir) {
         await db.yazSikistir('oran_lig/' + lig, JSON.stringify(satirlar));
         if (Object.keys(satirlar).length) yazilanLig.add(lig);
         else yazilanLig.delete(lig);
-    }
-
-    /* Başlamış maçların oranı bir daha yazılmaz: hafızadan silinir */
-    for (const no of yazilanMac) {
-        if (buTur.has(no)) continue;
-        yazilanMac.delete(no);
-        oda.oranUnut(no);
     }
 
     sonZaman = Date.now();
@@ -360,7 +355,7 @@ async function guncelle(maclar, gunler, bugun) {
     });
 
     console.log('Oranlar: ' + istek + ' istek, ' + sure + ' sn, ' + bahisler.size + ' maç (menüde ' + menude +
-        '), yeni yazılan maç ' + yazilan + (yazilamayan ? ', odaya yazılamayan ' + yazilamayan : '') + ', şirket başına maç ' + JSON.stringify(sirketSayisi));
+        '), oranı hesaplanan maç ' + yazilan + ', şirket başına maç ' + JSON.stringify(sirketSayisi));
     const yeni = [...bilinmeyen].filter(ad => !bildirilen.has(ad));
     if (yeni.length) {
         console.log('Oranlar: tanınmayan bahisler: ' + yeni.join(' | '));
@@ -369,4 +364,20 @@ async function guncelle(maclar, gunler, bugun) {
     bilinmeyen.clear();
 }
 
-module.exports = { kontrol, hesapla, menuSatiri };
+/*
+ * Gün değişince (ya da sunucu açılınca) bugünün oranları R2'den gün odasına (okunamazsa sonraki turda yeniden).
+ * Dosya yoksa (oranlar henüz R2'ye hiç yazılmadı) oranlar saatini beklemeden hemen güncellenir.
+ */
+async function odayaYukle(bugun) {
+    if (odadakiGun === bugun) return;
+    try {
+        const liste = await depo.oku('oran/' + bugun + '.json');
+        if (liste) oda.oranlar(bugun, liste);
+        else sonZaman = 0;
+        odadakiGun = bugun;
+    } catch (e) {
+        console.error('Bugünün oranları odaya yazılamadı: ' + e.message);
+    }
+}
+
+module.exports = { kontrol, hesapla, menuSatiri, odayaYukle };

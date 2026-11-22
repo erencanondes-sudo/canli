@@ -8,17 +8,17 @@
  *   Gönderilemezse bir sonraki çağrıda hepsi yeniden gider.
  * ozetHali(gün): odanın onayladığı Özet ve o andaki oda sırası: { metin: R2 dosyasının JSON'u { k, s, m }, surum } ya da null.
  *   surum her onayda artar (sunucu R2 dosyasını yalnızca değişince yazar).
- * mac(no, içerik): maç odasına içeriği gönderir (değiştiyse; oda alan alan karşılaştırır).
- * oran(no, oranlar): maçın oranlarını maç odasına yazar, gönderilene kadar bekler (değişmediyse gitmez; true: gitti).
- * oranUnut(no): maçın son gönderilen oranı hafızadan silinir (maç başladı, oranı bir daha yazılmaz).
- * oranOku(no): maç odasındaki oranlar (maç kesinleşince R2 dosyasına konur; yoksa {}).
- * sil(yol): odayı boşaltır ("gun/2026-11-09", "mac/123").
+ * mac(gün, no, içerik): maçın içeriğini gün odasına gönderir (değiştiyse; oda alan alan karşılaştırır).
+ * oranlar(gün, { no: oranlar }): maçların oranlarını gün odasına gönderir (değişenler).
+ * macHepsi(gün): gün odasındaki bütün maçların içeriği { maç no: içerik } (gün eskiyince R2'ye taşınır).
+ * sil(yol): gün odasını boşaltır ("gun/2026-11-09").
  * Aynı oda için istekler sırayla gider; beklerken yenisi gelirse yalnızca en son hali gider.
  * Gönderilemezse o odanın "son gönderilen"i unutulur: bir sonraki yazmada alanların hepsi yeniden gider.
  * hizliSil(gün, nolar): maçların hızlı skorunu ve uyarısını gün odasından siler (hızlı kaynağın yazdığı h, u).
- * dinle(gün, mesajGeldi): gün odasına telefon gibi bağlanır (hızlı kaynağı öğrenmek için). Her bağlanışta oda her şeyi
+ * dinle(gün, mesajGeldi): gün odasına telefon gibi bağlanır (hızlı kaynağı öğrenmek için; anahtarla, ana odaya: kopya sınırına
+ *   takılmaz). Her bağlanışta oda her şeyi
  *   baştan gönderir ("l"), sonra değişiklikler ("d"). Kopunca 5 sn sonra yeniden bağlanır. Kapatma fonksiyonu döner.
- * acik(no): maç odasına "bu maça yorum yazılabilir" bilgisi (bir kez).
+ * acik(no): mesaj odasına "bu maça yorum yazılabilir" bilgisi (bir kez).
  * bildirimDinle(gonder): bildirim kuyruğu odasına bağlanır; gelen her yanıt bildirimi için gonder({ kisi, baslik, metin, link }),
  *   sonra alındığı odaya bildirilir (kuyruktan silinir). Kopunca 5 sn sonra yeniden bağlanır.
  */
@@ -29,7 +29,8 @@ const SIL = Symbol('sil');
 const son = new Map();       /* oda yolu → { alan: son gönderilen metin } */
 const ozetGiden = new Map(); /* gün odası yolu → Map(maç no → olayların JSON'u): gönderilen ya da gönderilmeyi bekleyen */
 const ozetOnay = new Map();  /* gün odası yolu → { m: Map(maç no → olayların JSON'u), s, k, surum }: odanın aldığı */
-const oranSon = new Map();   /* maç no → son gönderilen oranların JSON'u */
+const macGiden = new Map();  /* gün odası yolu → Map(maç no → içeriğin JSON'u): gönderilen ya da gönderilmeyi bekleyen */
+const oranGiden = new Map(); /* gün odası yolu → Map(maç no → oranların JSON'u) */
 const bekleyen = new Map();  /* oda yolu → { alan: değer } ya da SIL */
 const gidiyor = new Set();
 let sonHata = null;
@@ -64,6 +65,14 @@ function yaz(yol, alanlar) {
             var_ = true;
             continue;
         }
+        /* Maç içerikleri de birikir: maç başına { d?, oran? } ya da null (silindi) */
+        if (alan === 'm') {
+            yeni.m = yeni.m || {};
+            for (const [no, x] of Object.entries(deger))
+                yeni.m[no] = x === null || yeni.m[no] === null || !yeni.m[no] ? x : Object.assign(yeni.m[no], x);
+            var_ = true;
+            continue;
+        }
         if (!(alan in yeni) && once[alan] === JSON.stringify(deger))
             continue;
         yeni[alan] = deger;
@@ -89,7 +98,7 @@ async function bosalt(yol) {
                 const cevap = await istek('/yaz/' + yol, 'POST', is);
                 const once = son.get(yol) || {};
                 for (const [alan, deger] of Object.entries(is))
-                    if (alan !== 'o') once[alan] = JSON.stringify(deger);
+                    if (alan !== 'o' && alan !== 'm') once[alan] = JSON.stringify(deger);
                 son.set(yol, once);
                 if (is.o) ozetOnaylandi(yol, is.o, cevap);
             }
@@ -97,6 +106,8 @@ async function bosalt(yol) {
         } catch (e) {
             son.delete(yol);
             ozetGiden.delete(yol);
+            macGiden.delete(yol);
+            oranGiden.delete(yol);
             sonHata = e.message;
             console.error(e.message);
         }
@@ -115,7 +126,7 @@ async function hizliSil(gunAdi, nolar) {
 }
 
 /* Odaya WebSocket ile bağlanır; mesajGeldi(mesaj, ws) */
-function dinle(gunAdi, mesajGeldi, yol = '/oda/gun/' + gunAdi) {
+function dinle(gunAdi, mesajGeldi, yol = '/oda/gun/' + gunAdi + '?anahtar=' + encodeURIComponent(ODA_ANAHTAR || '')) {
     let ws = null;
     let kapali = false;
     let bekleme = null;
@@ -193,18 +204,24 @@ function ozetHali(gunAdi) {
     const m = [...onay.m].map(([no, metin]) => JSON.stringify(no) + ':' + metin).join(',');
     return { metin: '{"k":' + JSON.stringify(onay.k) + ',"s":' + onay.s + ',"m":{' + m + '}}', surum: onay.surum };
 }
-const mac = (no, icerik) => yaz('mac/' + no, { d: icerik });
-
-async function oran(no, oranlar) {
-    const metin = JSON.stringify(oranlar);
-    if (oranSon.get(no) === metin) return false;
-    await istek('/yaz/mac/' + no, 'POST', { oran: oranlar });
-    oranSon.set(no, metin);
-    return true;
+/* Maçın alanı (içerik ya da oran) son gönderilenden farklıysa gün odasına birikir */
+function macAlani(harita, gunAdi, no, alan, deger) {
+    const yol = 'gun/' + gunAdi;
+    const giden = harita.get(yol) || new Map();
+    const metin = JSON.stringify(deger);
+    if (giden.get(String(no)) === metin) return;
+    giden.set(String(no), metin);
+    harita.set(yol, giden);
+    yaz(yol, { m: { [no]: { [alan]: deger } } });
 }
 
-const oranUnut = no => oranSon.delete(no);
-const oranOku = no => istek('/yaz/mac/' + no, 'GET');
+const mac = (gunAdi, no, icerik) => macAlani(macGiden, gunAdi, no, 'd', icerik);
+
+function oranlar(gunAdi, liste) {
+    for (const [no, o] of Object.entries(liste)) macAlani(oranGiden, gunAdi, no, 'oran', o);
+}
+
+const macHepsi = gunAdi => istek('/yaz/gun/' + gunAdi + '?tum=1', 'GET');
 const acik = no => yaz('mac/' + no, { acik: 1 });
 
 function sil(yol) {
@@ -215,9 +232,9 @@ function sil(yol) {
 
 /* Takip edilmeyen maçların ve eski günlerin "son gönderilen"i hafızadan silinir */
 function unut(gecerli) {
-    for (const harita of [son, ozetGiden, ozetOnay])
+    for (const harita of [son, ozetGiden, ozetOnay, macGiden, oranGiden])
         for (const yol of harita.keys())
             if (!gecerli(yol)) harita.delete(yol);
 }
 
-module.exports = { gun, ozet, ozetHali, mac, oran, oranUnut, oranOku, acik, sil, unut, hizliSil, dinle, bildirimDinle, sonHata: () => sonHata };
+module.exports = { gun, ozet, ozetHali, mac, oranlar, macHepsi, acik, sil, unut, hizliSil, dinle, bildirimDinle, sonHata: () => sonHata };

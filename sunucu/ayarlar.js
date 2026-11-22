@@ -132,10 +132,11 @@ module.exports = {
     OZET_R2_ARALIK: 30000,
     PUAN_BEKLE: 5 * 60000,          /* ligde maç bitince puan durumu bu kadar sonra çekilir (puan.js) */
     PUAN_TUR_ISTEK: 4,              /* puan durumu için turda en fazla bu kadar API isteği (lig başına 2) */          /* Özet R2'ye (ozet/{gün}.json) en fazla bu aralıkla yazılır (değiştiyse); sitede önbellek de 30 sn */
-    FIKSTUR_BUGUN: 30 * 60000,      /* bugünün ve yarının fikstürü: 30 dk */
-    FIKSTUR_DIGER: 60 * 60000,      /* dün ve yarının fikstürü: 1 saat */
+    FIKSTUR_BUGUN: 30 * 60000,      /* bugünün fikstürü: 30 dk */
+    FIKSTUR_YARIN: 2 * 3600000,     /* yarının fikstürü: 2 saat */
+    FIKSTUR_DIGER: 60 * 60000,      /* dünün fikstürü: 1 saat */
     ILERI_GUN: 7,                   /* bugünden sonra kaç günün fikstürü çekilir */
-    FIKSTUR_ILERI: 6 * 3600000,     /* yarından sonraki günlerin fikstürü: 6 saat */
+    FIKSTUR_ILERI: 8 * 3600000,     /* yarından sonraki günlerin fikstürü: 8 saat */
     KAPSAM_ARALIK: 24 * 3600000,    /* liglerin veri kapsamı: günde 1 */
 
     /* ORANLAR (maç öncesi, canlı değil) */

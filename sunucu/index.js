@@ -6,7 +6,7 @@
  *   3. Dakikada bir detay (istatistik, kadro), maç sonları ve düzeltmeler
  *   4. Değişenleri yaz: takım adları ve lig bilgisi (R2); gün listesi (gün odası + R2, değişince; hızlı kaynağın golünde de);
  *      Özet (değişen maçlar gün odasına; R2'ye OZET_R2_ARALIK'ta bir, sıkıştırılmış);
- *      maç içeriği (maç odası; maç kesinleşince R2 ve oda boşaltılır)
+ *      maç içeriği (maçın gün odası; gün dünden eski olunca içerikler R2'ye taşınır, oda boşaltılır)
  *   5. Maçta olay olduysa zili açık cihazlara bildirim (bildirim.js; gol ve iptal hızlı kaynaktan da);
  *      yorumlardaki @rumuz yanıt bildirimleri bildirim kuyruğu odasından gelir
  *   ESPN_LIGLER'deki liglerde ESPN ikinci kaynak (espn.js): skor, durum, olaylar ve istatistik API'ninkiyle birleştirilir.
@@ -320,24 +320,16 @@ async function detayCek(nolar) {
             if (f.lineups && f.lineups.length) k.kadro = true;
             sezon.macDegisti(f);
 
-            /* Maç içeriği maç odasına; maç bitince olaylarla birlikte tam (istatistik vermeyen liglerde de).
-               Maç kesinleşince (bitişten 2 saat sonraki son çekiş) içerik odadaki oranlarla birlikte R2'ye mac/{no}.json yazılır,
-               oda boşaltılır.
+            /* Maç içeriği maçın gün odasına (sabah maçı iki günün listesindeyse ikisine); maç bitince olaylarla birlikte tam
+               (istatistik vermeyen liglerde de), bitişten 2 saat sonraki son çekişte de. Gün dünden eski olunca içerikler
+               odadan R2'ye taşınır (arsivle).
                Bir maçın verisindeki sorun turu durdurmaz: o maç atlanır, günlüğe yazılır. */
             const bitti = BITTI.has(d);
             k.detayF = f;
             if (bitti || (detayli.get(f.league.id) && (k.kadro || (f.statistics && f.statistics.length)))) {
                 try {
                     const dokuman = icerik(k, f, bitti);
-                    if (bitti && k.duzeltildi) {
-                        const oran = await oda.oranOku(f.fixture.id);
-                        if (oran && Object.keys(oran).length) dokuman.oran = oran;
-                        await depo.yukle('mac/' + f.fixture.id + '.json', JSON.stringify({ ...dokuman, g: Date.now() }));
-                        oda.sil('mac/' + f.fixture.id);
-                        sezon.icerikYazildi(f.fixture.id);
-                    } else {
-                        oda.mac(f.fixture.id, dokuman);
-                    }
+                    macGunleri(k).forEach(gun => oda.mac(gun, f.fixture.id, dokuman));
                 } catch (e) {
                     console.error('Maç ' + f.fixture.id + ' yazılamadı: ' + e.message);
                 }
@@ -365,10 +357,38 @@ async function espnCek() {
         const k = maclar.get(no);
         espnUygula(no, k);
         const bitti = BITTI.has(durumu(k));
-        if (k.detayF && (bitti || detayli.get(k.f.league.id)) && !(bitti && k.duzeltildi))
-            oda.mac(no, icerik(k, k.detayF, bitti));
+        if (k.detayF && (bitti || detayli.get(k.f.league.id))) {
+            const dokuman = icerik(k, k.detayF, bitti);
+            macGunleri(k).forEach(gun => oda.mac(gun, no, dokuman));
+        }
     });
 }
+
+/*
+ * Gün dünden eski olunca: odadaki bütün maçların içeriği (oranlarla) R2'ye mac/{no}.json olarak yazılır, sonra oda boşaltılır.
+ * Bir dosya yazılamazsa oda boşaltılmaz, sonraki turda yeniden denenir. Her gün sunucu açıldıktan sonra bir kez yapılır
+ * (yeniden açılınca boş odada yeniden bakılır, iş yoktur).
+ */
+const arsivlenen = new Set();
+
+async function arsivle(gun) {
+    if (arsivlenen.has(gun)) return;
+    try {
+        const hepsi = await oda.macHepsi(gun);
+        for (const [no, dokuman] of Object.entries(hepsi || {})) {
+            await depo.yukle('mac/' + no + '.json', JSON.stringify({ ...dokuman, g: Date.now() }));
+            sezon.icerikYazildi(Number(no));
+        }
+        oda.sil('gun/' + gun);
+        arsivlenen.add(gun);
+        if (Object.keys(hepsi || {}).length) console.log('Arşiv ' + gun + ': ' + Object.keys(hepsi).length + ' maç R2\'ye');
+    } catch (e) {
+        console.error('Arşiv ' + gun + ' yapılamadı: ' + e.message);
+    }
+}
+
+/* Maçın listesinde bulunduğu günler (kendi günü; sabah maçıysa ertesi gün de) */
+const macGunleri = k => [k.gun, k.gun2].filter(Boolean);
 
 /* ---------- Yazma ---------- */
 
@@ -472,7 +492,9 @@ function gunYaz(gun) {
     const surumler = {};
     if (takimHali && takimHali.s) surumler.takim = takimHali.s;
     if (analizSurum) surumler.analiz = analizSurum;
-    oda.gun(gun, { r: satirlar, v: surumler });
+    /* Gün odası yalnızca dün ve bugün; diğer günler yalnızca R2'den okunur */
+    const [dun, bugun] = gunler();
+    if (gun === dun || gun === bugun) oda.gun(gun, { r: satirlar, v: surumler });
     depo.yaz('gun/' + gun + '.json', JSON.stringify(duz));
 }
 
@@ -615,15 +637,16 @@ async function tur() {
         if (basla - zaman.kapsam >= A.KAPSAM_ARALIK) {
             await kapsamCek();
             ligYaz();
-            /* Dünden eski günlerin odaları boşaltılır (o günler R2'den okunur) */
-            for (let i = 2; i <= A.ODA_GUN_SAKLA; i++) oda.sil('gun/' + gunAdi(basla - A.BUGUN_KAYMA * SAAT_MS - i * 864e5));
             zaman.kapsam = basla;
         }
+
+        /* Dünden eski günler: maç içerikleri odadan R2'ye taşınır, oda boşaltılır (o günler R2'den okunur) */
+        for (let i = 2; i <= A.ODA_GUN_SAKLA; i++) await arsivle(gunAdi(basla - A.BUGUN_KAYMA * SAAT_MS - i * 864e5));
 
         /* Bir gün iki takvim gününe yayılır (07:00 → ertesi gün 06:59): bir takvim günü fazla çekilir */
         const takvim = [...tumu, sonrakiGun(tumu[tumu.length - 1])];
         for (const gun of takvim) {
-            const aralik = gun === bugun || gun === yarin ? A.FIKSTUR_BUGUN : gun === dun ? A.FIKSTUR_DIGER : A.FIKSTUR_ILERI;
+            const aralik = gun === bugun ? A.FIKSTUR_BUGUN : gun === yarin ? A.FIKSTUR_YARIN : gun === dun ? A.FIKSTUR_DIGER : A.FIKSTUR_ILERI;
             if (basla - (zaman.fikstur[gun] || 0) < aralik) continue;
             if (gun !== bugun && gun !== yarin && api.yedekte()) continue;
             await fiksturCek(gun);
@@ -650,10 +673,13 @@ async function tur() {
         const hazir = tumu.filter(gun => zaman.fikstur[gun] && zaman.fikstur[sonrakiGun(gun)]);
         hazirGunler = hazir;
         await takimYaz();
-        /* Yorum yazılabilen maçlar: maç odasına bir kez bildirilir */
+        /* Yorum yazılabilen maçlar: mesaj odasına bir kez bildirilir */
         for (const no of maclar.keys()) oda.acik(no);
         for (const gun of hazir) gunYaz(gun);
         for (const gun of hazir) if (gun <= bugun) await ozetYaz(gun);
+
+        /* Gün değişince bugünün oranları (R2'den) gün odasına */
+        await oran.odayaYukle(bugun);
 
         /* Oranlar (günde 2 kez): bugün ve sonraki 7 günün fikstürü hazırsa. Beklenmez, arka planda sürer */
         const ileri = tumu.slice(1);

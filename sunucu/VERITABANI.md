@@ -2,8 +2,8 @@
 
 Odalar, bir dosya deposu ve veritabanları var:
 
-- **Odalar (Cloudflare Durable Objects, `oda/` klasörü, Worker adı `canli-oda`):** canlı veri. Gün odası (günün listesi, hızlı kaynak; Özet değişikliklerini iletir) ve maç odası (maçın içeriği, oranları, yorumları). Telefon odaya açık bir hatla (WebSocket) bağlanır; oda değişenleri kendisi gönderir. Ayrıntı: aşağıda "Odalar".
-- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet (gzip ile sıkıştırılmış) ve kesinleşmiş maçların içeriği, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json`, `/veri/sezon/…` olarak okur. Okuyucu bugün, dün ve ilerideki günlerin listesini ve takım adlarını önbelleğe aldırmaz (her açılışta en son hali), bugün ve dünün Özet'ini 30 sn, daha eski günleri, maç dosyalarını ve lig bilgisini 1 saat tutturur. Süresi olan dosyalar Cloudflare önbelleğinde de tutulur (domainde; her merkezde süresi boyunca R2'den bir kez okunur). Sıkıştırılmış Özet dosyasını açıp gönderir (Cloudflare tarayıcıya giderken kendisi sıkıştırır).
+- **Odalar (Cloudflare Durable Objects, `oda/` klasörü, Worker adı `canli-oda`):** canlı veri. Gün odası (günün listesi, hızlı kaynak, maçların içeriği ve oranları; Özet değişikliklerini iletir; 3000 bağlantıdan sonra kopyalar) ve mesaj odası (maçın yorumları). Telefon odaya açık bir hatla (WebSocket) bağlanır; oda değişenleri kendisi gönderir. Ayrıntı: aşağıda "Odalar".
+- **Cloudflare R2 (kova `canli`):** günün maç listesi, Özet (gzip ile sıkıştırılmış), oranlar ve dünden eski günlerin maç içerikleri, JSON dosyası olarak (arşiv, silinmez). Sunucu yazar (anahtarlar `/etc/canli/anahtar.env`: `R2_ADRES`, `R2_KIMLIK`, `R2_GIZLI`); site Cloudflare Pages'teki okuyucudan (`functions/veri`, kovaya `DEPO` adıyla bağlı) `/veri/gun/{gün}.json`, `/veri/ozet/{gün}.json`, `/veri/oran/{gün}.json`, `/veri/mac/{no}.json`, `/veri/takim.json`, `/veri/lig.json`, `/veri/sezon/…` olarak okur. Önbellek süreleri (telefon / Cloudflare): gün listesi bugün 0 / 0, dün 10 dk / 5 dk, daha eski günler 1 gün / 1 saat, gelecek günler 2 saat / 30 dk; Özet bugün ve dün 30 sn / 30 sn, daha eski günler 1 gün / 1 saat; oranlar 4 saat / 1 saat; maç dosyaları ve lig bilgisi 1 saat; takım adları ve sezon durumu tutulmaz. Cloudflare önbelleği domainde çalışır (her merkezde süresi boyunca R2'den bir kez okunur). Sıkıştırılmış Özet ve oran dosyalarını açıp gönderir (Cloudflare tarayıcıya giderken kendisi sıkıştırır).
 - **Cloudflare D1 (veritabanı `canli`):** kullanıcı bilgileri (rumuz, engellenenler, sayaç, şikayetler; aşağıda "Mesajlar").
 - **Realtime Database:** artık kullanılmıyor (kuralları her şeyi kapatır).
 - **Firestore:** menü oranları, analizler, bildirim kayıtları, sunucu durumu; yönetim sayfasının elle düzeltme kilitleri ve istekleri.
@@ -13,8 +13,8 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
-| Gün odası `gun/{gün}` | Günün maçlarının satırları (`r`, tek satır), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`); Özet değişikliklerini (`o`) saklamadan iletir. Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca liste, sonra değişenler) | Skor, dakika, durum, olay, hızlı skor değişince | satır ~40 bayt |
-| Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, puan, olaylar, oran }` (her alan bir satır; aşağıda "Maç içeriği" ve "Oranlar") ve yorumları. Maç kesinleşince içerik silinir, yorumlar kalır | Sunucu | Maç sayfası ve Oranlar menüsündeki oran sayfası (açıkken) | İçerik: canlı maçta ve bitişten sonraki 10 dk en sık 2 dk'da bir, maç bitince. Oranlar: günde 2 kez | ~2–4 KB |
+| Gün odası `gun/{gün}` (yalnızca dün ve bugün) | Günün maçlarının satırları (`r`, tek satır), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`); Özet değişikliklerini (`o`) saklamadan iletir; maçların içeriği `{ durum, istatistik, kadro, puan, olaylar, oran }` (maç başına, alan alan; aşağıda "Maç içeriği" ve "Oranlar"; gün dünden eski olunca R2'ye taşınır, oda boşaltılır). Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca liste, sonra değişenler); maç sayfası ve oran sayfası (maçı dinleyince içeriği) | Skor, dakika, durum, olay, hızlı skor değişince; içerik canlı maçta ve bitişten sonraki 10 dk en sık 2 dk'da bir, maç bitince; oranlar günde 2 kez | satır ~40 bayt; içerik maç başına ~2–4 KB |
+| Mesaj odası `mac/{maç no}` | Maçın yorumları (aşağıda "Mesajlar") | Telefonlar; sunucu yalnızca "yorum yazılabilir" bilgisini | Yorumlar sekmesi (açılınca) | Yorum yazılınca | yorum başına ~150 bayt |
 | R2 `sezon/{lig}-{yıl}.json` | Sezonun bütün maçları `{ "maç no": "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" }` (aşağıda "Sezonlar") | Sunucu | Takım ve lig sayfası (bir kez; 5 dk önbellek) | Günde 1 ve o ligden maç bitince | lig başına ~15–20 KB |
 | R2 `sezon/takimlar.json` | Takım dizini `{ takım no: ["lig-yıl", ...] }`: takım hangi sezon dosyalarında (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Sezon listesinde yeni takım görülünce | ~birkaç KB |
 | R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |
@@ -23,13 +23,14 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | R2 `lig.json` | Liglerin kadro / istatistik verip vermediği `{ "lig no": 1 / 0 }` | Sunucu | Site (açılışta bir kez) | Günde en fazla 1 | < 1 KB |
 | Firestore `elle/{maç no}` | Elle düzeltme kilidi `{ s: "2-1", d?: "FT", o?: "[olaylar]", t }`: kilit durdukça maçın skoru (ve durumu, olayları) API'nin yerine geçer, bildirim gitmez. Gün listesini, Özet'i ve maç içeriğini sunucu kilitten yazar; kilit konunca, değişince ve kalkınca maç API'den yeniden çekilir, konunca maçın hızlı kaydı silinir (yönetim sayfası yalnızca kilidi yazar; dün ve sonrası) | Yönetim sayfası | Sunucu (dinler), yönetim sayfası | Düzeltmede | ~40 bayt |
 | Firestore `istek/{ad}` | Yönetim sayfasının sunucudan istediği iş `{ tur, mac?, t }`: `yenile_{maç}` maçı API'den yeniden çek, `hizli_sil_{maç}` maçın hızlı kaydını sil, `hizli_sil_hepsi` bütün hızlı kayıtları sil. Sunucu işi yapınca siler (yönetim sayfası bunu bekler) | Yönetim sayfası | Sunucu (dinler) | İstendiğinde | ~50 bayt |
-| R2 `gun/{gün}.json` | Günün bütün maçları `{ "maç no": "satır" }` (gün odasındaki satırla aynı). Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) o. Arşiv, silinmez | Sunucu | Canlı Skor: dünden eski günler, yarın ve sonrası (bir kez); gün odasına bağlanılamazsa bugün ve dün de | Skor ya da durum değişince (hızlı kaynağın golünde de) | 200 maç ~7,7 KB |
+| R2 `gun/{gün}.json` | Günün bütün maçları `{ "maç no": "satır" }` (gün odasındaki satırla aynı). Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) o. Arşiv, silinmez | Sunucu | Canlı Skor: dünden eski günler, yarın ve sonrası (bir kez); dün oda bağlanana kadar; gün odasına bağlanılamazsa bugün ve dün de. Açılışta bugünün listesi ve Özet'i gelince dün, yarın ve öbür gün arkada indirilir | Skor ya da durum değişince (hızlı kaynağın golünde de); gelecek günler fikstür çekilince (yarın 2 saatte, sonrakiler 8 saatte bir) | 200 maç ~7,7 KB |
+| R2 `oran/{gün}.json` | Bugün ve sonraki 7 günün başlamamış maçlarının bütün oranları `{ "maç no": oranlar }` (aşağıda "Oranlar"; gzip ile sıkıştırılmış) | Sunucu | Gelecek bir gün açılınca listeden sonra arkada (maç sayfası ve oran sayfası); gün değişince sunucu bugününkileri gün odasına yazar | Günde 2 kez | gün başına ~400 KB (sıkıştırılmış ~150–200 KB) |
 | R2 `ozet/{gün}.json` | Dün ve bugünün oynanan ve biten maçlarının olayları `{ k, s, m: { "maç no": [olaylar] } }` (gzip ile sıkıştırılmış). `k`, `s`: dosya yazılırken gün odasının kimliği ve sırası (telefon sonrasını odadan ister; eski dosyalarda yok). Arşiv, silinmez | Sunucu | Site: son 7 gün; bugün ve dün listeden sonra (30 sn önbellekli, eksikler gün odasından); yönetim sayfası | Değişince, en sık 30 sn'de bir (`OZET_R2_ARALIK`) | 150 maç ~95 KB (sıkıştırılmış ~10–15 KB) |
-| R2 `mac/{maç no}.json` | Kesinleşmiş maçın içeriği `{ durum, istatistik, kadro, puan, olaylar, oran?, g: yazma anı (ms) }` (oran: maç odasındaki oranlar, varsa). Maç bitince 2 saat sonraki son çekişte yazılır (elle düzeltmede yeniden). Arşiv, silinmez | Sunucu | Maç sayfası (maç odası boşsa, bir kez) | Maç kesinleşince | ~2–4 KB |
+| R2 `mac/{maç no}.json` | Maçın içeriği `{ durum, istatistik, kadro, puan, olaylar, oran?, g: yazma anı (ms) }` (oran: gün odasındaki oranlar, varsa). Gün dünden eski olunca gün odasından taşınır. Arşiv, silinmez | Sunucu | Maç sayfası (dünden eski günlerde; dün ve bugün gün odasında içerik yoksa, bir kez) | Gün dünden eski olunca | ~2–4 KB |
 | Firestore `maclar/{maç no}` | Eski maç içerikleri (artık yazılmıyor). Yönetim sayfası düzeltmede hâlâ bakar; doküman yoksa o adımı atlar | — | — | — | — |
 | Firestore `oran_gun/{gün}` | Bugün ve sonraki 7 günün başlamamış maçlarının menü oranları (`z`, gzip: `{ "maç no": "satır" }`) | Sunucu | Oranlar menüsü (seçili gün, bir kez) | Günde 2 kez, değişince | hafta içi ~1,5–2 KB, hafta sonu ~4–5 KB (sıkıştırılmış) |
 | Firestore `oran_lig/{lig no}` | Aynı oranlar, ligin 8 günü | Sunucu | Oranlar menüsü (lig seçilince, bir kez) | Günde 2 kez, değişince | ~0,3–1 KB (sıkıştırılmış) |
-| Firestore `oran_mac/{maç no}` | Eski maç oranları (artık yazılmıyor ve okunmuyor, kuralı kaldırıldı; maçın oranları maç odasında) | — | — | — | — |
+| Firestore `oran_mac/{maç no}` | Eski maç oranları (artık yazılmıyor ve okunmuyor, kuralı kaldırıldı; maçın oranları gün odasında ve R2 `oran/{gün}`) | — | — | — | — |
 | Firestore `sistem/oran` | Son oran güncellemesi: zaman, istek sayısı, maç sayısı, süre | Sunucu | Sunucu (açılışta), sen | Günde 2 kez | < 1 KB |
 | Firestore `analiz_futbol/{maç no}`, `analiz_nba/{maç no}` | Analiz dosyasındaki maçın bütün alanları (sıkıştırılmadan; Firestore liste içinde liste kabul etmediği için öyle olan alanlar, ör. `gecmis`, JSON metni) + `gun` (başlama − 7 saat), `dosya_surum`, `dosya_olusturma`, `yuklendi`. Maç numarası analiz kaynağınınki (API'ninkiyle aynı değil) | Yönetici (bilgisayardaki yonetim.html, e-posta/şifre ile) | Detaylı Analiz'e basınca (bir kez) | Dosya yüklenince | ~2–3 KB |
 | Firestore `analiz_gun/{gün}`, `analiz_nba_gun/{gün}` | O günün kartları (`z`, gzip: `{ "maç no": kart }`). Futbol kartı: ts, league, home, away, featured_pick, stars, featured_odd, market, result, lineup_label, corner_chip, card_chip, offside_chip, card_reasons, sub_boxes, prob (`[ev, beraberlik, dep]` %). NBA kartı: ts, league, home, away, featured_pick, stars, featured_odd, market, result, chips, badges, reasons, prob (`[ev, dep]` %) | Yönetici | Analiz sekmesi, seçili gün (bir kez) | Dosya yüklenince | ~4–11 KB (sıkıştırılmış) |
@@ -41,7 +42,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 
 **Gün tanımı (sunucu ve site aynı):** maçın günü = başlama saati − 7 saat (00:00–06:59 başlayan maç önceki günün listesindedir); "bugün" = şu an − 4 saat (gün 04:00'te değişir). 04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır; site 04:00–07:00 arası önceki günün odasına da bağlı kalır. Canlı skor 12:30–07:00 arası çekilir.
 
-Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, dün ve yarın saatte bir, sonraki günler 6 saatte bir yenilenir). Gün odaları dünden eski olunca boşaltılır; R2'deki günler arşiv olarak kalır.
+Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 30 dk, dün saatte bir, yarın 2 saatte bir, sonraki günler 8 saatte bir yenilenir). Gün odası yalnızca dün ve bugün için yazılır; gelecek günler yalnızca R2'de. Gün odaları dünden eski olunca boşaltılır; R2'deki günler arşiv olarak kalır.
 
 ## Site ne zaman ne okur
 
@@ -55,10 +56,10 @@ Sunucu dün, bugün ve 7 gün ilerinin listesini yazar (fikstür: bugün 15 dk, 
 - İstatistikteki "Kart" sayısı maç içeriğindeki istatistikte sarı + kırmızı karttan.
 - Bugün her zaman dinlenir. Dün yalnızca seçiliyken dinlenir (gece yarısını geçen maçlar ve maç sonu düzeltmeleri için).
 - Takım adları telefonda saklanır. Sürüm bugünün gün odasından gelir (`v.takim`); telefondakinden farklıysa R2 `takim.json`'un tamamı bir kez iner. Odaya bağlanılamazsa ve telefonda sözlük yoksa dosya yine iner.
-- Maç açılınca maç odasına bağlanılır, maç kapanınca bırakılır. Bağlanınca içeriğin tamamı, sonra yalnızca değişen alanlar gelir. Odada içerik yoksa R2 `mac/{no}.json` okunur (dosya varsa oda bırakılır).
+- Maç açılınca (dün ve bugün) gün odasının açık bağlantısından maç dinlenir (`{ a: "mac", no }`), maç kapanınca bırakılır. İçeriğin tamamı, sonra yalnızca değişen alanlar gelir. Odada içerik yoksa R2 `mac/{no}.json` okunur. Daha eski günlerde içerik R2 `mac/{no}.json`'dan; gelecek günlerde içerik yok, oranlar günün `oran/{gün}.json` dosyasından. Yorumlar sekmesi açılınca maçın mesaj odasına bağlanılır, maç kapanınca bırakılır.
 - Uygulama arka plana geçince bütün dinlemeler durur, oda bağlantıları kapanır.
 - Hızlı kaynağın skoru ve uyarısı gün odasından gelir (yalnızca canlı ve kilitli olmayan maçlar).
-- Oranlar menüsü açılınca seçili günün `oran_gun` dokümanı, lig seçilince o ligin `oran_lig` dokümanı bir kez okunur. Maçın bütün oranları maç içeriğinin `oran` alanıyla gelir (maç odası ya da R2 maç dosyası); Oranlar menüsünden maçın oran sayfası açılınca da maç odasına bağlanılır. Okunan menü oran dokümanı 1 saatten eskiyse yeniden okunur.
+- Oranlar menüsü açılınca seçili günün `oran_gun` dokümanı, lig seçilince o ligin `oran_lig` dokümanı bir kez okunur. Maçın bütün oranları maç içeriğinin `oran` alanıyla gelir (gün odası ya da R2 maç dosyası), gelecek günlerde günün R2 oran dosyasından; Oranlar menüsünden maçın oran sayfası açılınca da aynı yerden. Okunan menü oran dokümanı 1 saatten eskiyse yeniden okunur.
 - Kayıtlı Oranlarım telefonda saklanır (Firestore'a yazılmaz).
 - Analiz sekmesi ilk açılınca `analiz_dizin/futbol` ve bugünün `analiz_gun` dokümanı okunur; başka gün seçilince o günün `analiz_gun`, lig seçilince `analiz_lig`, Detaylı Analiz'e basınca `analiz_futbol/{no}` bir kez okunur. Üstte basketbol seçiliyse aynısı NBA dokümanlarından (`analiz_dizin/nba`, `analiz_nba_gun`, `analiz_nba_lig`, `analiz_nba/{no}`). Başarı Karnesi `analiz_dizin/futbol`'daki `karne`'den. AI Kuponu sekmesi ilk açılınca seçili günlerin `kupon_gun` dokümanları okunur; kupon telefonda kurulur (ek okuma yok), kupondaki maça basınca Detaylı Analiz (`analiz_futbol/{no}` ya da `analiz_nba/{no}`). Analiz sürümü bugünün gün odasından (`v.analiz`) bağlanınca bir kez alınır. Okunan analiz dokümanları telefonda bu sürümle saklanır; sürüm aynıysa Firestore'dan yeniden okunmaz (geçmiş günler ve 1 günden eski maçlar telefondan silinir).
 
@@ -118,15 +119,15 @@ Depodaki `sezonlar.txt`'de yazan lig sezonlarının bütün maçları ve oynanm�
 - `sezon/takimlar.json`: her takımın bulunduğu sezon dosyaları (sezon listesi her çekildiğinde eklenir; silinmez).
 - Takım ve lig sayfasında üstte sezon menüsü (kaydedilmiş sezonlar, en yenisi seçili). Takım sayfası (maç sayfasındaki takım adına basınca): seçilen sezonda takımın kaydedilmiş bütün turnuvaları, lig adı başlığıyla; sıra: önce lig, sonra Avrupa kupaları (2, 3, 848), sonra kupalar (adında Kupa / Cup / Pokal / Shield geçen).
 - Lig sayfası (ana listede lig başlığına, maç sayfasında lig satırına basınca): seçilen sezonun dosyasından hafta hafta (oklar ve açılır liste); açılışta bugüne en yakın maçın haftası.
-- Takım ve lig sayfası, maça basınca açılan maç sayfası üst üste yeni sayfa olarak açılır; mavi top ve geri tuşu yalnızca en üsttekini kapatır. Maç içeriği maç odasından / R2 maç dosyasından gelir.
+- Takım ve lig sayfası, maça basınca açılan maç sayfası üst üste yeni sayfa olarak açılır; mavi top ve geri tuşu yalnızca en üsttekini kapatır. Maç içeriği gün odasından / R2 maç dosyasından gelir.
 
 ## Odalar
 
 Cloudflare Durable Objects; kodu `oda/src/index.js`, Cloudflare'de `canli-oda` Worker'ı (GitHub'daki `oda/` klasöründen kendisi yüklenir). Her oda kendi küçük deposunu tutar; kimse bağlı değilken uyur. Odalar Doğu Avrupa'da kurulur (`eeur`, Türkiye'ye en yakın bölge); `/bak` sayfasındaki `konum` odanın bulunduğu merkezdir (ör. `WAW` Varşova).
 
-- **Telefon bağlanır:** `wss://{site}/oda/gun/{gün}`, `wss://{site}/oda/mac/{no}`. `deneme.co.uk`'te `/oda/*` ve `/hesap/*` doğrudan Worker'a gider (canli-oda → Domains → Route); `pages.dev` adresinde Cloudflare Pages'teki geçit (`functions/oda`, Worker'a `ODA` adıyla bağlı) iletir.
-- **Sunucu yazar:** `POST {ODA_ADRES}/yaz/gun/{gün}`, `POST {ODA_ADRES}/yaz/mac/{no}`; boşaltma `DELETE` ile. Hızlı kaynak: `POST {ODA_ADRES}/hizli/gun/{gün}` (yukarıda "Hızlı kaynak"). Anahtarlar `/etc/canli/anahtar.env`: `ODA_ADRES` (Worker'ın adresi), `ODA_ANAHTAR` (Cloudflare'de aynı anahtar: canli-oda → Settings → Variables and Secrets).
-- **Sen bakarsın:** tarayıcıda `{ODA_ADRES}/bak/gun/2026-11-09?anahtar={ODA_ANAHTAR}` ya da `/bak/mac/{no}?anahtar=...`. Odanın şu anki hali, sıra numarası, bağlı telefon sayısı ve (gün odasında) son 20 değişiklik görünür.
+- **Telefon bağlanır:** `wss://{site}/oda/gun/{gün}` (kopyaya: `?kopya=n`), `wss://{site}/oda/mac/{no}` (mesaj odası). `deneme.co.uk`'te `/oda/*` ve `/hesap/*` doğrudan Worker'a gider (canli-oda → Domains → Route); `pages.dev` adresinde Cloudflare Pages'teki geçit (`functions/oda`, Worker'a `ODA` adıyla bağlı) iletir.
+- **Sunucu yazar:** `POST {ODA_ADRES}/yaz/gun/{gün}` (liste, Özet, maç içerikleri ve oranları), `POST {ODA_ADRES}/yaz/mac/{no}` (yalnızca "yorum yazılabilir"); gün odasının boşaltılması `DELETE /yaz/gun/{gün}` ile; gün eskiyince bütün maç içerikleri `GET /yaz/gun/{gün}?tum=1`. Hızlı kaynak: `POST {ODA_ADRES}/hizli/gun/{gün}` (yukarıda "Hızlı kaynak"). Anahtarlar `/etc/canli/anahtar.env`: `ODA_ADRES` (Worker'ın adresi), `ODA_ANAHTAR` (Cloudflare'de aynı anahtar: canli-oda → Settings → Variables and Secrets).
+- **Sen bakarsın:** tarayıcıda `{ODA_ADRES}/bak/gun/2026-11-09?anahtar={ODA_ANAHTAR}` (kopyaya `&kopya=1`) ya da `/bak/mac/{no}?anahtar=...`. Odanın şu anki hali, sıra numarası, bağlı telefon sayısı, (ana gün odasında) çalışan kopyalar ve son 20 değişiklik görünür.
 - **Sıra numarası:** odadaki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı ve odanın kimliğini gönderir; oda yalnızca kaçırılanları yollar. Gün odasında kaçırılan 100'den fazlaysa (ya da günlükte yoksa) listeyi baştan gönderir, telefon Özet'i R2'den yeniden okur. Gün odası son 300 değişikliği saklar, bellekte de.
 - **Yoklama:** telefon 45 sn'de bir `p` gönderir, oda uyanmadan `o` cevabı gider (mobil ağlar boştaki bağlantıyı kesmesin).
 
@@ -139,6 +140,7 @@ Cloudflare Durable Objects; kodu `oda/src/index.js`, Cloudflare'de `canli-oda` W
 | `h` | `{ "maç no": "2-1" }` hızlı kaynağın skoru (programın yazdığı gibi; kilitli maçta sunucu siler) |
 | `u` | `{ "maç no": "2-2" / "k" }` hızlı kaynağın uyarısı |
 | `v` | Sürümler `{ takim, analiz }`: takım adları (R2 `takim.json`) ve analiz dosyası (Firestore `analiz_dizin/futbol` → `surum`) |
+| `m` | Yalnızca sunucunun yazmasında: maçların içeriği `{ "maç no": { d?: içerik, oran?: oranlar } \| null }` (null: içerik silinir). Odada maç başına alan alan saklanır; içerik yazılınca içerikte olmayan alanlar silinir (oran hariç) |
 
 `r`, `v`'yi sunucu her seferinde o günün **tam hali** olarak gönderir (yalnızca son gönderilenden farklı alanlar). Oda kendi haliyle karşılaştırır, yalnızca değişenleri saklar ve telefonlara iletir. `o`'yu sunucu yalnızca değişen maçlar olarak gönderir (gönderemezse bir sonrakinde hepsini). `h`, `u`'yu hızlı kaynak yalnızca değişenler olarak yazar. Liste, hızlı kaynak ve sürümler odanın belleğinde hazır durur (oda uyanınca bir kez okunur).
 
@@ -150,14 +152,20 @@ Telefona giden mesajlar:
 | `{ t: "oz", s, o }` | Telefonun `{ a: "oz", s }` isteğine (R2 Özet dosyasını okuyunca, dosyanın `s`'i): o sıradan sonraki Özet değişiklikleri birleşik. `o: null`: günlükte yok (telefon dosyayla yetinir) |
 | `{ t: "h", k, s, z, n }` | Yeniden bağlanışta: ardından kaçırılan `n` değişiklik gelir |
 | `{ t: "d", s, r?, o?, h?, u?, v? }` | Değişiklik: yalnızca değişenler, `null` = silindi |
+| `{ t: "mm", no, g, d }` | Telefonun `{ a: "mac", no }` isteğine (maç sayfası ya da oran sayfası açılınca): maçın içeriğinin tamamı, `g` son değişme anı (ms) |
+| `{ t: "mp", no, g, d }` | Maçın içeriğinde yalnızca değişen alanlar (`null` = silindi); yalnızca o maçı dinleyenlere |
+| `{ t: "my", no }` | Maçın içeriği odada yok (telefon R2 `mac/{no}.json`'a bakar) |
+| `{ t: "dolu", kopya }` | Oda dolu: telefon bu kopyaya bağlanır |
 
-`k` odanın kimliği, `s` sıra numarası, `z` sunucu saati (ms; dakika telefonun saati yanlış olsa da doğru hesaplansın diye).
+`k` odanın kimliği, `s` sıra numarası, `z` sunucu saati (ms; dakika telefonun saati yanlış olsa da doğru hesaplansın diye). Telefon `{ a: "birak", no }` ile maçı bırakır; bir bağlantı aynı anda en fazla 3 maçı dinler. Dinlenen maçlar bağlantının üstünde not edilir (oda uyuyup uyanınca da bilinir); telefon yeniden bağlanınca yeniden ister.
 
-### Maç odası `mac/{maç no}`
+Maçın içeriği dün de odada kalır (maç sonu düzeltmeleri de odaya). Gün dünden eski olunca sunucu odadaki bütün içerikleri (oranlarla) `GET /yaz/gun/{gün}?tum=1` ile okuyup R2'ye `mac/{no}.json` olarak yazar ve odayı boşaltır (bir dosya yazılamazsa boşaltmaz, sonraki turda yeniden dener). Sabah maçı (04:00–07:00) iki günün listesindeyse içeriği iki günün odasına da yazılır. Oranları sunucu günde 2 kez ayrı yazar (yalnızca bugünün odasına; gün değişince yeni günün oranları R2 `oran/{gün}.json`'dan odaya); içerik yazılırken oran alanı silinmez.
 
-İçerik aşağıdaki "Maç içeriği"; her alanı (`durum`, `istatistik`, `kadro`, `puan`, `olaylar`, `oran`) odada ayrı satır. Telefona: bağlanınca `{ t: "m", k, s, g: değişme anı (ms), d: içeriğin tamamı }`, değişince yalnızca değişen alanlar `{ t: "p", k, s, g, d }`; telefondaki güncelse `{ t: "h" }`; odada içerik yoksa `{ t: "y" }` (maç kesinleştiyse içerik R2 `mac/{no}.json`'da). Maç kesinleşince sunucu içeriği odadaki oranlarla birlikte R2'ye yazar (oranları `GET /yaz/mac/{no}` ile, `ODA_ANAHTAR`) ve odadan içeriği siler (yorumlar kalır).
+**Kopyalar:** bir gün odasında 3000 bağlantı olunca yeni gelen telefona `{ t: "dolu", kopya: 1 }` gider, telefon `?kopya=1` ile kopyaya bağlanır; o da dolarsa 2. kopyaya… (en fazla 9 kopya; sınır `oda/src/index.js` → `KOPYA_SINIR`). Telefon her yeni bağlanışta önce ana odayı dener. Sunucu ve hızlı kaynak yalnızca ana odaya yazar; ana oda listedeki her değişikliği ve maç içeriklerini çalışan kopyalara iletir. Kopya ilk bağlantıda ana odadan her şeyi alır (kimliği ve sırası ana odanınkiyle aynı; telefon kopyalar arasında geçse de yalnızca kaçırılanlar gelir). Kopyanın sırası eksik kalırsa ana oda her şeyi yeniden gönderir. Kopya 10 dakika bağlantısız kalınca ana odadan ayrılır ve kendini boşaltır. Sunucunun dinleme bağlantısı (anahtarla) sınıra takılmaz.
 
-Oranları (`oran`) sunucu günde 2 kez ayrı yazar; içerik yazılırken oran alanı silinmez.
+### Mesaj odası `mac/{maç no}`
+
+Maçın yorumları (aşağıda "Mesajlar"). Bağlanınca `{ t: "a" }` gider; telefon yorumları ister. Adresi eski maç odasıyla aynı (yorumlar korunur); eski içerik tablosu oda ilk uyanışında silinir.
 
 ## Canlı skor satırı
 
@@ -235,9 +243,9 @@ Sondaki boş (`null`) alanlar yazılmaz.
 
 ---
 
-## Maç içeriği (maç odası, R2 `mac/{maç no}.json`)
+## Maç içeriği (gün odası, R2 `mac/{maç no}.json`)
 
-Kadro ve istatistik veren liglerde maç öncesi ve canlıyken maç odasına; bütün liglerde maç bitince (olaylarla) yazılır. Maç bittikten 2 saat sonraki son çekişte R2'ye yazılır ve oda boşaltılır.
+Kadro ve istatistik veren liglerde maç öncesi ve canlıyken maçın gün odasına; bütün liglerde maç bitince (olaylarla) ve bitişten 2 saat sonraki son çekişte yazılır. Gün dünden eski olunca R2'ye taşınır ve oda boşaltılır.
 
 | Alan | Açıklama |
 |---|---|
@@ -281,7 +289,7 @@ Maç öncesi oranlar (canlı değil). Günde 2 kez (06 ve 12, Türkiye saati; su
 
 Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda olduğu gibi (`"2.5"`), menü satırında 10 ile çarpılmış (`95` = 9,5).
 
-### Maç odasında `oran` (olmayan oran yazılmaz)
+### Maç içeriğinde ve R2 `oran/{gün}.json`'da `oran` (olmayan oran yazılmaz)
 
 | Anahtar | Ne | Değer |
 |---|---|---|
@@ -306,15 +314,15 @@ Oranlar 100 ile çarpılmış tam sayıdır (`185` = 1,85). Barajlar dokümanda 
 
 ---
 
-## Mesajlar (maç odası + D1)
+## Mesajlar (mesaj odası + D1)
 
 Maç sayfasındaki Yorumlar. Okuma herkese açık; yazmak, oy ve şikayet için Google ile giriş ve rumuz gerekir. Telefon her yazma isteğiyle Firebase giriş kimliğini (ID token) gönderir; oda / Worker kimliği Google'ın herkese açık anahtarlarıyla doğrular (`oda/src/kimlik.js`, görünmez giriş yazamaz). Bütün sınırları oda denetler.
 
-**Yorumlar maç odasında** (`oda/src/index.js` → MacOdasi; tablolar `yorum`, `oy`):
+**Yorumlar mesaj odasında** (`oda/src/index.js` → MacOdasi; tablolar `yorum`, `oy`):
 
 | Ne | Ayrıntı |
 |---|---|
-| Yorum | `{ id, u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), y?: yanıtlanan yorum, b: beğeni, d: beğenmeme }`. Değiştirilemez, yazan silebilir. Yalnızca sunucunun "açık" bildirdiği maçlara yazılır (sunucu gördüğü her maçı bildirir). Şimdilik hiç silinmez; maç kesinleşince yalnızca maç içeriği odadan silinir, yorumlar kalır |
+| Yorum | `{ id, u: yazanın kimliği, r: rumuz, t: metin (≤ 100 karakter), z: zaman (ms), y?: yanıtlanan yorum, b: beğeni, d: beğenmeme }`. Değiştirilemez, yazan silebilir. Yalnızca sunucunun "açık" bildirdiği maçlara yazılır (sunucu gördüğü her maçı bildirir). Şimdilik hiç silinmez |
 | Oy | Yorum ve kişi başına `{ v: 1 beğeni, -1 beğenmeme, 0 geri alındı, n: kaç kez değişti }`. İlk oy n = 0, en fazla 2 değişiklik. Kendi yorumuna oy verilemez; sayılar oda tarafından tutulur |
 | Okuma | Canlı ve başlamamış maçta maç sayfası açılınca odaya bağlanılır (içerik). Kesinleşmiş olabilecek maçta (bitmiş, başlamasının üzerinden 5 saat geçmiş) içerik önce R2'den okunur, odaya yalnızca Yorumlar sekmesi açılınca bağlanılır (R2'de dosya yoksa hemen). Yorumlar sekmesi açılınca (ve oda yeniden bağlanınca) son 20 yorum istenir, "Daha fazla göster" ile her seferinde 20 daha (en fazla 200). Ondan sonra yeni yorum, silinen yorum ve oy sayıları anında gelir (yorumları istememiş bağlantılara gitmez) |
 | Mesajların biçimi | `oda/src/index.js` → MAÇ ODASI açıklaması (`c`, `x`, `b`, `r` mesajları; `daha`, `yaz`, `sil`, `oy`, `sikayet` istekleri) |
