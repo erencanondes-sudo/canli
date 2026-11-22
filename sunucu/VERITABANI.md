@@ -14,7 +14,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
 |---|---|---|---|---|---|
 | Gün odası `gun/{gün}` | Günün maçlarının satırları (`r`, tek satır), canlı maçlarda hızlı kaynağın skoru (`h`) ve uyarısı (`u`); Özet değişikliklerini (`o`) saklamadan iletir. Ayrıntı: "Odalar" | Sunucu | Canlı Skor: bugün ve dün (bağlanınca liste, sonra değişenler) | Skor, dakika, durum, olay, hızlı skor değişince | satır ~40 bayt |
-| Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, olaylar, oran }` (her alan bir satır; aşağıda "Maç içeriği" ve "Oranlar") ve yorumları. Maç kesinleşince içerik silinir, yorumlar kalır | Sunucu | Maç sayfası ve Oranlar menüsündeki oran sayfası (açıkken) | İçerik: canlı maçta ve bitişten sonraki 10 dk en sık 2 dk'da bir, maç bitince. Oranlar: günde 2 kez | ~2–4 KB |
+| Maç odası `mac/{maç no}` | Maçın içeriği `{ durum, istatistik, kadro, puan, olaylar, oran }` (her alan bir satır; aşağıda "Maç içeriği" ve "Oranlar") ve yorumları. Maç kesinleşince içerik silinir, yorumlar kalır | Sunucu | Maç sayfası ve Oranlar menüsündeki oran sayfası (açıkken) | İçerik: canlı maçta ve bitişten sonraki 10 dk en sık 2 dk'da bir, maç bitince. Oranlar: günde 2 kez | ~2–4 KB |
 | R2 `sezon/{lig}-{yıl}.json` | Sezonun bütün maçları `{ "maç no": "gün,lig,hafta,ev,dep,saat,durum,ev gol,dep gol" }` (aşağıda "Sezonlar") | Sunucu | Takım ve lig sayfası (bir kez; 5 dk önbellek) | Günde 1 ve o ligden maç bitince | lig başına ~15–20 KB |
 | R2 `sezon/takimlar.json` | Takım dizini `{ takım no: ["lig-yıl", ...] }`: takım hangi sezon dosyalarında (aşağıda "Sezonlar") | Sunucu | Takım sayfası (bir kez; 5 dk önbellek) | Sezon listesinde yeni takım görülünce | ~birkaç KB |
 | R2 `sezon/durum.json` | Her sezonun durumu (aşağıda "Sezonlar") | Sunucu | Sen, takım sayfası (bir kez) | Sezon işi ilerledikçe | < 1 KB / sezon |
@@ -25,7 +25,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `istek/{ad}` | Yönetim sayfasının sunucudan istediği iş `{ tur, mac?, t }`: `yenile_{maç}` maçı API'den yeniden çek, `hizli_sil_{maç}` maçın hızlı kaydını sil, `hizli_sil_hepsi` bütün hızlı kayıtları sil. Sunucu işi yapınca siler (yönetim sayfası bunu bekler) | Yönetim sayfası | Sunucu (dinler) | İstendiğinde | ~50 bayt |
 | R2 `gun/{gün}.json` | Günün bütün maçları `{ "maç no": "satır" }` (gün odasındaki satırla aynı). Canlı maçta hızlı kaynağın skoru varsa (kilitli değilse) o. Arşiv, silinmez | Sunucu | Canlı Skor: dünden eski günler, yarın ve sonrası (bir kez); gün odasına bağlanılamazsa bugün ve dün de | Skor ya da durum değişince (hızlı kaynağın golünde de) | 200 maç ~7,7 KB |
 | R2 `ozet/{gün}.json` | Dün ve bugünün oynanan ve biten maçlarının olayları `{ k, s, m: { "maç no": [olaylar] } }` (gzip ile sıkıştırılmış). `k`, `s`: dosya yazılırken gün odasının kimliği ve sırası (telefon sonrasını odadan ister; eski dosyalarda yok). Arşiv, silinmez | Sunucu | Site: son 7 gün; bugün ve dün listeden sonra (30 sn önbellekli, eksikler gün odasından); yönetim sayfası | Değişince, en sık 30 sn'de bir (`OZET_R2_ARALIK`) | 150 maç ~95 KB (sıkıştırılmış ~10–15 KB) |
-| R2 `mac/{maç no}.json` | Kesinleşmiş maçın içeriği `{ durum, istatistik, kadro, olaylar, oran?, g: yazma anı (ms) }` (oran: maç odasındaki oranlar, varsa). Maç bitince 2 saat sonraki son çekişte yazılır (elle düzeltmede yeniden). Arşiv, silinmez | Sunucu | Maç sayfası (maç odası boşsa, bir kez) | Maç kesinleşince | ~2–4 KB |
+| R2 `mac/{maç no}.json` | Kesinleşmiş maçın içeriği `{ durum, istatistik, kadro, puan, olaylar, oran?, g: yazma anı (ms) }` (oran: maç odasındaki oranlar, varsa). Maç bitince 2 saat sonraki son çekişte yazılır (elle düzeltmede yeniden). Arşiv, silinmez | Sunucu | Maç sayfası (maç odası boşsa, bir kez) | Maç kesinleşince | ~2–4 KB |
 | Firestore `maclar/{maç no}` | Eski maç içerikleri (artık yazılmıyor). Yönetim sayfası düzeltmede hâlâ bakar; doküman yoksa o adımı atlar | — | — | — | — |
 | Firestore `oran_gun/{gün}` | Bugün ve sonraki 7 günün başlamamış maçlarının menü oranları (`z`, gzip: `{ "maç no": "satır" }`) | Sunucu | Oranlar menüsü (seçili gün, bir kez) | Günde 2 kez, değişince | hafta içi ~1,5–2 KB, hafta sonu ~4–5 KB (sıkıştırılmış) |
 | Firestore `oran_lig/{lig no}` | Aynı oranlar, ligin 8 günü | Sunucu | Oranlar menüsü (lig seçilince, bir kez) | Günde 2 kez, değişince | ~0,3–1 KB (sıkıştırılmış) |
@@ -155,7 +155,7 @@ Telefona giden mesajlar:
 
 ### Maç odası `mac/{maç no}`
 
-İçerik aşağıdaki "Maç içeriği"; her alanı (`durum`, `istatistik`, `kadro`, `olaylar`, `oran`) odada ayrı satır. Telefona: bağlanınca `{ t: "m", k, s, g: değişme anı (ms), d: içeriğin tamamı }`, değişince yalnızca değişen alanlar `{ t: "p", k, s, g, d }`; telefondaki güncelse `{ t: "h" }`; odada içerik yoksa `{ t: "y" }` (maç kesinleştiyse içerik R2 `mac/{no}.json`'da). Maç kesinleşince sunucu içeriği odadaki oranlarla birlikte R2'ye yazar (oranları `GET /yaz/mac/{no}` ile, `ODA_ANAHTAR`) ve odadan içeriği siler (yorumlar kalır).
+İçerik aşağıdaki "Maç içeriği"; her alanı (`durum`, `istatistik`, `kadro`, `puan`, `olaylar`, `oran`) odada ayrı satır. Telefona: bağlanınca `{ t: "m", k, s, g: değişme anı (ms), d: içeriğin tamamı }`, değişince yalnızca değişen alanlar `{ t: "p", k, s, g, d }`; telefondaki güncelse `{ t: "h" }`; odada içerik yoksa `{ t: "y" }` (maç kesinleştiyse içerik R2 `mac/{no}.json`'da). Maç kesinleşince sunucu içeriği odadaki oranlarla birlikte R2'ye yazar (oranları `GET /yaz/mac/{no}` ile, `ODA_ANAHTAR`) ve odadan içeriği siler (yorumlar kalır).
 
 Oranları (`oran`) sunucu günde 2 kez ayrı yazar; içerik yazılırken oran alanı silinmez.
 
@@ -244,6 +244,7 @@ Kadro ve istatistik veren liglerde maç öncesi ve canlıyken maç odasına; bü
 | `durum` | Maçın durumu |
 | `istatistik` | `[[ev sahibi 19 değer], [deplasman 19 değer]]`. Henüz yoksa `null` |
 | `kadro` | `[ev sahibi kadrosu, deplasman kadrosu]`. Henüz açıklanmadıysa `null` |
+| `puan` | Oyuncu puanları `[{ "oyuncu adı": 7.3, … }, { … }]` (ev sahibi, deplasman; maç sırasında da değişir). API vermiyorsa `null` |
 | `olaylar` | Yalnızca maç bitince: maçın bütün olayları (Özet'teki biçimde) |
 | `oran` | Maçın oranları (aşağıda "Oranlar"); yoksa alan yok |
 

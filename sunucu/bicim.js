@@ -120,7 +120,7 @@ function satir(f, ertesi, devre, kirmizi) {
 }
 
 /*
- * Maç dokümanının içeriği: { durum, istatistik, kadro, olaylar } (tamamı gzip ile sıkıştırılıp yazılır).
+ * Maç dokümanının içeriği: { durum, istatistik, kadro, puan, olaylar } (tamamı gzip ile sıkıştırılıp yazılır).
  * olay verilirse (maç bitince) olaylar da yazılır; doküman tam olur.
  */
 function macDokumani(f, olay) {
@@ -148,10 +148,23 @@ function macDokumani(f, olay) {
         ];
     });
 
+    /* Oyuncu puanları: [{ oyuncu adı: puan }, { … }] (API'de yoksa null; maç sırasında da değişir) */
+    const puan = taraflar.map(id => {
+        const t = taraf(f.players, id);
+        if (!t) return null;
+        const d = {};
+        (t.players || []).forEach(p => {
+            const r = sayi(((p.statistics || [])[0] || {}).games && p.statistics[0].games.rating);
+            if (p.player && p.player.name && r !== null) d[ad(p.player.name)] = r;
+        });
+        return Object.keys(d).length ? d : null;
+    });
+
     const dokuman = {
         durum: f.fixture.status.short,
         istatistik: istatistik.some(Boolean) ? istatistik : null,
-        kadro: kadro.some(Boolean) ? kadro : null
+        kadro: kadro.some(Boolean) ? kadro : null,
+        puan: puan.some(Boolean) ? puan : null
     };
     if (olay) dokuman.olaylar = olay.map(kisaOlay);
     return dokuman;

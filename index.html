@@ -3062,6 +3062,30 @@ body.has-layer .ac-kapa svg {
     display: inline-block;
 }
 
+/* Oyuncu puanı */
+.rating {
+    flex: none;
+    padding: .05em .35em;
+    border-radius: .3em;
+    font-size: .75em;
+    font-style: normal;
+    font-weight: 800;
+    color: white;
+}
+
+.rating.hi { background: #1e8e3e; }
+.rating.mid { background: #e0a100; }
+.rating.lo { background: #d93025; }
+.rating.best { box-shadow: 0 0 0 .12em #1d2340; }
+
+/* Saha dizilişinde formanın sağ altında */
+.pp-rating {
+    position: absolute;
+    right: -1.1em;
+    bottom: -.3em;
+    font-size: .62rem;
+}
+
 .card-icon {
     display: inline-block;
     width: .7em;
@@ -6393,7 +6417,21 @@ const DONE_CODES = new Set(['FT', 'AET', 'PEN']);
 /* Oynanmayacak maçların kısa yazısı (saat yerine) */
 const OTHER_LABELS = { PST: 'ERT', CANC: 'İPT', ABD: 'YRD', AWD: 'HÜK', WO: 'HÜK' };
 
-/* Olaylardan yalnızca goller ve kartlar (kaçan penaltı gol değildir) */
+/* VAR kararının Türkçesi (API'nin yazısı; bilinmeyen yazı olduğu gibi) */
+function varText(detail) {
+    const text = String(detail || '');
+    const why = /offside/i.test(text) ? ' (ofsayt)' : /hand/i.test(text) ? ' (el)' : /foul/i.test(text) ? ' (faul)' : '';
+    if (/goal (cancelled|disallowed)/i.test(text)) return 'Gol iptal' + why;
+    if (/goal confirmed/i.test(text)) return 'Gol onaylandı';
+    if (/penalty confirmed/i.test(text)) return 'Penaltı verildi';
+    if (/penalty cancel/i.test(text)) return 'Penaltı iptal';
+    if (/card upgrade/i.test(text)) return 'Kart kırmızıya çevrildi';
+    if (/card (cancel|downgrade)/i.test(text)) return 'Kart iptal';
+    if (/card/i.test(text)) return 'Kart incelendi';
+    return text || 'İnceleme';
+}
+
+/* Olaylardan goller, kaçan penaltılar, kartlar ve VAR kararları */
 /*
  * Özet: goller ve kartlar. VAR ile iptal edilen gol (API golü silmeyip "Goal cancelled" /
  * "Goal Disallowed - …" olayı ekler) iptal olarak işaretlenir: aynı taraftaki, VAR dakikasına kadarki
@@ -6403,19 +6441,22 @@ function rowEvents(list) {
     const at = e => (e[0] || 0) * 100 + (e[1] || 0);
     const goals = list.filter(e => e[3] === 'g' && e[4] !== 'kp');
     const cancelled = new Set();
+    const used = new Set();   /* golü iptal eden VAR olayı: ayrı satır olmaz, gol "VAR iptal" ile gösterilir */
     list.filter(e => e[3] === 'v' && /goal (cancelled|disallowed)/i.test(e[4] || '')).forEach(v => {
         const match = goals.filter(g => !cancelled.has(g) && g[2] === v[2] && at(g) <= at(v) && (!v[5] || !g[5] || g[5] === v[5]))
             .sort((a, b) => at(b) - at(a))[0];
-        if (match)
+        if (match) {
             cancelled.add(match);
+            used.add(v);
+        }
     });
     return list
-        .filter(e => (e[3] === 'g' && e[4] !== 'kp') || e[3] === 'k')
+        .filter(e => e[3] === 'g' || e[3] === 'k' || (e[3] === 'v' && !used.has(e)))
         .map(e => {
             const [minute, extra, side, type, detail, player] = e;
             return {
                 side: side === 1 ? 'away' : 'home',
-                type: type === 'g' ? 'goal' : detail === 's' ? 'yellow' : 'red',
+                type: type === 'v' ? 'var' : type === 'g' ? (detail === 'kp' ? 'miss' : 'goal') : detail === 's' ? 'yellow' : 'red',
                 detail: detail,
                 minute: minute,
                 extra: extra,
@@ -7715,6 +7756,7 @@ function watchDetail(match) {
             doc: doc,
             stats: doc.istatistik || null,
             lineup: doc.kadro || null,
+            ratings: doc.puan || null,
             olaylar: doc.olaylar || null,
             updated: time ? new Date(time) : null
         });
@@ -13666,6 +13708,14 @@ function renderSummary(match) {
                 tag.textContent = 'VAR iptal';
                 label.appendChild(tag);
             }
+        } else if (event.type === 'miss') {
+            label.textContent = '❌ ' + (event.player ? event.player + ' · ' : '') + 'Penaltı kaçtı';
+        } else if (event.type === 'var') {
+            const tag = document.createElement('em');
+            tag.className = 'var-tag';
+            tag.textContent = 'VAR';
+            label.appendChild(tag);
+            label.appendChild(document.createTextNode(' ' + varText(event.detail) + (event.player ? ' · ' + event.player : '')));
         } else if (event.type === 'sub') {
             label.classList.add('event-sub');
             [[SUB_IN_ICON, 'span', event.player], [SUB_OUT_ICON, 'small', event.out]].forEach(([icon, tag, name]) => {
@@ -13893,6 +13943,14 @@ function playerEvents(match) {
             p.card = detail === 's' && !p.card ? 'yellow' : detail === 's' ? p.card : 'red';
         }
     });
+    /* Oyuncu puanları (maç sırasında da değişir); maçın en yüksek puanlısı "best" */
+    let best = null;
+    (match.ratings || []).forEach((list, side) => Object.entries(list || {}).forEach(([name, rating]) => {
+        const p = get(side, name);
+        p.rating = rating;
+        if (!best || rating > best.rating) best = p;
+    }));
+    if (best) best.best = true;
     substitutions(match).forEach(({ side, minute, extra, out, inn }) => {
         const time = (minute || '') + (extra ? '+' + extra : '') + "'";
         get(side, out).out = time;
@@ -14108,6 +14166,11 @@ function playerShirt(number, name, color, ev, blackEdge) {
             s.innerHTML = SUB_ICON;
             shirt.appendChild(s);
         }
+        if (ev.rating) {
+            const r = ratingBadge(ev);
+            r.classList.add('pp-rating');
+            shirt.appendChild(r);
+        }
     }
 
     const label = document.createElement('div');
@@ -14128,6 +14191,14 @@ function lineupHead(team) {
     return head;
 }
 
+/* Oyuncu puanı kutucuğu: 7 ve üstü yeşil, 6–7 sarı, altı kırmızı; maçın en iyisi yıldızlı */
+function ratingBadge(ev) {
+    const b = document.createElement('i');
+    b.className = 'rating ' + (ev.rating >= 7 ? 'hi' : ev.rating >= 6 ? 'mid' : 'lo') + (ev.best ? ' best' : '');
+    b.textContent = (ev.best ? '★ ' : '') + ev.rating.toFixed(1).replace('.', ',');
+    return b;
+}
+
 /* Oyuncu satırı: numara, ad, olay işaretleri, mevki; oyuna girdiyse altında kimin yerine girdiği */
 function playerRow([number, player, position], events) {
     const wrap = document.createElement('div');
@@ -14139,6 +14210,8 @@ function playerRow([number, player, position], events) {
     row.querySelector('span').textContent = player || '';
     const ev = events.get(player);
     row.appendChild(eventMarks(ev));
+    if (ev && ev.rating)
+        row.appendChild(ratingBadge(ev));
     const pos = document.createElement('small');
     pos.textContent = POSITIONS[position] || '';
     row.appendChild(pos);
