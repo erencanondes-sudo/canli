@@ -880,23 +880,6 @@ button {
     background: #f4f6fa;
 }
 
-/* Gün değişince liste kayarak gelir (0,25 sn): önceki güne soldan, sonraki güne sağdan; taşan kısım sayfanın kenarında kesilir */
-#liveList.day-from-left {
-    animation: dayFromLeft .25s ease-out;
-}
-
-#liveList.day-from-right {
-    animation: dayFromRight .25s ease-out;
-}
-
-@keyframes dayFromLeft {
-    from { transform: translateX(-35%); opacity: 0; }
-}
-
-@keyframes dayFromRight {
-    from { transform: translateX(35%); opacity: 0; }
-}
-
 /* Maç sayfası kapanırken o maçın satırı (canlı liste, takım ve lig sayfası): çok açık mavi yanar, 0,15 sn kalır, sonraki 0,15 sn'de söner (toplam 0,3 sn) */
 .score-row.closed-flash,
 .tm-row.closed-flash {
@@ -8353,9 +8336,29 @@ function renderDays(keepScroll) {
  * Bir gün seçilir: "Canlı" ve arama kapanır, liste o güne döner.
  * (Gün düğmeleri ve takvim kullanır.)
  */
+/*
+ * Gün değişince sekme geçişi gibi kayma (.28s ease, sekmelerle aynı): eski gün listesinin kopyası yerinde durur,
+ * eski kopya bir yana, yeni liste öbür yandan birlikte kayar. Önceki güne: yeni soldan gelir; sonraki güne: sağdan.
+ */
+let dayGhost = null;
+
 function selectDay(key, keepScroll) {
 
     const old = selectedDay;
+    const list = document.getElementById('liveList');
+    if (dayGhost)
+        dayGhost.remove();
+    dayGhost = null;
+    if (key !== old && list.offsetWidth) {
+        dayGhost = list.cloneNode(true);
+        dayGhost.removeAttribute('id');
+        dayGhost.setAttribute('aria-hidden', 'true');
+        Object.assign(dayGhost.style, {
+            position: 'absolute', top: '0', left: '0',
+            width: list.offsetWidth + 'px', margin: '0', pointerEvents: 'none'
+        });
+    }
+
     selectedDay = key;
     searchInput.value = '';
 
@@ -8367,12 +8370,24 @@ function selectDay(key, keepScroll) {
     renderDays(keepScroll);
     renderLive();
 
-    /* Liste kayarak gelir: geriye (önceki gün) soldan, ileriye sağdan (günler "YYYY-AA-GG", yazı sırası = tarih sırası) */
-    if (key !== old) {
-        const list = document.getElementById('liveList');
-        list.classList.remove('day-from-left', 'day-from-right');
-        list.getBoundingClientRect();
-        list.classList.add(key < old ? 'day-from-left' : 'day-from-right');
+    /* Günler "YYYY-AA-GG": yazı sırası = tarih sırası */
+    if (dayGhost) {
+        const ghost = dayGhost;
+        const side = key < old ? 1 : -1;
+        const timing = { duration: 280, easing: 'ease' };
+        /* Kopya listenin tam üstüne oturtulur (kaydırılan şerit yüzünden yer, ölçülerek bulunur) */
+        list.parentElement.appendChild(ghost);
+        const at = list.getBoundingClientRect();
+        const now = ghost.getBoundingClientRect();
+        ghost.style.top = (at.top - now.top) + 'px';
+        ghost.style.left = (at.left - now.left) + 'px';
+        ghost.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + side * 100 + '%)' }], timing)
+            .onfinish = () => {
+                ghost.remove();
+                if (dayGhost === ghost)
+                    dayGhost = null;
+            };
+        list.animate([{ transform: 'translateX(' + -side * 100 + '%)' }, { transform: 'translateX(0)' }], timing);
     }
 }
 
