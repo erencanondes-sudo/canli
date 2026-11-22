@@ -8375,6 +8375,10 @@ function selectDay(key, keepScroll) {
         const ghost = dayGhost;
         const side = key < old ? 1 : -1;
         const timing = { duration: 280, easing: 'ease' };
+        /* Kayma mesafesi: listenin değil sayfanın genişliği (sekmelerdeki gibi). Listenin genişliği kadar kayınca
+           sayfanın iç boşluğu kadar bir şerit kenarda görünür kalıyor, bitişte birden kayboluyordu */
+        const page = list.closest('.home-page');
+        const shift = (page ? page.clientWidth : list.offsetWidth) * side;
         /* Kopya listenin tam üstüne oturtulur (kaydırılan şerit yüzünden yer, ölçülerek bulunur) */
         list.parentElement.appendChild(ghost);
         const at = list.getBoundingClientRect();
@@ -8382,13 +8386,13 @@ function selectDay(key, keepScroll) {
         ghost.style.top = (at.top - now.top) + 'px';
         ghost.style.left = (at.left - now.left) + 'px';
         /* Kopya bitişte gittiği yerde kalır (yoksa silinmeden önceki bir karede eski yerine geri sıçrıyor) */
-        ghost.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + side * 100 + '%)' }], { ...timing, fill: 'forwards' })
+        ghost.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + shift + 'px)' }], { ...timing, fill: 'forwards' })
             .onfinish = () => {
                 ghost.remove();
                 if (dayGhost === ghost)
                     dayGhost = null;
             };
-        list.animate([{ transform: 'translateX(' + -side * 100 + '%)' }, { transform: 'translateX(0)' }], timing);
+        list.animate([{ transform: 'translateX(' + -shift + 'px)' }, { transform: 'translateX(0)' }], timing);
     }
 }
 
