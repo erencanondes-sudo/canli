@@ -8381,7 +8381,8 @@ function selectDay(key, keepScroll) {
         const now = ghost.getBoundingClientRect();
         ghost.style.top = (at.top - now.top) + 'px';
         ghost.style.left = (at.left - now.left) + 'px';
-        ghost.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + side * 100 + '%)' }], timing)
+        /* Kopya bitişte gittiği yerde kalır (yoksa silinmeden önceki bir karede eski yerine geri sıçrıyor) */
+        ghost.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + side * 100 + '%)' }], { ...timing, fill: 'forwards' })
             .onfinish = () => {
                 ghost.remove();
                 if (dayGhost === ghost)
