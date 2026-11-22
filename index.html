@@ -176,10 +176,10 @@ button {
 }
 
 /* "vuu" beyaz, ".live" kırmızı; ikisi aynı boyda, kalın eğik. Küçük harflerin altı boş kalır:
-   yazı .1em aşağı, üstte ve altta lacivert boşluk eşit olsun */
+   yazı .1em aşağı (üstte ve altta lacivert boşluk eşit), sonra 1px (.0625rem) yukarı */
 #homeAdGap .vuu {
     position: relative;
-    top: .1em;
+    top: calc(.1em - .0625rem);
     font: italic 900 1.35rem/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
     letter-spacing: -.02em;
 }
