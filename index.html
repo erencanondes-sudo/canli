@@ -78,6 +78,16 @@
     --side-gap: max(1rem, calc((100% - var(--content-width)) / 2));
 }
 
+/*
+ * ÖLÇEK: 1rem ekran genişliğiyle orantılı. 360px genişlikte 1rem = 16px (tasarımın ölçüldüğü genişlik);
+ * 412'de ~18,3px, 320'de ~14,2px. rem ve em olan her şey (yazı, boşluk, düğme, satır) bütün
+ * telefonlarda aynı oranda büyür / küçülür. Geniş ekranda 480px genişliğin ölçüsünde durur (site tasarımı sonra).
+ * Ölçeklenmeyenler: 1px çizgiler ve reklam alanının boyu (AdMob'un kuralı; içindeki yazılar orantılı).
+ */
+html {
+    font-size: min(calc(100vw / 22.5), 1.3333rem);
+}
+
 html, body {
     margin: 0;
     width: 100%;
@@ -473,7 +483,7 @@ button {
 .tool-row {
     display: flex;
     align-items: center;
-    gap: .3em;
+    gap: .25em;
     margin: 0 0 .625rem;
 
     /* Dar ekranda yazılar biraz küçülür, dört öğe tek satıra sığar */
@@ -614,42 +624,21 @@ button {
 
 /*
  * Canlı Skor arama kutusu: satırın kalanını doldurur ama bir sınırı var
- * (geniş ekranda çok uzamasın); sağa yaslı durur.
+ * (geniş ekranda çok uzamasın); sağa yaslı durur. Büyüteç yok ("Arama yap" yazısı sığsın).
  */
 .search-box.tool-search {
     flex: 1 1 6em;
     max-width: 11em;
     margin-left: auto;
-    gap: .25em;
-    padding: 0 .55em;
-}
-
-/* Dar ekranda büyüteç gizlenir; "Arama yap" yazısı sığsın */
-@media (max-width: 23.75rem) {
-    .search-box.tool-search svg {
-        display: none;
-    }
-
-    .search-box.tool-search {
-        padding: 0 .4em;
-    }
-
-    .tool-row {
-        gap: .25em;
-    }
+    padding: 0 .4em;
 }
 
 /*
- * Canlı Skor satırındaki arama: büyüteç ve yazı kutunun ortasında.
+ * Canlı Skor satırındaki arama: yazı kutunun ortasında.
  * Kutu yazı kadar geniştir; yazdıkça büyür (en fazla kutu kadar).
  */
 .search-box.tool-search {
     justify-content: center;
-}
-
-/* Büyüteç yer kaplamış sayılmaz: "Arama yap" yazısı kutunun ortasına yakın durur */
-.search-box.tool-search svg {
-    margin-left: -1em;
 }
 
 .search-box.tool-search input {
@@ -793,7 +782,7 @@ button {
     flex: none;
     width: 1.5em;
     height: 1em;
-    border-radius: 2px;
+    border-radius: .125rem;
     box-shadow: 0 0 0 1px rgba(255,255,255,.25);
 }
 
@@ -1649,7 +1638,7 @@ button {
      * Yan boşluk --side-gap ile aynı, ama ekran genişliğine göre (100vw): sayfanın içinde
      * % şeridin genişliğine göre hesaplanırdı. Alttaki boşluk: son kart düğmenin arkasında kalmasın.
      */
-    padding: var(--title-h, 0) max(16px, calc((100vw - var(--content-width)) / 2)) 11.25rem;
+    padding: var(--title-h, 0) max(1rem, calc((100vw - var(--content-width)) / 2)) 11.25rem;
 }
 
 .home-empty {
@@ -2006,7 +1995,7 @@ body[data-tab="empty"] #emptyLayer {
     left: 50%;
 
     /* Biraz aşağıda: topun ortası alttan 44px yukarıda */
-    bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(.125rem + env(safe-area-inset-bottom, 0px));
 
     /* Maç sayfası ve açılan her şeyin üstünde görünür */
     z-index: 33;
@@ -2947,7 +2936,7 @@ body.has-layer .ac-kapa svg {
     width: 5.25rem;
     height: 5.25rem;
     margin: -2.625rem auto 1.25rem;
-    border: 2px solid #2f8cff;
+    border: .125rem solid #2f8cff;
     border-radius: 50%;
     background: rgba(8, 24, 52, .85);
     box-shadow: 0 0 1.1rem rgba(47, 140, 255, .55), inset 0 0 .9rem rgba(47, 140, 255, .3);
@@ -2964,7 +2953,7 @@ body.has-layer .ac-kapa svg {
 }
 .empty-hero hr {
     width: 80%;
-    height: 2px;
+    height: .125rem;
     margin: .75rem auto;
     border: 0;
     background: linear-gradient(90deg, transparent, rgba(47, 140, 255, .55) 30%, #6fb6ff 50%, rgba(47, 140, 255, .55) 70%, transparent);
@@ -3005,7 +2994,7 @@ body.has-layer .ac-kapa svg {
     left: 50%;
     top: 0;
     bottom: 0;
-    width: 2px;
+    width: .125rem;
     margin-left: -1px;
     background: #d5dbe6;
 }
@@ -3102,7 +3091,7 @@ body.has-layer .ac-kapa svg {
     display: inline-block;
     width: .7em;
     height: .95em;
-    border-radius: 2px;
+    border-radius: .125rem;
     background: #f5c518;
 }
 
@@ -3218,7 +3207,7 @@ body.has-layer .ac-kapa svg {
 
 .sum-wait hr {
     width: 60%;
-    height: 2px;
+    height: .125rem;
     margin: .5rem auto .75rem;
     border: 0;
     background: linear-gradient(90deg, transparent, #2f6cf0, transparent);
@@ -5527,11 +5516,17 @@ body:has(#oddsSheet.open) #homeBanner::before {
     border-radius: .6rem;
 }
 
-/* Lig adı satırı biraz alçak (yükseklik ~26,7px); ülke, lig adı ve bayrak 1px küçük (12px).
-   Boşluklar rem: yazı küçülünce satırın yüksekliği ve zilin yeri değişmesin */
+/* Lig adı satırı biraz alçak (360 genişlikte yükseklik ~25,7px); ülke, lig adı ve bayrak 12px.
+   Boşluklar rem: yazı boyu değişince satırın yüksekliği ve zilin yeri değişmesin */
 #homePage .league-head {
-    padding: .272rem .73125rem;
+    padding: .24075rem .73125rem;
     font-size: .75rem;
+}
+
+/* Lig satırındaki zil 360 genişlikte 14,6px */
+#homePage .league-bell svg {
+    width: .9125rem;
+    height: .9125rem;
 }
 
 /* Maç satırı biraz alçak */
@@ -8567,7 +8562,6 @@ function scoreRow(match, showDate, showLeague) {
  *   input    : arama kutusu (varsa); takım adına göre
  */
 const TIME_ICON = '<svg class="time-arrow" viewBox="0 0 10 16" aria-hidden="true"><path d="M5 1.5v12M1.5 10l3.5 4 3.5-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const SEARCH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg>';
 
 /* Açık olan Ligler menüsü (aynı anda tek menü açık olur) */
 let openLeagueMenu = null;
@@ -8684,8 +8678,7 @@ function buildTools(row, state, options) {
 
         const box = document.createElement('label');
         box.className = 'search-box tool-search';
-        box.innerHTML = SEARCH_ICON +
-            '<input type="search" placeholder="Arama yap" size="9" autocomplete="off">';
+        box.innerHTML = '<input type="search" placeholder="Arama yap" size="9" autocomplete="off">';
         row.appendChild(box);
         tools.input = box.querySelector('input');
     }
