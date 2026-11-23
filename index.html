@@ -182,15 +182,17 @@ button {
     left: 0;
     right: 0;
     z-index: 2;
-    padding: 0 var(--side-gap);
+
+    /* Sekmeler geniş olsun diye telefonda kenarlara sayfanın içeriğinden daha yakın (.5rem) */
+    padding: 0 max(.5rem, calc((100% - var(--content-width)) / 2));
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
 /*
- * ÜST DÜĞMELER: Canlı Skor / AI Kuponu / Analiz / Oranlar
- * Satırın genişliğine yayılırlar; yazı boyutu ekranla orantılı.
+ * ÜST DÜĞMELER: Canlı Skor / Maçlarım / Ai Kuponu / Analiz / Oranlar
+ * Satırın genişliğine eşit genişlikte yayılırlar; yazı boyutu ekranla orantılı.
  */
 #homeModeBox {
     display: flex;
@@ -206,9 +208,9 @@ button {
 }
 
 #homeModeBox button {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
-    padding: .55em .3em;
+    padding: .55em .15em;
     border: 1px solid #d5d8de;
     border-radius: .625rem;
     background: white;
@@ -1619,7 +1621,8 @@ button {
 }
 
 /*
- * Canlı Skor sayfası en üstte aşağı, en altta yukarı çekilince esner (reklamın altındaki alanın içinde),
+ * Canlı Skor sayfası en üstte aşağı, en altta yukarı çekilince esner (reklamın altındaki alanın içinde;
+ * en üstte sekme satırı da sayfayla birlikte iner, boşluk vuu.live şeridinin altında açılır),
  * bırakınca yumuşakça yerine döner. Kenarda tarayıcı kendi çekme hareketini yapmaz.
  */
 .home-page[data-page="live"] {
@@ -5524,10 +5527,10 @@ body:has(#oddsSheet.open) #homeBanner::before {
     border-radius: .6rem;
 }
 
-/* Lig adı satırı biraz alçak */
+/* Lig adı satırı biraz alçak (yükseklik ~26,7px; önceki 29,7px'in %90'ı) */
 #homePage .league-head {
-    padding-top: .45em;
-    padding-bottom: .45em;
+    padding-top: .335em;
+    padding-bottom: .335em;
 }
 
 /* Maç satırı biraz alçak */
@@ -13129,9 +13132,22 @@ function endHomeSwipe() {
 homeMain.addEventListener('touchend', endHomeSwipe, { passive: true });
 homeMain.addEventListener('touchcancel', endHomeSwipe, { passive: true });
 
-/* Canlı Skor sayfasında esneme: en üstte aşağı, en altta yukarı çekince */
+/* Canlı Skor sayfasında esneme: en üstte aşağı, en altta yukarı çekince.
+   En üstte sekme satırı da sayfayla birlikte iner; bırakınca sayfayla aynı hareketle yerine döner. */
 const livePage = document.querySelector('.home-page[data-page="live"]');
 let livePull = null;
+
+function resetLivePull() {
+
+    livePage.classList.remove('pulling');
+    livePage.style.transform = '';
+
+    if (homeTitleRow.dataset.pulled) {
+        delete homeTitleRow.dataset.pulled;
+        homeTitleRow.style.transition = 'transform .35s cubic-bezier(.25, .8, .25, 1)';
+        homeTitleRow.style.transform = 'translateY(0px)';
+    }
+}
 
 livePage.addEventListener('touchstart', event => {
 
@@ -13185,25 +13201,30 @@ livePage.addEventListener('touchmove', event => {
     /* Ters yöne dönüp başlangıcı geçince esneme biter, normal kaydırma sürer */
     if (distance <= 0) {
         livePull.edge = 0;
-        livePage.classList.remove('pulling');
-        livePage.style.transform = '';
+        resetLivePull();
         return;
     }
 
     event.preventDefault();
 
-    /* Çektikçe zorlaşır; en fazla sayfa boyunun onda biri kadar */
-    const max = livePage.clientHeight / 10;
+    /* Çektikçe zorlaşır; en fazla sayfa boyunun on beşte biri kadar */
+    const max = livePage.clientHeight / 15;
+    const shift = livePull.edge * max * distance / (distance + max);
 
-    livePage.style.transform = 'translateY(' + (livePull.edge * max * distance / (distance + max)) + 'px)';
+    livePage.style.transform = 'translateY(' + shift + 'px)';
+
+    if (livePull.edge === 1) {
+        homeTitleRow.dataset.pulled = '1';
+        homeTitleRow.style.transition = 'none';
+        homeTitleRow.style.transform = 'translateY(' + shift + 'px)';
+    }
 
 }, { passive: false });
 
 function endLivePull() {
 
     livePull = null;
-    livePage.classList.remove('pulling');
-    livePage.style.transform = '';
+    resetLivePull();
 }
 
 livePage.addEventListener('touchend', endLivePull, { passive: true });
