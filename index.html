@@ -5527,10 +5527,11 @@ body:has(#oddsSheet.open) #homeBanner::before {
     border-radius: .6rem;
 }
 
-/* Lig adı satırı biraz alçak (yükseklik ~26,7px; önceki 29,7px'in %90'ı) */
+/* Lig adı satırı biraz alçak (yükseklik ~26,7px); ülke, lig adı ve bayrak 1px küçük (12px).
+   Boşluklar rem: yazı küçülünce satırın yüksekliği ve zilin yeri değişmesin */
 #homePage .league-head {
-    padding-top: .335em;
-    padding-bottom: .335em;
+    padding: .272rem .73125rem;
+    font-size: .75rem;
 }
 
 /* Maç satırı biraz alçak */
