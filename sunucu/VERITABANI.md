@@ -8,7 +8,7 @@ Odalar, bir dosya deposu ve veritabanları var:
 - **Realtime Database:** artık kullanılmıyor (kuralları her şeyi kapatır).
 - **Firestore:** menü oranları, analizler, bildirim kayıtları, sunucu durumu; yönetim sayfasının elle düzeltme kilitleri ve istekleri.
 
-Dokümanları ve odaları sunucu yazar; `zil/{gizli kimlik}` kayıtlarını site (kullanıcının cihazı), gün odasındaki hızlı skoru ve uyarıyı (`h`, `u`) hızlı kaynak (başka bir bilgisayardaki skor sunucusu, kendi anahtarıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
+Dokümanları ve odaları sunucu yazar; zil kayıtlarını (bildirim odası) site (kullanıcının cihazı), gün odasındaki hızlı skoru ve uyarıyı (`h`, `u`) hızlı kaynak (başka bir bilgisayardaki skor sunucusu, kendi anahtarıyla) yazar. Bir şey değişmediyse yeniden yazılmaz.
 Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük dokümanlar (menü oranları, analizler) gzip ile sıkıştırılmış `z` alanında durur; Console'da okunamaz, site açar.
 
 | Yer | Ne var | Kim yazar | Kim okur | Ne zaman değişir | Boyut |
@@ -38,7 +38,7 @@ Firestore dokümanlarında `guncellendi` alanı son yazma zamanıdır. Büyük d
 | Firestore `analiz_dizin/futbol`, `analiz_dizin/nba` | `{ gunler: { gün: sayı }, ligler: { lig: sayı } }` (`z`); futbolda ayrıca `surum` (son yüklemenin anı, saniye; sunucu dinler ve gün odasına `v.analiz` olarak aktarır), `karne` (dosyadaki `basari_karnesi`, futbol ve NBA birlikte) ve `kupon` (kupon günlerinin maç sayıları `{ tarih: [futbol, NBA] }`, AI Kuponu gün düğmelerinde) | Yönetici | Analiz sekmesi açılınca (bir kez) | Dosya yüklenince | < 1 KB |
 | Firestore `kupon_gun/{tarih}` | AI Kuponu havuzu, maçın takvim gününe (Türkiye saati) göre, futbol ve NBA birlikte (`z`, gzip: `{ "maç no": { s: "f" \| "n", ts, d: tarih, t: saat, league, home, away, prob, opts: [{ pick, odd, prob, stars, cat, why }] } }`). Analiz dosyasındaki `hazir_tercihler`'den (ya da `opts`); tercihi olmayan maç yazılmaz | Yönetici | AI Kuponu sekmesi, seçili günler (Bugün seçiliyse ertesi gün de), bir kez; telefonda analiz sürümüyle saklanır | Dosya yüklenince | yoğun gün ~35 KB (sıkıştırılmış) |
 | Firestore `sistem/durum` | Sunucunun durumu | Sunucu | Yalnızca sen | Dakikada bir | < 1 KB |
-| Firestore `zil/{cihaz no}` | Bir cihazın kaydı: `{ token, maclar (zil açılan maçlar), sahip (yazan girişin kimliği), kisi (Google ile giriş yapan kişi, varsa), tur: site / uygulama }`. Cihaz no telefonda saklanır; bir kişinin birden çok cihazı olabilir. Eski biçim `zil/{kimlik}` yenisi yazılınca silinir | Site | Yalnızca sunucu | Kullanıcı zil açıp kapatınca, giriş / çıkışta | ~300 bayt |
+| Bildirim odası `bildirim` | Zil kayıtları (cihaz başına `{ token, maclar, kisi?, tur }`; aşağıda "Zil kayıtları") ve sunucuya giden işler (abonelik, yanıt bildirimi) | Site (`POST /hesap/zil`), mesaj odaları | Yalnızca sunucu (işleri) | Kullanıcı zil açıp kapatınca, giriş / çıkışta | kayıt başına ~300 bayt |
 
 **Gün tanımı (sunucu ve site aynı):** maçın günü = başlama saati − 7 saat (00:00–06:59 başlayan maç önceki günün listesindedir); "bugün" = şu an − 4 saat (gün 04:00'te değişir). 04:00–06:59 başlayan ("sabah") maç kendi takvim gününün listesine de yazılır; site 04:00–07:00 arası önceki günün odasına da bağlı kalır. Canlı skor 12:30–07:00 arası çekilir.
 
@@ -342,7 +342,7 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık; yazmak, oy ve şikayet için 
 | `bildirim_son` | Son yanıt bildirimi (aynı kişiden aynı kişiye 10 dakikada bir) |
 
 - Küfür ve bağlantı filtresi: depodaki `kufur.json` (kök, tam kelime, bağlantı, izinli kelimeler); oda yorumu ve rumuzu yayınlamadan önce kontrol eder (`oda/src/filtre.js`), uygunsuzsa hiç yazılmaz.
-- Yanıt bildirimi: yeni yorumda `@rumuz` (en fazla 2) geçerse oda bildirim kuyruğu odasına ekler; sunucu kuyruğa bağlıdır (`/oda/bildirim`), o kişinin bildirim izni vermiş ve zil kaydı olan cihazlarına gönderir (bağlantı `#mac={no}&yorum` Yorumlar'ı açar). Gitmez: kendine, yanıt bildirimlerini kapatana, göndereni engelleyene ya da göndericinin engellediğine, yanıtlanan yorumu için bildirimi kapatana, aynı gönderenden 10 dakika içinde ikinci kez. Kuyrukta 10 dakikadan eski iş gönderilmez. İzin ilk mesajdan sonra bir kez sorulur.
+- Yanıt bildirimi: yeni yorumda `@rumuz` (en fazla 2) geçerse oda bildirim odasına ekler; oda o kişinin zil kaydı olan cihazlarının anahtarlarını bulur, sunucu (`/oda/bildirim`'e bağlı) onlara gönderir (bağlantı `#mac={no}&yorum` Yorumlar'ı açar). Gitmez: kendine, yanıt bildirimlerini kapatana, göndereni engelleyene ya da göndericinin engellediğine, yanıtlanan yorumu için bildirimi kapatana, aynı gönderenden 10 dakika içinde ikinci kez. Kuyrukta 10 dakikadan eski iş gönderilmez. İzin ilk mesajdan sonra bir kez sorulur.
 - Hesap silinince: yorumlar, `mesajlarim`, `kisi`, `engel`, `sessiz`, rumuz ve giriş kaydı silinir; oylar, `sayac`, `rumuz_zaman` ve şikayetler kalır.
 - Henüz yok: eski yorumları silme (ör. her maçta son 100), yönetim sayfasında şikayetler.
 
@@ -364,18 +364,20 @@ Maç sayfasındaki Yorumlar. Okuma herkese açık; yazmak, oy ve şikayet için 
 
 ---
 
-## `zil/{cihaz no}`
+## Zil kayıtları (bildirim odası)
 
-Kullanıcı bir maçın zilini açınca, Google ile giriş / çıkış yapınca (bildirim izni verdiyse) site yazar. Cihaz no her cihazın telefonda saklanan rastgele numarasıdır; bir kişi birden çok cihazdan girse her cihazın kaydı ayrıdır (birbirinin üzerine yazmaz).
+Kullanıcı bir maçın zilini açınca / kapatınca, Google ile giriş / çıkış yapınca (bildirim izni verdiyse) site `POST /hesap/zil` ile bildirim odasına gönderir (`oda/src/index.js` → BildirimOdasi, tablo `zil`). Kullanıcı hissetmez: zil değişince 5 sn beklenir (birçok değişiklik tek seferde), sayfadan çıkarken beklemeden gönderilir. Son gönderilen telefonda saklanır; değişmediyse gönderilmez. Açılışta, bütün dosyalar indikten sonra (en son) bildirim anahtarı ve kayıt kontrol edilir, değiştiyse (ya da sayfadan çıkarken gönderilen onaylanmadıysa) gönderilir. Görünmez giriş kullanılmaz.
 
 | Alan | Açıklama |
 |---|---|
-| `token` | Cihazın bildirim kimliği (Firebase verir) |
+| `cihaz` | Cihazın telefonda saklanan rastgele numarası (kaydın anahtarı; bir kişinin her cihazı ayrı kayıt) |
+| `token` | Cihazın bildirim anahtarı (Firebase verir) |
 | `maclar` | Zili açık maçların numaraları, en fazla 100 |
-| `sahip` | Kaydı yazan girişin kimliği (görünmez ya da Google) |
-| `kisi` | O cihazda Google ile giriş yapan kişinin kimliği (yoksa alan yok). Yanıt bildirimleri kişinin bütün cihazlarına gider |
+| `kisi` | O cihazda Google ile giriş yapan kişinin kimliği: yalnızca geçerli Google giriş kimliğiyle yazılır, çıkışta silinir. Yanıt bildirimleri kişinin bütün cihazlarına gider |
 | `tur` | `site` (ileride uygulama: `uygulama`) |
-| `guncellendi` | Son yazma zamanı |
 
-Sunucu bu kayıtları dinler ve cihazı her maçın bildirim konusuna (`mac-{maç no}`) abone eder (aynı cihaz anahtarı birden çok kayıtta olabilir; abonelik, anahtar ve maç hiçbir kayıtta kalmayınca kaldırılır). Geçersizleşen cihaz anahtarının kaydı yanıt bildirimi gönderilirken silinir. Bildirimler:
-gol, VAR gol iptali, kırmızı kart, maç başladı, devre arası, maç sonu. Yalnızca canlı saatlerde (12:30–01:00) gönderilir.
+Kötüye kullanıma karşı: internet adresi başına dakikada en fazla 30 istek, günde en fazla 50 yeni cihaz (fazlası reddedilir); bir cihazın değişikliği sunucuya en fazla 5 sn'de bir iletilir (daha önce gelirse son hali saklanır, süre dolunca iletilir; değişiklik kaybolmaz).
+
+Oda her değişiklikte sunucuya "bu anahtarı şu maçların bildirim konusuna (`mac-{maç no}`) abone et / şunlardan çıkar" işini gönderir (aynı anahtar başka kayıtta varsa onun maçlarından çıkarılmaz; anahtar değişince eskisi çıkarılır). İşler sunucu yapıp onaylayana kadar odada bekler (sunucu kapalıyken gelenler bağlanınca gelir). Geçersizleşen anahtarın kayıtları sunucunun bildirmesiyle silinir. Sunucu kayıtları tutmaz. Sen bakarsın: `{ODA_ADRES}/bak/bildirim?anahtar={ODA_ANAHTAR}`.
+
+Bildirimler: gol, VAR gol iptali, kırmızı kart, maç başladı, devre arası, maç sonu. Yalnızca canlı saatlerde (12:30–01:00) gönderilir. Eski Firestore `zil/{…}` kayıtları sunucu açılınca silinir (kuralı kaldırıldı).

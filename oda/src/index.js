@@ -6,7 +6,7 @@
  *                            taşır ve odayı boşaltır); Özet değişikliklerini iletir (Özet'in tamamı R2'de).
  *                            Bağlantı 3000'i geçince yeni gelenler kopyalara gider (aşağıda "Kopyalar").
  *   Mesaj odası mac/{no}   : maçın yorumları
- *   Bildirim kuyruğu       : yorumlardaki @rumuz yanıt bildirimleri; sunucu bağlanıp alır ve FCM ile gönderir
+ *   Bildirim odası         : zil kayıtları ve yorumlardaki @rumuz yanıt bildirimleri; sunucu bağlanıp işleri alır (abonelik, FCM)
  *   Kullanıcı bilgileri D1 veritabanında (d1.js); hesap işlemleri hesap.js
  *
  * Adresler:
@@ -18,7 +18,9 @@
  *   POST   /hizli/gun/{gün}              hızlı kaynak (bilgisayardaki program) yazar (Authorization: Bearer HIZLI_ANAHTAR; sunucu da ODA_ANAHTAR ile)
  *   DELETE /yaz/gun/{gün}                gün odası (kopyalarıyla) boşaltılır
  *   GET    /bak/gun/{gün}?anahtar=...&kopya=, /bak/mac/{no}?anahtar=...   odanın şu anki hali (yalnızca sen; tarayıcıda açılır)
- *   GET    /oda/bildirim?anahtar=...     sunucu bildirim kuyruğuna bağlanır (WebSocket, ODA_ANAHTAR)
+ *   GET    /oda/bildirim?anahtar=...     sunucu bildirim odasına bağlanır (WebSocket, ODA_ANAHTAR)
+ *   POST   /hesap/zil                    site zil kaydını gönderir { cihaz, token, maclar, tur, google?, cikis? }
+ *   GET    /bak/bildirim?anahtar=...     bildirim odasının özeti (zil kaydı sayısı, bekleyen işler)
  *   GET, POST /hesap/...                 hesap işlemleri (hesap.js)
  *
  * Sıra numarası (s): gün odasında listedeki her değişiklik 1 artar. Telefon yeniden bağlanırken son aldığı numarayı (s) ve odanın
@@ -82,13 +84,28 @@ export default {
         const [, bolum, tur, ad] = url.pathname.split('/');
         const macOdasi = no => env.MAC.get(env.MAC.idFromName('eeur/mac/' + no), { locationHint: 'eeur' });
 
+        const bildirimOdasi = () => env.BILDIRIM.get(env.BILDIRIM.idFromName('bildirim'), { locationHint: 'eeur' });
+
+        /* Zil kaydı: gövde JSON (sayfadan çıkarken düz metin olarak da gelir); Google giriş kimliği varsa kişi yazılır */
+        if (bolum === 'hesap' && tur === 'zil' && istek.method === 'POST') {
+            const govde = await istek.text().then(t => JSON.parse(t)).catch(() => null);
+            if (!govde || typeof govde !== 'object')
+                return izinEkle(istek, bos(400));
+            const kim = govde.google ? await dogrula(String(govde.google), env).catch(() => null) : null;
+            const sonuc = await bildirimOdasi().zil(govde, istek.headers.get('CF-Connecting-IP') || '', kim && kim.google ? kim.uid : null);
+            return izinEkle(istek, Response.json(sonuc, { status: sonuc.hata === 'sinir' ? 429 : sonuc.hata ? 400 : 200 }));
+        }
+
         if (bolum === 'hesap')
             return izinEkle(istek, istek.method === 'OPTIONS' ? bos(204) : await hesap(istek, env, tur, macOdasi));
+
+        if (bolum === 'bak' && tur === 'bildirim' && istek.method === 'GET')
+            return yetkili(istek, url, env.ODA_ANAHTAR) ? Response.json(await bildirimOdasi().bak()) : bos(403);
 
         if (bolum === 'oda' && tur === 'bildirim' && istek.headers.get('Upgrade') === 'websocket') {
             if (!yetkili(istek, url, env.ODA_ANAHTAR))
                 return bos(403);
-            return env.BILDIRIM.get(env.BILDIRIM.idFromName('bildirim'), { locationHint: 'eeur' }).fetch(istek);
+            return bildirimOdasi().fetch(istek);
         }
 
         if (!BICIM[tur] || !BICIM[tur].test(ad || ''))
@@ -1038,34 +1055,167 @@ export class MacOdasi extends Oda {
 }
 
 /*
- * BİLDİRİM KUYRUĞU (tek oda): maç odaları yanıt bildirimlerini ekler, sunucu bağlıysa hemen gönderilir.
- * Sunucu bağlanınca son 10 dakikanın bekleyen işleri gelir; sunucu işi alınca { ack: no } gönderir, iş silinir.
- * Sunucuya giden: { t: "i", id, kisi, baslik, metin, link }
+ * BİLDİRİM ODASI (tek oda): zil kayıtları ve sunucuya giden işler.
+ *
+ * Zil kaydı (site gönderir: POST /hesap/zil): cihaz başına { token, maclar, kisi?, tur }. zil tablosunda son hal ve sunucuya
+ * en son iletilen hal (iletilen: { token, maclar }). Değişiklik sunucuya cihaz başına en fazla 5 sn'de bir iletilir: daha
+ * önce gelirse son hal saklanır, süre dolunca (zamanlayıcı) iletilir; hiçbir değişiklik kaybolmaz.
+ * İnternet adresi başına dakikada en fazla 30 istek ve günde en fazla 50 yeni cihaz (fazlası reddedilir).
+ * kisi yalnızca geçerli Google girişiyle yazılır; { cikis: true } ile silinir (giriş kimliği gelmezse eskisi kalır).
+ *
+ * Sunucuya giden işler (kuyruk; sunucu işi yapınca { ack: no } gönderir, o iş silinir):
+ *   { t: "z", id, token, ekle: [maç no], cikar: [maç no] }  cihaz anahtarını maçların bildirim konusuna abone et / çıkar
+ *                                                         (sunucu onaylayana kadar bekler)
+ *   { t: "i", id, tokenlar, baslik, metin, link }         yanıt bildirimi (kişinin bütün cihazlarına; 10 dk'dan eskisi gitmez)
+ * Sunucudan gelen: { ack: no }, { gecersiz: token } (cihaz anahtarı geçersizleşti: kayıtları silinir).
  */
+const ZIL_ARALIK = 5000;          /* bir cihazın değişikliği sunucuya en fazla bu aralıkla iletilir */
+const ZIL_DAKIKA = 30;            /* internet adresi başına dakikada en fazla istek */
+const ZIL_YENI_GUNLUK = 50;       /* internet adresi başına günde en fazla yeni cihaz */
+const ZIL_MAC_EN = 100;           /* bir kayıtta en fazla maç */
+
 export class BildirimOdasi extends Oda {
 
     tablolar() {
         super.tablolar();
         this.sql.exec('CREATE TABLE IF NOT EXISTS kuyruk (id INTEGER PRIMARY KEY AUTOINCREMENT, v TEXT NOT NULL, z INTEGER NOT NULL)');
+        try { this.sql.exec("ALTER TABLE kuyruk ADD COLUMN t TEXT NOT NULL DEFAULT 'i'"); } catch (e) {}
+        this.sql.exec('CREATE TABLE IF NOT EXISTS zil (cihaz TEXT PRIMARY KEY, token TEXT NOT NULL, maclar TEXT NOT NULL, ' +
+            'kisi TEXT, tur TEXT, z INTEGER NOT NULL, iletilen TEXT, g INTEGER NOT NULL DEFAULT 0, bekliyor INTEGER NOT NULL DEFAULT 0)');
+        this.sql.exec('CREATE INDEX IF NOT EXISTS zil_kisi ON zil (kisi)');
+        this.sql.exec('CREATE INDEX IF NOT EXISTS zil_token ON zil (token)');
+        this.sql.exec('CREATE TABLE IF NOT EXISTS yeni_cihaz (ip TEXT, gun INTEGER, n INTEGER, PRIMARY KEY (ip, gun))');
+        this.dakikalik = new Map();   /* ip → { dk, n } (bellekte) */
     }
 
-    ekle(is) {
+    /* Kuyruğa iş ekler, sunucu bağlıysa hemen gönderir */
+    kuyruga(t, is) {
         const z = Date.now();
-        this.sql.exec('DELETE FROM kuyruk WHERE z < ?', z - BILDIRIM_ESKI);
-        const id = this.sql.exec('INSERT INTO kuyruk (v, z) VALUES (?, ?) RETURNING id', JSON.stringify(is), z).one().id;
-        this.herkese({ t: 'i', id, ...is });
+        const id = this.sql.exec('INSERT INTO kuyruk (v, z, t) VALUES (?, ?, ?) RETURNING id', JSON.stringify(is), z, t).one().id;
+        this.herkese({ t, id, ...is });
     }
 
+    /* Yanıt bildirimi (mesaj odası ekler): kişinin cihazlarının anahtarlarıyla */
+    ekle(is) {
+        this.sql.exec("DELETE FROM kuyruk WHERE t = 'i' AND z < ?", Date.now() - BILDIRIM_ESKI);
+        const tokenlar = [...new Set(this.sql.exec('SELECT token FROM zil WHERE kisi = ?', is.kisi).toArray().map(x => x.token))];
+        if (!tokenlar.length)
+            return;
+        this.kuyruga('i', { tokenlar, baslik: is.baslik, metin: is.metin, link: is.link });
+    }
+
+    /* Site zil kaydını gönderir. Cevap { ok } ya da { hata } */
+    zil(govde, ip, kisi) {
+        const cihaz = String((govde || {}).cihaz || '');
+        const token = String((govde || {}).token || '');
+        const maclar = Array.isArray(govde.maclar) ? [...new Set(govde.maclar.map(String).filter(no => BICIM.mac.test(no)))].slice(-ZIL_MAC_EN) : null;
+        if (!/^[0-9a-f]{16,64}$/.test(cihaz) || !token || token.length > 400 || !maclar)
+            return { hata: 'bicim' };
+
+        /* İnternet adresi başına dakikada en fazla 30 istek */
+        const dk = Math.floor(Date.now() / 60000);
+        const sayac = this.dakikalik.get(ip);
+        if (sayac && sayac.dk === dk && sayac.n >= ZIL_DAKIKA)
+            return { hata: 'sinir' };
+        this.dakikalik.set(ip, sayac && sayac.dk === dk ? { dk, n: sayac.n + 1 } : { dk, n: 1 });
+        if (this.dakikalik.size > 10000)
+            this.dakikalik.clear();
+
+        const once = this.sql.exec('SELECT kisi FROM zil WHERE cihaz = ?', cihaz).toArray()[0];
+
+        /* Yeni cihaz: internet adresi başına günde en fazla 50 */
+        if (!once) {
+            const gun = Math.floor(Date.now() / 86400000);
+            const n = (this.sql.exec('SELECT n FROM yeni_cihaz WHERE ip = ? AND gun = ?', ip, gun).toArray()[0] || {}).n || 0;
+            if (n >= ZIL_YENI_GUNLUK)
+                return { hata: 'sinir' };
+            this.sql.exec('INSERT OR REPLACE INTO yeni_cihaz (ip, gun, n) VALUES (?, ?, ?)', ip, gun, n + 1);
+            this.sql.exec('DELETE FROM yeni_cihaz WHERE gun < ?', gun - 1);
+        }
+
+        const yeniKisi = kisi || (govde.cikis ? null : once ? once.kisi : null);
+        const tur = govde.tur === 'uygulama' ? 'uygulama' : 'site';
+        if (once)
+            this.sql.exec('UPDATE zil SET token = ?, maclar = ?, kisi = ?, tur = ?, z = ? WHERE cihaz = ?',
+                token, JSON.stringify(maclar), yeniKisi, tur, Date.now(), cihaz);
+        else
+            this.sql.exec('INSERT INTO zil (cihaz, token, maclar, kisi, tur, z) VALUES (?, ?, ?, ?, ?, ?)',
+                cihaz, token, JSON.stringify(maclar), yeniKisi, tur, Date.now());
+        this.ilet(cihaz);
+        return { ok: true };
+    }
+
+    /* Cihazın değişikliği sunucuya: son iletilenden bu yana 5 sn geçtiyse hemen, geçmediyse süre dolunca */
+    ilet(cihaz) {
+        const k = this.sql.exec('SELECT token, maclar, iletilen, g FROM zil WHERE cihaz = ?', cihaz).toArray()[0];
+        if (!k)
+            return;
+        const simdi = Date.now();
+        if (simdi - k.g < ZIL_ARALIK) {
+            this.sql.exec('UPDATE zil SET bekliyor = 1 WHERE cihaz = ?', cihaz);
+            this.zamanla(k.g + ZIL_ARALIK);
+            return;
+        }
+        const once = k.iletilen ? JSON.parse(k.iletilen) : { token: null, maclar: [] };
+        const simdiki = JSON.parse(k.maclar);
+        /* Aynı anahtar başka kayıtta da varsa onun maçlarından çıkarılmaz */
+        const baska = token => new Set(this.sql.exec('SELECT maclar FROM zil WHERE token = ? AND cihaz != ?', token, cihaz).toArray()
+            .flatMap(x => JSON.parse(x.maclar)));
+        if (once.token && once.token !== k.token) {
+            const kalan = baska(once.token);
+            const cikar = once.maclar.filter(no => !kalan.has(no));
+            if (cikar.length)
+                this.kuyruga('z', { token: once.token, ekle: [], cikar });
+            once.maclar = [];
+        }
+        const ekle = simdiki.filter(no => !once.maclar.includes(no));
+        const kalan = baska(k.token);
+        const cikar = once.maclar.filter(no => !simdiki.includes(no) && !kalan.has(no));
+        if (ekle.length || cikar.length)
+            this.kuyruga('z', { token: k.token, ekle, cikar });
+        this.sql.exec('UPDATE zil SET iletilen = ?, g = ?, bekliyor = 0 WHERE cihaz = ?',
+            JSON.stringify({ token: k.token, maclar: simdiki }), simdi, cihaz);
+    }
+
+    async zamanla(an) {
+        const once = await this.ctx.storage.getAlarm();
+        if (!once || once > an)
+            await this.ctx.storage.setAlarm(an);
+    }
+
+    /* Süresi dolan bekleyen değişiklikler iletilir */
+    async alarm() {
+        const simdi = Date.now();
+        for (const { cihaz } of this.sql.exec('SELECT cihaz FROM zil WHERE bekliyor = 1 AND g <= ?', simdi - ZIL_ARALIK).toArray())
+            this.ilet(cihaz);
+        const sonraki = this.sql.exec('SELECT MIN(g) AS g FROM zil WHERE bekliyor = 1').one().g;
+        if (sonraki)
+            await this.ctx.storage.setAlarm(Math.max(sonraki + ZIL_ARALIK, simdi + 1000));
+    }
+
+    /* Sunucu bağlanınca: onaylanmamış abonelik işleri ve son 10 dakikanın yanıt bildirimleri */
     ac(ws) {
-        this.sql.exec('SELECT id, v FROM kuyruk WHERE z >= ? ORDER BY id', Date.now() - BILDIRIM_ESKI).toArray()
-            .forEach(x => ws.send(JSON.stringify({ t: 'i', id: x.id, ...JSON.parse(x.v) })));
+        this.sql.exec("SELECT id, v, t FROM kuyruk WHERE t = 'z' OR z >= ? ORDER BY id", Date.now() - BILDIRIM_ESKI).toArray()
+            .forEach(x => ws.send(JSON.stringify({ t: x.t, id: x.id, ...JSON.parse(x.v) })));
     }
 
     webSocketMessage(ws, ham) {
         try {
             const m = JSON.parse(ham);
             if (Number.isInteger(m.ack))
-                this.sql.exec('DELETE FROM kuyruk WHERE id <= ?', m.ack);
+                this.sql.exec('DELETE FROM kuyruk WHERE id = ?', m.ack);
+            if (typeof m.gecersiz === 'string' && m.gecersiz)
+                this.sql.exec('DELETE FROM zil WHERE token = ?', m.gecersiz);
         } catch (e) {}
+    }
+
+    async bak() {
+        return {
+            konum: await this.konum(),
+            bagli_sunucu: this.acikSayisi(),
+            zil_kaydi: this.sql.exec('SELECT COUNT(*) AS n FROM zil').one().n,
+            girisli_cihaz: this.sql.exec('SELECT COUNT(*) AS n FROM zil WHERE kisi IS NOT NULL').one().n,
+            bekleyen_is: this.sql.exec('SELECT t, COUNT(*) AS n FROM kuyruk GROUP BY t').toArray()
+        };
     }
 }

@@ -6659,19 +6659,15 @@ async function startData() {
         authLoad();
     checkDay();
     setInterval(checkDay, 60000);
-
-    /* İzin daha önce verildiyse: cihaz kimliği değişmiş olabilir, gerekirse zil kaydı yenilenir */
-    if (bildirimVar() && Notification.permission === 'granted' && savedIds.size)
-        zilYazSonra();
 }
 
 /* =================================================
    BİLDİRİM (zil açılan maçlar)
    -------------------------------------------------
    İlk zil açılışında tarayıcı izin ister. İzin verilirse
-   görünmez giriş (anonim) yapılır, cihaz kimliği alınır ve
-   kayıtlı maçlar zil/{gizli kimlik} dokümanına yazılır.
-   Sunucu bunu görüp cihazı maçların bildirimlerine abone eder.
+   cihazın bildirim anahtarı alınır ve kayıtlı maçlar bildirim
+   odasına (Cloudflare) gönderilir (aşağıda zilGonder). Oda
+   sunucuya iletir, sunucu cihazı maçların bildirimlerine abone eder.
 ================================================= */
 
 let fbApp = null;
@@ -6706,7 +6702,7 @@ let bildirimHazir = null;
 let zilTimer = null;
 let izinSoruluyor = false;
 
-const ZIL_SON_KEY = 'canliSkorZilSon';
+const ZIL_SON_KEY = 'canliSkorZil2';   /* son gönderilen kayıt (karşılaştırmak için) */
 
 function bildirimVar() {
     return !!BILDIRIM_ANAHTARI && !!fbApp && 'Notification' in window &&
@@ -6734,26 +6730,29 @@ function zilDegisti(acildi) {
     }
 }
 
-/* Lig zilinde birçok maç birden değişir: 1 sn bekleyip tek seferde yazılır */
+/*
+ * ZİL KAYDI: bildirim odasına (HESAP_ADRES/zil, Cloudflare). Kullanıcı hissetmez: zil değişince 5 sn beklenir (birçok değişiklik
+ * tek seferde), sayfadan çıkarken (arka plana geçince, kapanınca) beklemeden gönderilir. Son gönderilen telefonda saklanır;
+ * değişen bir şey yoksa gönderilmez. Sayfadan çıkarken gönderilenin cevabı alınamaz: onaylanmamış sayılır, açılıştaki
+ * kontrolde (en son, bizim dosyalar indikten sonra) yeniden gönderilir.
+ * Kayıt: { cihaz (telefonda saklanan rastgele numara), token (cihazın bildirim anahtarı), maclar, tur, google? (giriş kimliği:
+ * kişi yazılır, yanıt bildirimleri kişinin bütün cihazlarına), cikis? (Google'dan çıkıldı: kişi silinir) }
+ */
+const ZIL_BEKLE = 5000;
+let zilCikis = false;      /* Google'dan çıkıldı, kayıtta kişi silinecek (gönderilene kadar) */
+let zilGoogle = null;      /* son alınan Google giriş kimliği (sayfadan çıkarken beklemeden kullanılır) */
+
 function zilYazSonra() {
     clearTimeout(zilTimer);
-    zilTimer = setTimeout(zilYaz, 1000);
+    zilTimer = setTimeout(() => zilGonder(false), ZIL_BEKLE);
 }
 
+/* Cihazın bildirim anahtarı (ilk seferde bildirim kütüphanesi iner, bildirim servisi kurulur) */
 function bildirimHazirla() {
 
     if (!bildirimHazir) {
         bildirimHazir = (async () => {
-            const base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/';
-            const [authLib, msgLib] = await Promise.all([
-                import(base + 'firebase-auth.js'),
-                import(base + 'firebase-messaging.js')
-            ]);
-
-            const auth = authLib.getAuth(fbApp);
-            await auth.authStateReady();
-            const user = auth.currentUser || (await authLib.signInAnonymously(auth)).user;
-
+            const msgLib = await import('https://www.gstatic.com/firebasejs/' + FIREBASE_SURUM + '/firebase-messaging.js');
             const worker = await navigator.serviceWorker.register('firebase-messaging-sw.js');
             const messaging = msgLib.getMessaging(fbApp);
             const token = await msgLib.getToken(messaging, {
@@ -6772,59 +6771,90 @@ function bildirimHazirla() {
                 });
             });
 
-            return { uid: user.uid, token: token, person: user.isAnonymous ? null : user.uid };
+            return token;
         })();
+        bildirimHazir.catch(() => { bildirimHazir = null; });
     }
 
     return bildirimHazir;
 }
 
 /*
- * Zil kaydı: her cihazın kendi kaydı zil/{cihaz no} (cihaz no telefonda saklanır). Google ile giriş
- * yapılmışsa kişinin kimliği de yazılır: yanıt bildirimleri kişinin bütün cihazlarına gider.
- * Eski biçimdeki kayıt (zil/{kimlik}) yenisi yazıldıktan sonra bir kez silinir.
+ * Cihaz numarası: her cihazın telefonda saklanan rastgele numarası (kaydın anahtarı)
  */
 const DEVICE_KEY = 'canliSkorCihaz';
 
 function deviceId() {
     let id = readJSON(DEVICE_KEY, null);
-    if (!id) {
-        id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '');
+    if (!id || !/^[0-9a-f]{16,64}$/.test(id)) {
+        id = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') :
+            Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''));
         writeJSON(DEVICE_KEY, id);
     }
     return id;
 }
 
-async function zilYaz() {
+/* Gönderilecek kayıt ve karşılaştırma anahtarı (token bilinmiyorsa null) */
+function zilKaydi(token) {
+    const list = Array.from(savedIds).filter(id => /^\d+$/.test(id)).slice(-100);
+    const body = { cihaz: deviceId(), token: token, maclar: list, tur: 'site' };
+    if (accountUid && zilGoogle)
+        body.google = zilGoogle;
+    if (zilCikis)
+        body.cikis = true;
+    return { body: body, key: body.cihaz + '|' + token + '|' + (accountUid || '') + '|' + list.join(',') };
+}
+
+/* Kayıt gönderilir (değişen bir şey varsa). cikiyor: sayfadan çıkılıyor, beklemeden (cevap alınamaz) */
+async function zilGonder(cikiyor) {
+    clearTimeout(zilTimer);
+    zilTimer = null;
     try {
-        const { uid, token, person } = await bildirimHazirla();
-        if (!(await loadFs()))
-            throw new Error('Firestore yüklenemedi');
-        const list = Array.from(savedIds).filter(id => /^\d+$/.test(id)).slice(-100);
-        const device = deviceId();
-        const key = device + '|' + uid + '|' + (person || '') + '|' + token + '|' + list.join(',');
-
-        /* Değişen bir şey yoksa yazılmaz */
-        if (readJSON(ZIL_SON_KEY, '') === key)
+        if (cikiyor) {
+            /* Anahtar daha önce alındıysa hemen; alınmadıysa gönderilemez (açılışta yeniden denenir) */
+            const token = bildirimHazir && await Promise.race([bildirimHazir, new Promise(r => setTimeout(() => r(null), 50))]);
+            if (!token)
+                return;
+            const { body, key } = zilKaydi(token);
+            if (readJSON(ZIL_SON_KEY, '') !== key)
+                navigator.sendBeacon(HESAP_ADRES + '/zil', new Blob([JSON.stringify(body)], { type: 'text/plain' }));
             return;
-
-        const record = { token: token, maclar: list, sahip: uid, tur: 'site', guncellendi: fs.serverTimestamp() };
-        if (person)
-            record.kisi = person;
-        await fs.setDoc(fs.doc(db, 'zil', device), record);
-
-        /* Eski biçimdeki kayıt (bu girişin kimliğiyle) bir kez silinir */
-        const oldKey = 'canliSkorZilEski|' + uid;
-        if (device !== uid && !readJSON(oldKey, false)) {
-            fs.deleteDoc(fs.doc(db, 'zil', uid)).catch(() => {});
-            writeJSON(oldKey, true);
         }
-
+        const token = await bildirimHazirla();
+        if (accountUid)
+            zilGoogle = await idToken().catch(() => zilGoogle);
+        const { body, key } = zilKaydi(token);
+        if (readJSON(ZIL_SON_KEY, '') === key && !zilCikis)
+            return;
+        const response = await fetch(HESAP_ADRES + '/zil', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok)
+            throw new Error('Zil kaydı: ' + response.status);
+        if (body.cikis)
+            zilCikis = false;
         writeJSON(ZIL_SON_KEY, key);
     } catch (error) {
         console.error('Bildirim kaydı yapılamadı:', error);
-        bildirimHazir = null;
     }
+}
+
+/* Sayfadan çıkarken bekleyen kayıt beklemeden gönderilir */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && zilTimer)
+        zilGonder(true);
+});
+window.addEventListener('pagehide', () => {
+    if (zilTimer)
+        zilGonder(true);
+});
+
+/* Açılışta, bizim dosyalar indikten sonra (en son): izin verilmişse anahtar ve kayıt kontrol edilir, değiştiyse gönderilir */
+function zilKontrol() {
+    if (bildirimVar() && Notification.permission === 'granted' && (savedIds.size || readJSON(ZIL_SON_KEY, '')))
+        zilGonder(false);
 }
 
 /* Değişiklik gelince ekranlar bir kez yeniden çizilir */
@@ -7691,7 +7721,8 @@ function prefetchDays() {
     if (prefetchedFor === TODAY)
         return;
     prefetchedFor = TODAY;
-    [dayShift(-1), dayShift(1), dayShift(2)].forEach(day => readFile('gun/' + day).catch(() => {}));
+    /* Ardından (en son) zil kaydının kontrolü */
+    Promise.allSettled([dayShift(-1), dayShift(1), dayShift(2)].map(day => readFile('gun/' + day))).then(zilKontrol);
 }
 
 /*
@@ -12225,6 +12256,7 @@ function accountChanged(user) {
     const uid = user && !user.isAnonymous ? user.uid : null;
     if (uid === accountUid)
         return meReady;
+    const first = accountUid === undefined;   /* açılıştaki ilk bilgi: zil kaydı açılıştaki kontrolde (en son) */
     accountUid = uid;
     meReady = (async () => {
         if (!uid) {
@@ -12247,9 +12279,11 @@ function accountChanged(user) {
             mySilenced = new Set(value.sessiz || []);
         }
 
-        /* Bildirim kaydı yeni kişiyle yazılsın (izin verilmişse; çıkışta kişi bilgisi kalkar) */
-        bildirimHazir = null;
-        if (bildirimVar() && Notification.permission === 'granted')
+        /* Zil kaydı yeni kişiyle gönderilsin (izin verilmişse; çıkışta kayıttaki kişi silinir) */
+        zilGoogle = null;
+        if (!uid && readJSON(ZIL_SON_KEY, '').split('|')[2])
+            zilCikis = true;
+        if (!first && bildirimVar() && Notification.permission === 'granted')
             zilYazSonra();
         renderAccountMenu();
         renderComments();

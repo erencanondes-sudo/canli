@@ -19,8 +19,8 @@
  *   takılmaz). Her bağlanışta oda her şeyi
  *   baştan gönderir ("l"), sonra değişiklikler ("d"). Kopunca 5 sn sonra yeniden bağlanır. Kapatma fonksiyonu döner.
  * acik(no): mesaj odasına "bu maça yorum yazılabilir" bilgisi (bir kez).
- * bildirimDinle(gonder): bildirim kuyruğu odasına bağlanır; gelen her yanıt bildirimi için gonder({ kisi, baslik, metin, link }),
- *   sonra alındığı odaya bildirilir (kuyruktan silinir). Kopunca 5 sn sonra yeniden bağlanır.
+ * bildirimDinle(isler): bildirim odasına bağlanır; gelen işler (abonelik "z", yanıt bildirimi "i") sırayla yapılır ve onaylanır
+ *   (kuyruktan silinir; geçersiz cihaz anahtarları odaya bildirilir). Kopunca 5 sn sonra yeniden bağlanır.
  */
 
 const { ODA_ADRES, ODA_ANAHTAR } = process.env;
@@ -155,11 +155,28 @@ function dinle(gunAdi, mesajGeldi, yol = '/oda/gun/' + gunAdi + '?anahtar=' + en
     };
 }
 
-function bildirimDinle(gonder) {
+/*
+ * Bildirim odasından gelen işler sırayla yapılır, her biri bitince onaylanır (onaylanmayan iş yeniden bağlanınca yeniden gelir).
+ * isler: { z: (iş) => Promise, i: (iş) => Promise<geçersiz anahtarlar> }
+ */
+function bildirimDinle(isler) {
+    let zincir = Promise.resolve();
     return dinle(null, (is, ws) => {
-        if (is.t !== 'i') return;
-        gonder(is);
-        ws.send(JSON.stringify({ ack: is.id }));
+        if (!isler[is.t]) return;
+        zincir = zincir.then(async () => {
+            /* Ağ hatasında 3 kez denenir; olmazsa onaylanmaz, yeniden bağlanınca yeniden gelir */
+            for (let deneme = 1; deneme <= 3; deneme++) {
+                try {
+                    const gecersiz = await isler[is.t](is);
+                    for (const token of gecersiz || []) ws.send(JSON.stringify({ gecersiz: token }));
+                    ws.send(JSON.stringify({ ack: is.id }));
+                    return;
+                } catch (e) {
+                    if (deneme === 3) console.error('Bildirim işi yapılamadı (' + is.t + '): ' + e.message);
+                    else await new Promise(r => setTimeout(r, 2000 * deneme));
+                }
+            }
+        });
     }, '/oda/bildirim?anahtar=' + encodeURIComponent(ODA_ANAHTAR || ''));
 }
 

@@ -1,6 +1,6 @@
 /*
  * BİLDİRİMLER (Firebase Cloud Messaging)
- * - zil/{cihaz} dokümanlarını dinler; cihazı kayıtlı maçların konusuna (mac-{no}) abone eder.
+ * - Bildirim odasından gelen işlerle cihazı zili açık maçların konusuna (mac-{no}) abone eder / çıkarır.
  * - Maçta gol, VAR iptali, kırmızı kart, başlama, devre ve maç sonunda konuya tek mesaj gönderir.
  * - Gol ve gol iptali hızlı kaynaktan (gün odasındaki h) da gelir: hangi kaynak önce görürse o gönderir,
  *   diğeri aynı skor için tekrar göndermez (bildirilen skor ortak tutulur).
@@ -196,122 +196,69 @@ function gonderMesaj(no, baslik, metin) {
 }
 
 /* ---------- Zil kayıtları ----------
- * zil/{cihaz no}: { token, maclar, sahip, kisi?, tur? } her cihazın kendi kaydı (bir kişinin birden çok cihazı olabilir).
- * kisi: o cihazda Google ile giriş yapmış kişinin kimliği (yanıt bildirimleri bu kişinin bütün cihazlarına gider).
- * Eski kayıtlar zil/{kimlik} (kişi bilgisi yok) maç zili için çalışmaya devam eder.
- * Aynı cihaz anahtarı birden çok kayıtta olabilir (eskiden yeniye geçerken): bir konuya abonelik,
- * o anahtar ve maç hiçbir kayıtta kalmayınca kaldırılır.
+ * Kayıtlar bildirim odasında (oda/src/index.js → BildirimOdasi): site zil değişince oraya gönderir. Oda her değişiklik için
+ * "bu cihaz anahtarını şu maçlara abone et / şunlardan çıkar" işini hesaplar, sunucuya iletir (oda.bildirimDinle).
+ * Yanıt bildirimlerinde kişinin cihaz anahtarlarını da oda bulur. Sunucu kayıtları tutmaz.
  */
 
-const kayitli = new Map();   /* cihaz → { token, maclar: Set, kisi } */
-const kullanim = new Map();  /* "token|maç" → kaç kayıtta */
-
-function gecerli(veri) {
-    const token = veri && typeof veri.token === 'string' && veri.token.length < 400 ? veri.token : null;
-    const maclar = new Set(
-        (veri && Array.isArray(veri.maclar) ? veri.maclar : [])
-            .map(String).filter(m => /^\d{1,10}$/.test(m)).slice(-100)
-    );
-    const kisi = veri && typeof veri.kisi === 'string' && veri.kisi.length <= 128 ? veri.kisi : null;
-    return { token, maclar, kisi };
-}
-
-/* Konu → cihaz listesi şeklinde toplayıp FCM'e tek seferde gönderir */
-async function abonelik(islem, ciftler) {
-    const konular = new Map();
-    ciftler.forEach(([token, mac]) => {
-        if (!konular.has(mac)) konular.set(mac, []);
-        konular.get(mac).push(token);
-    });
-    for (const [mac, tokenlar] of konular) {
-        for (let i = 0; i < tokenlar.length; i += 1000) {
-            try {
-                const parca = tokenlar.slice(i, i + 1000);
-                const sonuc = islem === 'ekle'
-                    ? await getMessaging().subscribeToTopic(parca, konu(mac))
-                    : await getMessaging().unsubscribeFromTopic(parca, konu(mac));
-                if (sonuc.failureCount) console.warn('Abonelik: ' + sonuc.failureCount + ' cihaz başarısız (' + konu(mac) + ')');
-            } catch (e) {
-                console.error('Abonelik yapılamadı (' + konu(mac) + '): ' + e.message);
-            }
+/* Cihaz anahtarını maçların konusuna abone eder / çıkarır (maç başına tek istek). Anahtar geçersizse [anahtar] döner */
+async function abone(token, ekle, cikar) {
+    for (const [islem, liste] of [['cikar', cikar || []], ['ekle', ekle || []]]) {
+        for (const mac of liste) {
+            const sonuc = islem === 'ekle'
+                ? await getMessaging().subscribeToTopic([token], konu(mac))
+                : await getMessaging().unsubscribeFromTopic([token], konu(mac));
+            const kod = ((sonuc.errors[0] || {}).error || {}).code || '';
+            if (/registration-token-not-registered|invalid-registration-token|invalid-argument/.test(kod))
+                return [token];
+            if (sonuc.failureCount) console.warn('Abonelik başarısız (' + konu(mac) + '): ' + kod);
         }
     }
-}
-
-async function zilDegisti(cihaz, veri) {
-
-    const once = kayitli.get(cihaz);
-    const yeni = veri ? gecerli(veri) : null;
-    const ciftler = k => k && k.token ? [...k.maclar].map(m => k.token + '|' + m) : [];
-    const eski = new Set(ciftler(once));
-    const simdi = new Set(ciftler(yeni));
-    const ekle = [];
-    const cikar = [];
-
-    eski.forEach(c => {
-        if (simdi.has(c)) return;
-        const n = (kullanim.get(c) || 1) - 1;
-        if (n > 0) kullanim.set(c, n);
-        else {
-            kullanim.delete(c);
-            cikar.push(c.split('|'));
-        }
-    });
-    simdi.forEach(c => {
-        if (eski.has(c)) return;
-        const n = (kullanim.get(c) || 0) + 1;
-        kullanim.set(c, n);
-        if (n === 1) ekle.push(c.split('|'));
-    });
-
-    if (yeni) kayitli.set(cihaz, yeni);
-    else kayitli.delete(cihaz);
-
-    if (cikar.length) await abonelik('cikar', cikar);
-    if (ekle.length) await abonelik('ekle', ekle);
-}
-
-/* Sunucu açılınca bütün kayıtlar bir kez okunur (abonelik aynıysa FCM'de değişmez), sonra yalnızca değişenler gelir */
-function zilDinle() {
-    getFirestore().collection('zil').onSnapshot(snap => {
-        snap.docChanges().forEach(d => {
-            zilDegisti(d.doc.id, d.type === 'removed' ? null : d.doc.data())
-                .catch(e => console.error('Zil işlenemedi: ' + e.message));
-        });
-    }, e => console.error('Zil kayıtları dinlenemedi: ' + e.message));
+    return [];
 }
 
 /*
- * Bir kişiye bildirim (mesajda @rumuz): kişinin giriş yaptığı bütün cihazlarına (site ve uygulama).
- * Geçersizleşmiş cihaz anahtarının kaydı silinir. En az bir cihaz varsa true
+ * Yanıt bildirimi (mesajda @rumuz): kişinin cihaz anahtarlarına (oda bulur). Geçersizleşmiş anahtarlar döner
+ * (oda o kayıtları siler).
  */
-function kisiyeGonder(kisi, baslik, metin, link) {
-    const hedefler = new Map();   /* token → cihaz */
-    for (const [cihaz, k] of kayitli) if (k.kisi === kisi && k.token) hedefler.set(k.token, cihaz);
-    if (!hedefler.size) return false;
-
-    let mesajci;
-    try {
-        mesajci = getMessaging();
-    } catch (e) {
-        console.error('Yanıt bildirimi gönderilemedi: ' + e.message);
-        return false;
-    }
-    for (const [token, cihaz] of hedefler) {
-        mesajci.send({
-            token: token,
-            webpush: {
-                notification: { title: baslik, body: metin, icon: A.SITE_ADRES + 'cs-icon-192.png' },
-                fcmOptions: { link: link }
-            }
-        }).catch(e => {
+async function tokenlaraGonder(tokenlar, baslik, metin, link) {
+    const gecersiz = [];
+    for (const token of tokenlar || []) {
+        try {
+            await getMessaging().send({
+                token: token,
+                webpush: {
+                    notification: { title: baslik, body: metin, icon: A.SITE_ADRES + 'cs-icon-192.png' },
+                    fcmOptions: { link: link }
+                }
+            });
+        } catch (e) {
             if (/registration-token-not-registered|invalid-registration-token|invalid-argument/.test(e.code || ''))
-                getFirestore().doc('zil/' + cihaz).delete().catch(() => {});
+                gecersiz.push(token);
             else
                 console.error('Yanıt bildirimi gönderilemedi: ' + e.message);
-        });
+        }
     }
-    return true;
+    return gecersiz;
 }
 
-module.exports = { kontrol, zilDinle, hizliAl, hizliKontrol, hizliSkoru, kisiyeGonder };
+/* Eski Firestore zil kayıtları (artık bildirim odasında) bir kez silinir */
+async function eskiZilSil() {
+    try {
+        const fs = getFirestore();
+        let toplam = 0;
+        for (;;) {
+            const snap = await fs.collection('zil').limit(400).get();
+            if (snap.empty) break;
+            const yigin = fs.batch();
+            snap.docs.forEach(d => yigin.delete(d.ref));
+            await yigin.commit();
+            toplam += snap.size;
+        }
+        if (toplam) console.log('Eski zil kayıtları silindi: ' + toplam);
+    } catch (e) {
+        console.error('Eski zil kayıtları silinemedi: ' + e.message);
+    }
+}
+
+module.exports = { kontrol, hizliAl, hizliKontrol, hizliSkoru, abone, tokenlaraGonder, eskiZilSil };

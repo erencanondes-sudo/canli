@@ -710,8 +710,11 @@ async function tur() {
 
 if (require.main === module) {
     console.log('Sunucu başladı: ' + A.LIGLER.map(l => l.ad).join(', '));
-    bildirim.zilDinle();
-    oda.bildirimDinle(is => bildirim.kisiyeGonder(is.kisi, is.baslik, is.metin, A.SITE_ADRES + is.link));
+    oda.bildirimDinle({
+        z: is => bildirim.abone(is.token, is.ekle, is.cikar),
+        i: is => bildirim.tokenlaraGonder(is.tokenlar, is.baslik, is.metin, A.SITE_ADRES + is.link)
+    });
+    bildirim.eskiZilSil();
     yonetimDinle();
     setInterval(ozetR2Yaz, A.OZET_R2_ARALIK);
     tur();
