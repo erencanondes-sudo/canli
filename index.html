@@ -3287,6 +3287,9 @@ body.has-layer .ac-kapa svg {
     margin: 0 -.35rem;
     padding: .5em .45em .4em;
     border-bottom: 1px solid #e6e8ef;
+    border-radius: calc(.75rem - 1px) calc(.75rem - 1px) 0 0;
+    /* Kart zemininden çok az koyu */
+    background: #f3f4f7;
     font-size: .8125rem;
 }
 
@@ -3299,7 +3302,9 @@ body.has-layer .ac-kapa svg {
     border: 0;
     background: none;
     font: inherit;
-    font-weight: 700;
+    /* Lig adı kalın ve 1 birim büyük; Puan Durumu ince */
+    font-size: .875rem;
+    font-weight: 800;
     letter-spacing: 0;
     color: #1d2340;
     cursor: pointer;
@@ -3314,6 +3319,7 @@ body.has-layer .ac-kapa svg {
 .st-title {
     flex: none;
     margin-left: .6em;
+    font-weight: 500;
 }
 
 .st-row {
