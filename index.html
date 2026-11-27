@@ -3271,55 +3271,20 @@ body.has-layer .ac-kapa svg {
 .st-card {
     margin-bottom: .6rem;
     padding: 0 .35rem .35rem;
+    overflow: hidden;
     border: 1px solid #1f3c6e;
     border-radius: .75rem;
     background: #fafafb;
 }
 
-/*
- * Kartın başlığı: yan yana [bayrak + lig adı] Puan Durumu (grup adı); lig adına basınca lig sayfası açılır.
- * Kupa turu kartında yalnızca tur adı. Altında çizgi
- */
-.st-card > .stat-head {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Kartın başlığı: ana sayfadaki lig başlığının aynısı (bayrak, ülke · lig adı), sağında Puan Durumu; basınca lig sayfası */
+.st-card > .league-head {
     margin: 0 -.35rem;
-    padding: .5em .45em .4em;
-    border-bottom: 1px solid #e6e8ef;
-    border-radius: calc(.75rem - 1px) calc(.75rem - 1px) 0 0;
-    /* Kart zemininden biraz koyu */
-    background: #e9ebf0;
-    font-size: .8125rem;
-}
-
-.st-league {
-    display: inline-flex;
-    align-items: center;
-    gap: .4em;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    /* Lig adı kalın ve 1 birim büyük; Puan Durumu ince */
-    font-size: .875rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    color: #1d2340;
     cursor: pointer;
 }
 
-.st-league span {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
 .st-title {
-    flex: none;
-    margin-left: .6em;
-    font-weight: 500;
+    margin-left: auto;
 }
 
 .st-row {
@@ -13688,18 +13653,17 @@ function renderStandings(match) {
         const card = document.createElement('div');
         card.className = 'st-card';
 
+        /* Ana sayfadaki lig başlığı gibi; sağında Puan Durumu (grup adı) */
         const head = document.createElement('div');
-        head.className = 'stat-head';
-        const league = document.createElement('button');
-        league.type = 'button';
-        league.className = 'st-league';
-        league.innerHTML = (match.league.flag || '') + '<span></span>';
-        league.lastChild.textContent = match.league.name;
-        league.addEventListener('click', () => pushPage({ kind: 'league', id: match.league.id }));
+        head.className = 'league-head';
+        head.innerHTML = match.league.flag + '<span></span>';
+        head.querySelector('span').textContent = match.league.country + ' · ';
+        head.appendChild(document.createTextNode(match.league.name));
         const title = document.createElement('span');
         title.className = 'st-title';
         title.textContent = groups.length > 1 && rows[0] && rows[0].group ? rows[0].group : 'Puan Durumu';
-        head.append(league, title);
+        head.appendChild(title);
+        head.addEventListener('click', () => pushPage({ kind: 'league', id: match.league.id }));
         card.appendChild(head);
 
         const line = (cells, className) => {
