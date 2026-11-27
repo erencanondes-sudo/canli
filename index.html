@@ -3277,7 +3277,7 @@ body.has-layer .ac-kapa svg {
 }
 
 /*
- * Kartın başlığı: yan yana [bayrak + lig adı ›] | PUAN DURUMU (grup adı); lig adına basınca lig sayfası açılır.
+ * Kartın başlığı: yan yana [bayrak + lig adı] Puan Durumu (grup adı); lig adına basınca lig sayfası açılır.
  * Kupa turu kartında yalnızca tur adı. Altında çizgi
  */
 .st-card > .stat-head {
@@ -3285,7 +3285,7 @@ body.has-layer .ac-kapa svg {
     align-items: center;
     justify-content: center;
     margin: 0 -.35rem;
-    padding: .6em .45em .5em;
+    padding: .5em .45em .4em;
     border-bottom: 1px solid #e6e8ef;
     font-size: .8125rem;
 }
@@ -3311,17 +3311,9 @@ body.has-layer .ac-kapa svg {
     text-overflow: ellipsis;
 }
 
-.st-league::after {
-    content: '›';
-    color: #8a90a6;
-    font-weight: 800;
-}
-
 .st-title {
     flex: none;
     margin-left: .6em;
-    padding-left: .6em;
-    border-left: 1px solid #d5d9e3;
 }
 
 .st-row {
@@ -3514,13 +3506,13 @@ body.has-layer .ac-kapa svg {
 .st-modes {
     display: flex;
     gap: .4rem;
-    margin: .4rem 0;
+    margin: .6rem 0;
 }
 
 /* Hap düğmeler: açık gri; seçili olan mavi, hafif parlak */
 .st-modes button {
     flex: 1;
-    padding: .45rem 0;
+    padding: .3rem 0;
     border: 1px solid #d5d9e3;
     border-radius: 999px;
     background: #fafafb;
@@ -13700,7 +13692,7 @@ function renderStandings(match) {
         league.addEventListener('click', () => pushPage({ kind: 'league', id: match.league.id }));
         const title = document.createElement('span');
         title.className = 'st-title';
-        title.textContent = groups.length > 1 && rows[0] && rows[0].group ? rows[0].group : 'PUAN DURUMU';
+        title.textContent = groups.length > 1 && rows[0] && rows[0].group ? rows[0].group : 'Puan Durumu';
         head.append(league, title);
         card.appendChild(head);
 
