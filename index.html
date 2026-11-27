@@ -3277,10 +3277,14 @@ body.has-layer .ac-kapa svg {
     background: #fafafb;
 }
 
-/* Kartın başlığı: ana sayfadaki lig başlığının aynısı (bayrak, ülke · lig adı), sağında Puan Durumu; basınca lig sayfası */
+/*
+ * Kartın başlığı: ana sayfadaki lig başlığının aynısı (bayrak, ülke · lig adı; boyutlar ANA SAYFA ölçü ayarlarında),
+ * sağında Puan Durumu; basınca lig sayfası. Zil olmadığı için yükseklik, zilin verdiği yükseklikle sabit:
+ * zil 2,0625rem - 2 × .46875rem eksi pay = 1,125rem + üst ve alt boşluk (2 × .272rem)
+ */
 .st-card > .league-head {
+    min-height: calc(1.125rem + 2 * .272rem);
     margin: 0 -.35rem;
-    cursor: pointer;
 }
 
 .st-title {
@@ -5573,8 +5577,9 @@ body:has(#oddsSheet.open) #homeBanner::before {
 }
 
 /* Lig adı satırı biraz alçak (360 genişlikte yükseklik ~26,7px); ülke, lig adı ve bayrak 1px küçük (12px).
-   Boşluklar rem: yazı küçülünce satırın yüksekliği ve zilin yeri değişmesin */
-#homePage .league-head {
+   Boşluklar rem: yazı küçülünce satırın yüksekliği ve zilin yeri değişmesin. Puan tablosunun lig satırı da aynı */
+#homePage .league-head,
+.st-card > .league-head {
     padding: .272rem .73125rem;
     font-size: .75rem;
 }
