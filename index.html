@@ -3276,15 +3276,24 @@ body.has-layer .ac-kapa svg {
     background: #fafafb;
 }
 
-/* Kartın başlığı: kupa + PUAN DURUMU (grup / tur adı), altında çizgi */
+/* Kartın başlığı: üstte küçük lig adı, altında kupa + PUAN DURUMU (grup adı); kupa turu kartında yalnızca tur adı. Altında çizgi */
 .st-card > .stat-head {
     margin: 0 -.35rem;
-    padding: .7em .45em .6em;
+    padding: .6em .45em .5em;
     border-bottom: 1px solid #e6e8ef;
-    font-size: 1rem;
+    font-size: .8125rem;
 }
 
-.st-card > .stat-head::before {
+.st-league {
+    display: block;
+    margin-bottom: .2em;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #6b7190;
+}
+
+.st-title::before {
     content: '🏆';
     margin-right: .45em;
 }
@@ -3293,9 +3302,9 @@ body.has-layer .ac-kapa svg {
     display: grid;
     grid-template-columns: 2em 1fr repeat(4, 1.6em) 3em 2.2em 2.2em;
     align-items: center;
-    padding: .5em .5em;
+    padding: .35em .5em;
     border-top: 1px solid #e6e8ef;
-    font-size: .8125rem;
+    font-size: .75rem;
     color: #1d2340;
 }
 
@@ -3308,11 +3317,15 @@ body.has-layer .ac-kapa svg {
 .st-row > span:nth-child(2) { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .st-row > span:last-child { font-weight: 800; }
 
+/* Sütun başlıkları: satırla aynı yazı boyu (sütun genişlikleri em, ancak böyle değerlerin tam üstüne gelir); harfler içeride küçük */
 .st-row.st-cols {
     border-top: 0;
-    font-size: .6875rem;
     font-weight: 700;
     color: #6b7190;
+}
+
+.st-row.st-cols > span {
+    font-size: .85em;
 }
 
 /* Maçın takımları: açık mavi, köşeleri yuvarlak, kartın kenarlarından biraz taşan bant; yan yanaysa tek bant */
@@ -3321,8 +3334,8 @@ body.has-layer .ac-kapa svg {
     position: relative;
     z-index: 1;
     margin: 0 -.25rem;
-    padding-left: .75em;
-    padding-right: .75em;
+    padding-left: calc(.5em + .25rem);
+    padding-right: calc(.5em + .25rem);
     border-top-color: transparent;
     border-radius: .5rem;
     background: #d7e8ff;
@@ -3475,7 +3488,7 @@ body.has-layer .ac-kapa svg {
 .st-modes {
     display: flex;
     gap: .4rem;
-    margin-bottom: .6rem;
+    margin: .6rem 0;
 }
 
 /* Hap düğmeler: açık gri; seçili olan mavi, hafif parlak */
@@ -13653,7 +13666,13 @@ function renderStandings(match) {
 
         const head = document.createElement('div');
         head.className = 'stat-head';
-        head.textContent = groups.length > 1 && rows[0] && rows[0].group ? rows[0].group : 'PUAN DURUMU';
+        const league = document.createElement('small');
+        league.className = 'st-league';
+        league.textContent = match.league.name;
+        const title = document.createElement('span');
+        title.className = 'st-title';
+        title.textContent = groups.length > 1 && rows[0] && rows[0].group ? rows[0].group : 'PUAN DURUMU';
+        head.append(league, title);
         card.appendChild(head);
 
         const line = (cells, className) => {
