@@ -854,7 +854,7 @@ button {
     background: #fdecec;
 }
 
-/* Gol (20 sn): satır hafif yeşil, dakika hapı da yeşil; geri alınan gol (10 sn): uyarıdan biraz koyu kırmızı */
+/* Gol (20 sn): satır hafif yeşil, dakika hapı da yeşil; geri alınan gol (20 sn): uyarıdan biraz koyu kırmızı */
 .score-row.goal-hit {
     background: #c0f0cf;
 }
@@ -7126,8 +7126,7 @@ function readLeagues() {
 const lastScores = new Map();   /* maç no → [ev, dep] */
 /* Sayfa açıkken görülen gollerin dakikası: maç no → [[ev dakikaları], [dep dakikaları]] (Özet'te olayı gelmeyen gol için) */
 const goalMinutes = new Map();
-const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an */
-const greenUntil = new Map();   /* "maç no-home/away" → gol sonrası yeşil satırın söneceği an (20 sn; top 10 sn) */
+const goalUntil = new Map();    /* "maç no-home/away" → topun kalkacağı an (20 sn) */
 const cancelUntil = new Map();  /* "maç no-home/away" → geri alınan golün kırmızı topunun kalkacağı an */
 const goalQueue = [];
 let goalsReady = false;         /* bir önceki çizimde canlı veri tazeydi */
@@ -7164,19 +7163,17 @@ function findGoals() {
                     seenMinutes.length = Math.min(seenMinutes.length, Math.max(0, seenMinutes.length - (before[i] - score[i])));
                 }
                 if (score[i] > before[i]) {
-                    goalUntil.set(id + '-' + side, Date.now() + 10000);
-                    greenUntil.set(id + '-' + side, Date.now() + 20000);
+                    goalUntil.set(id + '-' + side, Date.now() + 20000);
                     cancelUntil.delete(id + '-' + side);
                     scored = true;
                     /* Şerit bütün canlı maçlarda, yalnızca Canlı Skor sayfası açıkken; ses yalnızca kayıtlı (zili açık) maçlarda */
                     if (liveScreen())
                         goalQueue.push({ match: match, side: side });
                 }
-                /* Gol geri alındı (skor düştü): 10 sn kırmızı top ve kırmızı satır, şeritte "GOL İPTAL" */
+                /* Gol geri alındı (skor düştü): 20 sn kırmızı top ve kırmızı satır, şeritte "GOL İPTAL" */
                 if (score[i] < before[i]) {
-                    cancelUntil.set(id + '-' + side, Date.now() + 10000);
+                    cancelUntil.set(id + '-' + side, Date.now() + 20000);
                     goalUntil.delete(id + '-' + side);
-                    greenUntil.delete(id + '-' + side);
                     scored = true;
                     if (liveScreen())
                         goalQueue.push({ match: match, side: side, cancel: true });
@@ -7196,17 +7193,9 @@ function findGoals() {
     if (goalQueue.length)
         showNextGoal();
 
-    /* Top 10 sn sonra kalksın, yeşil satır 20 sn sonra sönsün */
-    if (scored) {
-        setTimeout(refreshViews, 10100);
+    /* Top ve yeşil / kırmızı satır 20 sn sonra kalksın */
+    if (scored)
         setTimeout(refreshViews, 20100);
-    }
-}
-
-/* Gol sonrası satır yeşil mi (iki takımdan birinin golü 20 sn içinde) */
-function isGreen(id) {
-    const now = Date.now();
-    return ['home', 'away'].some(side => (greenUntil.get(id + '-' + side) || 0) > now);
 }
 
 /* Takımın yanındaki top: 'goal' (gol), 'cancel' (geri alınan gol) ya da null */
@@ -8512,10 +8501,10 @@ function scoreRow(match, showDate, showLeague) {
 
     /* Satırın içinde zil düğmesi olduğu için satır <button> değil */
     const row = document.createElement('div');
-    /* Gol: 20 sn yeşil satır; geri alınan gol: 10 sn kırmızı satır (top süresince) */
+    /* Gol / geri alınan gol: 20 sn yeşil / kırmızı satır (top süresince) */
     const balls = match.status === 'live' ? [hasBall(match.id, 'home'), hasBall(match.id, 'away')] : [];
     row.className = 'score-row' + (match.warn ? ' warn' : '') +
-        (balls.includes('cancel') ? ' goal-off' : match.status === 'live' && isGreen(match.id) ? ' goal-hit' : '');
+        (balls.includes('cancel') ? ' goal-off' : balls.includes('goal') ? ' goal-hit' : '');
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
 
