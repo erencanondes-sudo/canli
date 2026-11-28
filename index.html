@@ -874,6 +874,11 @@ button {
     background: #ebf2ff;
 }
 
+/* Canlı Skor listesinde: basınca yalnızca hafif gri (kapanırken yanma da yok: flashClosedRow) */
+#liveList .score-row:active {
+    background: #f4f6fa;
+}
+
 /* Basınca hafif gri: puan tablosunda takım adına basınca o satır */
 .st-row:has(.st-team:active),
 .st-tie:has(.st-team:active) {
@@ -14937,11 +14942,11 @@ function refreshDetail() {
     fillDetail(match);
 }
 
-/* Kapanan maçın listedeki satırı kısa bir an gri yanar (hangi maçın kapandığı görünsün) */
+/* Kapanan maçın satırı (takım, lig, Kayıtlı sayfalarında) kısa bir an açık mavi yanar; Canlı Skor listesinde yanmaz */
 function flashClosedRow(id) {
     document.querySelectorAll('.score-bell[data-id="' + id + '"], .tm-row[data-mid="' + id + '"]').forEach(el => {
         const row = el.closest('.score-row, .tm-row');
-        if (!row)
+        if (!row || row.closest('#liveList'))
             return;
         row.classList.remove('closed-flash');
         row.getBoundingClientRect();
